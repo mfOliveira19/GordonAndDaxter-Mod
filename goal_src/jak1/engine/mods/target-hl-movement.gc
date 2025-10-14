@@ -1,32 +1,7 @@
 (in-package goal)
+(require "engine/mods/hl-inputs-handler.gc")
 (require "engine/mods/target-hl-handler.gc")
-
-(defun should-jump? ()
-  (or (< (-> *mouse-data* mouse-scrolly) 0.0) (when *auto-jump* (cpad-hold? 0 x)) (cpad-pressed? 0 x)))
-
-(defun should-move-forward? ()
-  (< (-> *cpad-list* cpads 0 lefty) 127) 
-)
-
-(defun should-move-back? ()
-  (> (-> *cpad-list* cpads 0 lefty) 127)
-)
-
-(defun should-move-left? ()
-  (< (-> *cpad-list* cpads 0 leftx) 127)
-)
-
-(defun should-move-right? ()
-  (> (-> *cpad-list* cpads 0 leftx) 127)
-)
-
-(defun should-duck? ()
-  (or (> (-> *mouse-data* mouse-scrolly) 0.0) (cpad-hold? 0 l1))
-)
-
-(defun should-walk? ()
-  (cpad-hold? 0 r1)
-)
+(require "engine/mods/hl-weapons-handler.gc")
 
 (defun on-ground? ()
   (logtest? (-> *target* control status) (cshape-moving-flags onground))
@@ -34,35 +9,111 @@
 
 ;; global camera duck offset (lerped each frame)
 (define *duck-camera-offset* 0.0)
-;; global camera bob offsets
-(define *view-bob-x* 0.0) ;; horizontal bob
-(define *view-bob-y* 0.0) ;; vertical bob
-(define *view-bob-phase* 0.0)
-
 (define *was-ducking* #f)
 
-;; bob constants
-(define *bob-speed* 0.012)
-(define *bob-vert-amp* 350.0)
-(define *bob-horiz-amp* 200.0)
+(defun get-camera-pitch ()
+  (-> (the-as camera-slave (-> *camera* slave 0))
+      tracking inv-mat vector 0 w))
 
-(defbehavior update-view-bob target ()
+(define *viewmodel-bob-phase* 0.0)
+(define *viewmodel-bob-speed* 500.0)        ;; phase advance multiplier
+(define *viewmodel-bob-amp-base* 1.0)       ;; base amplitude of bob
+(define *viewmodel-bob-return-rate* 0.12)   ;; how fast it returns to neutral
+(define *viewmodel-bob-current-z* 0.0)      ;; current smoothed offset
+(define *viewmodel-rot-x* 0.0)              ;; smoothed viewmodel pitch tilt
+
+(defbehavior update-viewmodel-bob target ()
   (let ((hvel (new 'stack-no-clear 'vector)))
-    ;; get horizontal velocity
     (vector-copy! hvel (-> self control ltransv))
     (set! (-> hvel y) 0.0)
     (let ((speed (vector-length hvel)))
-      ;; advance phase only if moving
+
+      ;; Advance or decay bob phase
       (if (> speed 0.1)
-          (set! *view-bob-phase* (+ *view-bob-phase* (* *bob-speed* speed)))
-          ;; idle phase advance
-          (set! *view-bob-phase* (+ *view-bob-phase* 0.08)))
-      ;; calculate target offsets
-      (let ((target-x (* (sin (* 0.5 *view-bob-phase*)) *bob-horiz-amp*))
-            (target-y (* (sin *view-bob-phase*) *bob-vert-amp*)))
-        ;; lerp offsets smoothly like duck camera
-        (set! *view-bob-x* (+ *view-bob-x* (* 1 (- target-x *view-bob-x*))))
-        (set! *view-bob-y* (+ *view-bob-y* (* 1 (- target-y *view-bob-y*))))))))
+          (set! *viewmodel-bob-phase* (+ *viewmodel-bob-phase* *viewmodel-bob-speed*))
+          (set! *viewmodel-bob-phase* (* *viewmodel-bob-phase* 0.9)))
+
+      ;; Compute speed-scaled amplitude
+      (let ((amp (min 1.0 (* speed *viewmodel-bob-amp-base* 0.00002))))
+
+        ;; Base bob offset
+        (let ((target-offset-z
+               (if (> speed 0.1)
+                   (* (sin *viewmodel-bob-phase*) amp)
+                   0.0)))
+
+          ;; Get current camera pitch influence
+          (let ((pitch-offset (get-camera-pitch)))
+            ;; Move forward/back depending on pitch
+            (set! target-offset-z (+ target-offset-z (* pitch-offset -1.0)))
+
+            ;; Apply small viewmodel tilt
+            (let ((target-rot-x (* pitch-offset 0.01)))
+              (set! *viewmodel-rot-x*
+                    (+ *viewmodel-rot-x*
+                       (* (- target-rot-x *viewmodel-rot-x*)
+                          *viewmodel-bob-return-rate*)))
+              (pc-set-viewmodel-rotation-x *viewmodel-rot-x*))
+
+          ;; Smooth Z movement
+          (set! *viewmodel-bob-current-z*
+                (+ *viewmodel-bob-current-z*
+                   (* (- target-offset-z *viewmodel-bob-current-z*)
+                      *viewmodel-bob-return-rate*)))
+
+          ;; Send to C++ side
+          (pc-set-viewmodel-offset-z *viewmodel-bob-current-z*)))))))
+
+;; --- Camera view bob control ---
+(define *view-bob-x* 0.0)
+(define *view-bob-y* 0.0)
+(define *view-bob-phase* 0.0)
+(define *view-bob-speed* 0.012)
+(define *view-bob-vert-amp-base* 350.0)
+(define *view-bob-horiz-amp-base* 200.0)
+(define *view-bob-return-rate* 0.1)
+(define *view-bob-current-x* 0.0)
+(define *view-bob-current-y* 0.0)
+
+(defbehavior update-view-bob target ()
+  (let ((hvel (new 'stack-no-clear 'vector)))
+    ;; get horizontal velocity (XZ plane)
+    (vector-copy! hvel (-> self control ltransv))
+    (set! (-> hvel y) 0.0)
+    (let ((speed (vector-length hvel)))
+
+      ;; Advance or decay phase
+      (if (> speed 0.1)
+          (set! *view-bob-phase* (+ *view-bob-phase* (* *view-bob-speed* speed)))
+          (set! *view-bob-phase* (* *view-bob-phase* 0.9)))
+
+      ;; Compute clamped amplitude scaling based on speed
+      (let ((amp-scale (min 1.0 (* speed 0.001)))) ;; tweak multiplier if needed
+        (let ((target-x
+               (if (> speed 0.1)
+                   (* (sin (* 0.5 *view-bob-phase*))
+                      *view-bob-horiz-amp-base* amp-scale)
+                   0.0))
+              (target-y
+               (if (> speed 0.1)
+                   (* (sin *view-bob-phase*)
+                      *view-bob-vert-amp-base* amp-scale)
+                   0.0)))
+          
+          ;; Smooth interpolation toward target (returns to center when stopping)
+          (set! *view-bob-current-x*
+                (+ *view-bob-current-x*
+                   (* (- target-x *view-bob-current-x*)
+                      *view-bob-return-rate*)))
+          (set! *view-bob-current-y*
+                (+ *view-bob-current-y*
+                   (* (- target-y *view-bob-current-y*)
+                      *view-bob-return-rate*)))
+
+          ;; Apply to globals (used in camera transform)
+          (set! *view-bob-x* *view-bob-current-x*)
+          (set! *view-bob-y* *view-bob-current-y*)
+          )))))
 
 (defun update-duck-camera-offset ()
   (let* ((duck-depth -4500.0)
@@ -80,42 +131,13 @@
     (+! (-> cam-pos y) *duck-camera-offset*)
     ;; apply view bob offsets
     (update-view-bob)
+    (update-viewmodel-bob)
     (+! (-> cam-pos x) *view-bob-x*)
     (+! (-> cam-pos y) *view-bob-y*)
     ;; set final camera pos
     (set! (-> (&-> (-> self control) unknown-qword00) 0) (-> cam-pos quad)))
   0
   (none))
-
-(defbehavior read-input target ((arg0 vector))
-  (when (!= (-> self control pad-read-time) (-> *display* real-frame-counter))
-    (set! (-> self control last-stick-vec quad) (-> self control stick-vec quad))
-    (set! (-> self control last-pad-stick-speed) (-> self control pad-stick-speed))
-    (set! (-> self control pad-read-time) (the-as uint (-> *display* real-frame-counter))))
-
-  ;; start clean
-  (set! (-> arg0 x) 0.0)
-  (set! (-> arg0 y) 0.0)
-  (set! (-> arg0 z) 0.0)
-  (set! (-> arg0 w) 0.0)
-
-  ;; build input vector
-  (when (should-move-forward?) (set! (-> arg0 z) (+ (-> arg0 z) 1.0)))
-  (when (should-move-back?)    (set! (-> arg0 z) (- (-> arg0 z) 1.0)))
-  (when (should-move-left?)    (set! (-> arg0 x) (+ (-> arg0 x) 1.0)))
-  (when (should-move-right?)   (set! (-> arg0 x) (- (-> arg0 x) 1.0)))
-
-  (let ((has-input (> (vector-length arg0) 0.0)))
-    (if has-input
-        ;; when input exists
-        (begin
-          (vector-normalize! arg0 1.0)
-          (set! (-> self control stick-vec quad) (-> arg0 quad))
-          (let ((base-speed (if (should-walk?) 0.5 1.5))
-                (duck-mult (if (should-duck?) 0.333 1.0)))
-            (set! (-> self control pad-stick-speed) (* base-speed duck-mult)))
-          (vector-matrix*! arg0 arg0 (matrix-local->world #t #f))
-))))
 
 ;; HL-style movement constants
 (define *hl-max-speed*   50640.0)
@@ -131,7 +153,7 @@
 (define *fall-damage-threshold* 30000.0) ;; Distance/impact to start taking damage (tweak to feel right)
 
 (defbehavior apply-fall-status target ()
-  (print "FALL DAMAGE")
+  (format 0 "FALL DAMAGE~%")
   (play-sound-file "sound_replacements/pl_jumpland2.wav" 50)
   (play-sound-file "sound_replacements/pl_pain2.wav" 50)
   (set! *should-take-fall-damage* #f)

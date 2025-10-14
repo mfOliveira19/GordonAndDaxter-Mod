@@ -2108,6 +2108,10 @@
 (goal-src "engine/mods/orb-placer.gc")
 (goal-src "engine/mods/target-hl-handler.gc")
 (goal-src "engine/mods/target-hl-movement.gc")
+(goal-src "engine/mods/hl-inputs-handler.gc")
+(goal-src "engine/mods/hl-weapons/hl-weapons.gc")
+(goal-src "engine/mods/hl-weapons/hl-weapons-crowbar.gc")
+(goal-src "engine/mods/hl-weapons/hl-weapons-pistol.gc")
 
 (goal-src-sequence
  ;; prefix

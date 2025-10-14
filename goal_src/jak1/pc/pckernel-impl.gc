@@ -112,6 +112,34 @@
   :size-assert 20
 )
 
+(deftype keyboard-info (basic)
+  ((key_w        uint8 :offset-assert 4)
+   (key_a        uint8 :offset-assert 5)
+   (key_s        uint8 :offset-assert 6)
+   (key_d        uint8 :offset-assert 7)
+   (key_r        uint8 :offset-assert 8)
+   (key_q        uint8 :offset-assert 9)
+   (key_space    uint8 :offset-assert 10)
+   (key_shift    uint8 :offset-assert 11)
+   (key_ctrl     uint8 :offset-assert 12)
+   (key_alt      uint8 :offset-assert 13)
+   (key_esc      uint8 :offset-assert 14)
+   (key_0        uint8 :offset-assert 15)
+   (key_1        uint8 :offset-assert 16)
+   (key_2        uint8 :offset-assert 17)
+   (key_3        uint8 :offset-assert 18)
+   (key_4        uint8 :offset-assert 19)
+   (key_5        uint8 :offset-assert 20)
+   (key_6        uint8 :offset-assert 21)
+   (key_7        uint8 :offset-assert 22)
+   (key_8        uint8 :offset-assert 23)
+   (key_9        uint8 :offset-assert 24))
+  (:methods
+    (new (symbol type int) _type_))
+  :method-count-assert 9
+  :size-assert 25
+)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; debug settings
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -197,3 +225,4 @@
 (define *mouse-data* (new 'global 'mouse-info 0))
 (define *mouse-sens* 8.0)
 (define *auto-jump* #t)
+(define *keyboard-data* (new 'global 'keyboard-info 0))

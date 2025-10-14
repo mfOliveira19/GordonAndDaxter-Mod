@@ -69,6 +69,9 @@ class InputManager {
   MouseDevice::MouseButtonStatus get_mouse_button_status() const {
     return m_mouse.get_mouse_button_status();
   }
+  KeyboardDevice::KeyboardKeyStatus get_keyboard_key_status() const {
+    return m_keyboard.get_key_status();
+  }
   float get_mouse_scroll_y() const { return m_mouse.get_mouse_scroll_y(); }
 
   // These functions can be called from the EE and interact with SDL directly

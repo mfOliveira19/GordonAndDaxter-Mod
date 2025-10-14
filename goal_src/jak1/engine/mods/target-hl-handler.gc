@@ -245,8 +245,6 @@
        (go target-load-wait)))
     (('change-mode)
      (case (-> arg3 param 0)
-       (('grab) (go target-grab))
-       (('look-around) (go target-look-around))
        (('billy) (go target-billy-game))
        (('falling) (go target-falling #f))
        (('racing) (go target-racing-start (process->handle (the-as process (-> arg3 param 1)))))

@@ -68,13 +68,14 @@ enum class BucketId {
   MERC_WATER_LEVEL1 = 61,
   GENERIC_WATER_LEVEL1 = 62,
   OCEAN_NEAR = 63,
-  DEPTH_CUE = 64,
-  PRE_SPRITE_TEX = 65,  // maybe it's just common textures?
-  SPRITE = 66,
-  DEBUG = 67,
-  DEBUG_NO_ZBUF = 68,
-  SUBTITLE = 69,
-  MAX_BUCKETS = 70
+  VIEWMODEL = 64,
+  DEPTH_CUE = 65,
+  PRE_SPRITE_TEX = 66,  // maybe it's just common textures?
+  SPRITE = 67,
+  DEBUG = 68,
+  DEBUG_NO_ZBUF = 69,
+  SUBTITLE = 70,
+  MAX_BUCKETS = 71
 };
 }
 

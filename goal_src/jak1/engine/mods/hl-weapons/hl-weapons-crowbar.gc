@@ -1,0 +1,67 @@
+(in-package goal)
+(require "engine/mods/hl-weapons.gc")
+(require "engine/mods/hl-inputs-handler.gc")
+
+(defconstant crowbar-attack-cooldown (seconds 0.5))
+(defconstant crowbar-sound-path "sound_replacements/cbar_miss1.wav")
+(defconstant crowbar-draw-duration (seconds 1.0))
+
+(defbehavior crowbar-switch-handle hl-weapons ()
+  (when (and (should-switch-slot2?)
+             (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
+             (not (= (-> self current-weapon) (weapons-enum pistol))))
+    (set-time! (-> self weapon-last-switch-time))
+    (set-time! (-> self weapon-last-switch-time))
+    (go pistol-draw)))
+
+(defstate crowbar-draw (hl-weapons)
+  :enter
+  (behavior ()
+    (hl-set-weapon (weapons-enum crowbar))
+    (viewmodel-play-animation (viewmodel-animations-enum draw))
+    (set! (-> self weapon-last-attack-time) (current-time)))
+  
+  :trans
+  (behavior ()
+    (when (time-elapsed? (-> self weapon-last-attack-time) crowbar-draw-duration)
+      (go crowbar-idle))
+    (crowbar-switch-handle))
+  :code
+  (behavior ()
+    (loop (suspend))))
+
+(defstate crowbar-idle (hl-weapons)
+  :trans
+  (behavior ()
+    (crowbar-switch-handle)
+    (when (and (should-attack?)
+               (time-elapsed? (-> self weapon-last-attack-time) crowbar-attack-cooldown))
+      (go crowbar-attack-miss)))
+  :code
+  (behavior ()
+    (loop (suspend)))
+)
+
+(defstate crowbar-attack-miss (hl-weapons)
+  :enter
+  (behavior ()
+    (set! (-> self crowbar-swing-index) (mod (+ (-> self crowbar-swing-index) 1) 3))
+    (let ((anim (case (-> self crowbar-swing-index)
+                  ((0) (viewmodel-animations-enum crowbar-attack1))
+                  ((1) (viewmodel-animations-enum crowbar-attack2))
+                  ((2) (viewmodel-animations-enum crowbar-attack3))
+                  (else (viewmodel-animations-enum crowbar-attack1)))))
+      (viewmodel-play-animation anim)
+      (play-sound-file crowbar-sound-path 50)
+      (set-time! (-> self weapon-last-attack-time))))
+  
+  :trans
+  (behavior ()
+    (crowbar-switch-handle)
+    (when (time-elapsed? (-> self weapon-last-attack-time) crowbar-attack-cooldown)
+      (go crowbar-idle)))
+  
+  :code
+  (behavior ()
+    (loop (suspend)))
+)

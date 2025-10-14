@@ -909,13 +909,24 @@ void pc_set_keyboard_enabled(u32 sym_val) {
   }
 }
 
+u64 pc_get_keyboard_data(u64 keyboard_info) {
+  auto keyboard_status = Ptr<KeyboardDevice::KeyboardKeyStatus>(keyboard_info).c();
+  if (Display::GetMainDisplay()) {
+    const auto& keyboard_key_status =
+        Display::GetMainDisplay()->get_input_manager()->get_keyboard_key_status();
+
+   *keyboard_status = keyboard_key_status;
+  }
+
+  return keyboard_info;
+}
+
 u64 pc_get_mouse_data(u64 mouse_info) {
   auto mouse = Ptr<MouseInfo>(mouse_info).c();
   if (Display::GetMainDisplay()) {
     auto rel_values = Display::GetMainDisplay()->get_input_manager()->get_mouse_rel_pos();
     auto button_status = Display::GetMainDisplay()->get_input_manager()->get_mouse_button_status();
     auto scroll_y = Display::GetMainDisplay()->get_input_manager()->get_mouse_scroll_y();
-    auto mouse = Ptr<MouseInfo>(mouse_info).c();
     mouse->relx = rel_values.first;
     mouse->rely = rel_values.second;
     mouse->mouse1 = button_status.left;
@@ -1136,6 +1147,26 @@ void pc_set_letterbox(int w, int h) {
   Gfx::g_global_settings.lbox_h = h;
 }
 
+void pc_renderer_viewmodel_set_active_model(int model) {
+  Gfx::g_global_settings.viewmodel_active_model = model;
+}
+
+void pc_renderer_viewmodel_set_active_animation(int animation) {
+  Gfx::g_global_settings.viewmodel_active_animation = animation;
+}
+
+void pc_renderer_viewmodel_set_offset_z(u32 offset_z) {
+  float offset_val;
+  memcpy(&offset_val, &offset_z, 4);
+  Gfx::g_global_settings.viewmodel_offset_z = offset_val;
+}
+
+void pc_renderer_viewmodel_set_rotation_x(u32 rotation_x) {
+  float rotation_val;
+  memcpy(&rotation_val, &rotation_x, 4);
+  Gfx::g_global_settings.viewmodel_rotation_x = rotation_val;
+}
+
 void pc_renderer_tree_set_lod(Gfx::RendererTreeType tree, int lod) {
   switch (tree) {
     case Gfx::RendererTreeType::TFRAG3:
@@ -1292,6 +1323,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-set-controller!", (void*)pc_set_controller);
   make_func_symbol_func("pc-get-keyboard-enabled?", (void*)pc_get_keyboard_enabled);
   make_func_symbol_func("pc-set-keyboard-enabled!", (void*)pc_set_keyboard_enabled);
+  make_func_symbol_func("pc-get-keyboard-data", (void*)pc_get_keyboard_data);
   make_func_symbol_func("pc-get-mouse-data", (void*)pc_get_mouse_data);
   make_func_symbol_func("pc-set-mouse-options!", (void*)pc_set_mouse_options);
   make_func_symbol_func("pc-set-mouse-camera-sens!", (void*)pc_set_mouse_camera_sens);
@@ -1337,6 +1369,10 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-set-collision-wireframe", (void*)pc_set_collision_wireframe);
   make_func_symbol_func("pc-set-collision", (void*)pc_set_collision);
   make_func_symbol_func("pc-set-gfx-hack", (void*)pc_set_gfx_hack);
+  make_func_symbol_func("pc-set-viewmodel-active-model", (void*)pc_renderer_viewmodel_set_active_model);
+  make_func_symbol_func("pc-set-viewmodel-active-animation", (void*)pc_renderer_viewmodel_set_active_animation);
+  make_func_symbol_func("pc-set-viewmodel-offset-z", (void*)pc_renderer_viewmodel_set_offset_z);
+  make_func_symbol_func("pc-set-viewmodel-rotation-x", (void*)pc_renderer_viewmodel_set_rotation_x);
 
   // -- OTHER --
   // Return the current OS as a symbol. Actually returns what it was compiled for!

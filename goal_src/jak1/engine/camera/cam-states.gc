@@ -398,7 +398,9 @@
                   ;; Y movement affects pitch (x axis)
                   (set! (-> s4-0 x) (+ (-> s4-0 x) (* delta-y *mouse-sens*)))
                   ;; X movement affects yaw (y axis)
-                  (set! (-> s4-0 y) (- (-> s4-0 y) (* delta-x *mouse-sens*)))))
+                  (set! (-> s4-0 y) (- (-> s4-0 y) (* delta-x *mouse-sens*)))
+                  
+                  ))
               (matrix-axis-angle! s5-0 (-> *camera* local-down) (-> s4-0 y))
               (matrix*! (the-as matrix (-> self tracking)) (the-as matrix (-> self tracking)) s5-0)
               (when (not (logtest? (-> self options) 8))

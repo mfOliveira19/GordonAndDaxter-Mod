@@ -312,7 +312,7 @@ set(RUNTIME_SOURCE
 add_subdirectory(sound)
 
 # we build the runtime as a static library.
-add_library(runtime STATIC ${RUNTIME_SOURCE} "../third-party/glad/src/glad.c")
+add_library(runtime STATIC ${RUNTIME_SOURCE} "../third-party/glad/src/glad.c" "graphics/opengl_renderer/foreground/ViewmodelBucketRenderer.cpp" "graphics/opengl_renderer/foreground/Viewmodel.cpp" "graphics/opengl_renderer/foreground/Viewmodel.h")
 
 target_link_libraries(runtime common fmt SDL3::SDL3 imgui discord-rpc sound stb_image libco libcurl)
 if(WIN32)
@@ -321,7 +321,7 @@ else()
     target_link_libraries(runtime pthread dl)
 endif()
 
-add_executable(gk main.cpp)
+add_executable(gk main.cpp "graphics/opengl_renderer/foreground/ViewmodelBucketRenderer.cpp" "graphics/opengl_renderer/foreground/Viewmodel.cpp" "graphics/opengl_renderer/foreground/Viewmodel.h")
 target_link_libraries(gk runtime)
 if(WIN32)
     set_target_properties(gk PROPERTIES VS_DPI_AWARE "PerMonitor")

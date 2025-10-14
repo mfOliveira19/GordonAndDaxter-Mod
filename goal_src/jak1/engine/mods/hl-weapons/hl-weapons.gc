@@ -1,0 +1,86 @@
+(in-package goal)
+(require "engine/mods/hl-inputs-handler.gc")
+
+(defenum weapons-enum
+  :type uint16
+  (crowbar 0)
+  (pistol 1)
+  (smg 2))
+
+(defenum viewmodel-animations-enum
+  :type uint16
+  (draw 0)
+  (crowbar-attack1 1)
+  (crowbar-attack1-miss 2)
+  (crowbar-attack2 3)
+  (crowbar-attack2-hit 4)
+  (crowbar-attack3 5)
+  (crowbar-attack3-hit 6)
+  (pistol-idle1 7)
+  (pistol-idle2 8)
+  (pistol-idle3 9)
+  (pistol-shoot 10)
+  (pistol-shoot-empty 11)
+  (pistol-reload 12)
+  (pistol-reload-noshot 13)
+  (smg-idle1 14)
+  (smg-longidle 15)
+  (smg-shoot 16)
+  (smg-shoot2 17)
+  (smg-shoot3 18)
+  (smg-reload 19)
+  (smg-grenade 20))
+
+(deftype hl-weapons (process)
+  ((current-weapon          weapons-enum)
+   (weapon-last-attack-time time-frame)
+   (weapon-last-switch-time time-frame)
+   (weapon-last-reload-time time-frame)
+   (crowbar-swing-index     uint16))
+  (:methods)
+  (:states
+   crowbar-draw
+   crowbar-idle
+   crowbar-attack-miss
+   pistol-draw
+   pistol-idle
+   pistol-attack
+   pistol-reload-part1
+   pistol-reload-part2))
+
+(defconstant weapon-switch-cooldown (seconds 0.05))
+
+(defbehavior hl-weapons-init-by-other hl-weapons ()
+  (set-time! (-> self weapon-last-attack-time))
+  (format 0 "HL Weapons process initialized.~%")
+  (go crowbar-draw))
+
+(defun init-hl-weapons! ()
+    (process-spawn hl-weapons :from *4k-dead-pool* :to *active-pool* :stack *kernel-dram-stack* :stack-size #x4000 :name 'hl-weapon-proc)
+  (none)
+)
+(defun viewmodel-play-animation ((animation viewmodel-animations-enum))
+  (pc-set-viewmodel-active-animation (the-as int animation)))
+
+(defbehavior hl-set-weapon hl-weapons ((weapon weapons-enum))
+  (set! (-> self current-weapon) weapon)
+  (pc-set-viewmodel-active-model (the-as int weapon)))
+#|
+(defun target-set-weapon ((weapon weapons-enum))
+  (pc-set-viewmodel-active-model (the-as int weapon))
+  (set-time! *weapon-last-attack-time*)
+  (set-time! *pistol-reload-part2-start-time*)
+  (set! *pistol-playing-reload-part2* #f)
+  (set-time! *smg-reload-part2-start-time*)
+  (set! *smg-playing-reload-part2* #f)
+  (set! *current-weapon* weapon))
+|#
+
+#|
+(defun launch-weapon-process ()
+  "Call this to launch the weapons logic process"
+  (let ((proc (get-process *nk-dead-pool* process #x4000)))
+    (activate proc *target-pool* 'hl-weapons *kernel-dram-stack*)
+    (run-next-time-in-process proc (lambda () (let ((iter 0)) (while #t (go crowbar-idle) (suspend) (+! iter 1)))))
+    proc))
+|#

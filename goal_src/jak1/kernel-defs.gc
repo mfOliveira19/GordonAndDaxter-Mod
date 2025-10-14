@@ -263,6 +263,8 @@
 
 (declare-type mouse-info structure)
 
+(declare-type keyboard-info structure)
+
 (declare-type discord-info structure)
 
 (define-extern cpad-open (function cpad-info int cpad-info))
@@ -468,6 +470,8 @@
 
 (define-extern pc-set-keyboard-enabled! (function symbol none))
 
+(define-extern pc-get-keyboard-data (function keyboard-info keyboard-info))
+
 (define-extern pc-get-mouse-data (function mouse-info mouse-info))
 
 (define-extern pc-set-mouse-options! (function symbol symbol symbol none))
@@ -539,6 +543,14 @@
 (define-extern pc-set-vsync (function symbol none))
 
 (define-extern pc-renderer-tree-set-lod (function pc-renderer-tree-type int none))
+
+(define-extern pc-set-viewmodel-active-model (function int none))
+
+(define-extern pc-set-viewmodel-active-animation (function int none))
+
+(define-extern pc-set-viewmodel-offset-z (function float none))
+
+(define-extern pc-set-viewmodel-rotation-x (function float none))
 
 (define-extern pc-set-letterbox (function int int none))
 

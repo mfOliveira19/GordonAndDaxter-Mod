@@ -164,7 +164,7 @@
 ;; order that textures are uploaded and things are drawn.
 
 ;; there is typically a texture upload bucket followed by renderer-specific draw buckets.
-(defconstant BUCKET_COUNT (#if PC_PORT 70 69))
+(defconstant BUCKET_COUNT (#if PC_PORT 71 70))
 
 (defenum bucket-id
   :type int32
@@ -233,13 +233,15 @@
   (merc-water1 61)
   (generic-water1 62)
   (ocean-near 63) ; ocean
-  (depth-cue 64)
-  (common-page-tex 65)
-  (sprite 66)
-  (debug 67)
-  (debug-no-zbuf 68)
+  (viewmodel 64)
+  (depth-cue 65)
+  (common-page-tex 66)
+  (sprite 67)
+  (debug 68)
+  (debug-no-zbuf 69)
   ;; extra buckets for pc port
-  (subtitle 69))
+  (subtitle 70)
+  )
 
 ;; A DMA bucket is a way of sorting data within a dma buffer.
 ;; The buckets themselves live inside in the dma buffer.

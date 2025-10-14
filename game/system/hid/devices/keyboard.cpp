@@ -102,6 +102,31 @@ void KeyboardDevice::poll_state(std::shared_ptr<PadData> data) {
       it++;
     }
   }
+
+  // To check the keyboard status without mapping to a controller
+  m_key_status.w = keyboard_state[SDL_SCANCODE_W];
+  m_key_status.a = keyboard_state[SDL_SCANCODE_A];
+  m_key_status.s = keyboard_state[SDL_SCANCODE_S];
+  m_key_status.d = keyboard_state[SDL_SCANCODE_D];
+  m_key_status.r = keyboard_state[SDL_SCANCODE_R];
+  m_key_status.q = keyboard_state[SDL_SCANCODE_Q];
+  m_key_status.space = keyboard_state[SDL_SCANCODE_SPACE];
+  m_key_status.shift = (keyboard_state[SDL_SCANCODE_LSHIFT] || keyboard_state[SDL_SCANCODE_RSHIFT]);
+  m_key_status.ctrl = (keyboard_state[SDL_SCANCODE_LCTRL] || keyboard_state[SDL_SCANCODE_RCTRL]);
+  m_key_status.alt = (keyboard_state[SDL_SCANCODE_LALT] || keyboard_state[SDL_SCANCODE_RALT]);
+  m_key_status.esc = keyboard_state[SDL_SCANCODE_ESCAPE];
+
+  m_key_status.k_0 = keyboard_state[SDL_SCANCODE_0];
+  m_key_status.k_1 = keyboard_state[SDL_SCANCODE_1];
+  m_key_status.k_2 = keyboard_state[SDL_SCANCODE_2];
+  m_key_status.k_3 = keyboard_state[SDL_SCANCODE_3];
+  m_key_status.k_4 = keyboard_state[SDL_SCANCODE_4];
+  m_key_status.k_5 = keyboard_state[SDL_SCANCODE_5];
+  m_key_status.k_6 = keyboard_state[SDL_SCANCODE_6];
+  m_key_status.k_7 = keyboard_state[SDL_SCANCODE_7];
+  m_key_status.k_8 = keyboard_state[SDL_SCANCODE_8];
+  m_key_status.k_9 = keyboard_state[SDL_SCANCODE_9];
+
 }
 
 void KeyboardDevice::clear_actions(std::shared_ptr<PadData> data) {

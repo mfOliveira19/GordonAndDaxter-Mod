@@ -20,6 +20,30 @@ struct ActiveKeyboardAction {
 
 class KeyboardDevice : public InputDevice {
  public:
+  struct KeyboardKeyStatus {
+    bool w = false;
+    bool a = false;
+    bool s = false;
+    bool d = false;
+    bool r = false;
+    bool q = false;
+    bool space = false;
+    bool shift = false;
+    bool ctrl = false;
+    bool alt = false;
+    bool esc = false;
+    bool k_0 = false;
+    bool k_1 = false;
+    bool k_2 = false;
+    bool k_3 = false;
+    bool k_4 = false;
+    bool k_5 = false;
+    bool k_6 = false;
+    bool k_7 = false;
+    bool k_8 = false;
+    bool k_9 = false;
+  };
+
   KeyboardDevice() {};
   KeyboardDevice(std::shared_ptr<game_settings::InputSettings> settings);
   ~KeyboardDevice() {}
@@ -31,6 +55,7 @@ class KeyboardDevice : public InputDevice {
                      const CommandBindingGroups& commands,
                      std::shared_ptr<PadData> data,
                      std::optional<InputBindAssignmentMeta>& bind_assignment) override;
+  KeyboardKeyStatus get_key_status() const { return m_key_status; }
   // clang-format off
   void close_device() override {
     // there is nothing to close
@@ -44,4 +69,5 @@ class KeyboardDevice : public InputDevice {
   std::optional<u32> m_ignore_key_on_keyup;
 
   bool is_action_already_active(const u32 sdl_keycode);
+  KeyboardKeyStatus m_key_status;
 };

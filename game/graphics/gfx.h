@@ -101,6 +101,12 @@ struct GfxGlobalSettings {
   u32 collision_skip_mask = 0;
   u32 collision_skip_hide_mask = 0;
   bool collision_skip_nomask_allowed = true;
+
+  // Viewmodel stats
+  int viewmodel_active_model = 0;
+  int viewmodel_active_animation = 0;
+  float viewmodel_offset_z = 0.0;
+  float viewmodel_rotation_x = 0.0;
 };
 
 namespace Gfx {

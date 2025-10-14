@@ -346,14 +346,20 @@
   "plat-eco.o"
   "ropebridge.o"
   "ticky.o"
+  ;; hl mod stuff
+  "hl-inputs-handler.o"
+  "hl-weapons.o"
+  "hl-weapons-crowbar.o"
+  "hl-weapons-pistol.o"
+  "target-hl-handler.o"
+  "target-hl-movement.o"
+  ;;
   "hud-classes-pc.o" ;; added
   "mod-settings.o" ;; added mod-base-change
   "mod-common-functions.o" ;; added
   "orb-placer.o" ;; added
   "mod-custom-code.o" ;; added
   "mod-debug.o" ;; added
-  "target-hl-handler.o"
-  "target-hl-movement.o"
   ;; keep zoomer stuff loaded
   "target-racer-h.o"
   "racer-part.o"

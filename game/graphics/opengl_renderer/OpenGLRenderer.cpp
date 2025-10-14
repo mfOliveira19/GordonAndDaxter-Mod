@@ -25,7 +25,9 @@
 #include "game/graphics/opengl_renderer/ocean/OceanMidAndFar.h"
 #include "game/graphics/opengl_renderer/ocean/OceanNear.h"
 #include "game/graphics/opengl_renderer/sprite/Sprite3.h"
+#include "game/graphics/opengl_renderer/foreground/ViewmodelBucketRenderer.h"
 #include "game/graphics/pipelines/opengl.h"
+#include "game/graphics/opengl_renderer/foreground/Viewmodel.h"
 
 #include "third-party/imgui/imgui.h"
 #include "third-party/imgui/imgui_stdlib.h"
@@ -145,6 +147,7 @@ OpenGLRenderer::OpenGLRenderer(std::shared_ptr<TexturePool> texture_pool,
 
   m_merc2 = std::make_shared<Merc2>(m_render_state.shaders, anim_slot_array());
   m_generic2 = std::make_shared<Generic2>(m_render_state.shaders);
+  m_viewmodel = std::make_shared<Viewmodel>();
 
   // initialize all renderers
   auto p = scoped_prof("init-bucket-renderers");
@@ -867,6 +870,10 @@ void OpenGLRenderer::init_bucket_renderers_jak1() {
                                        BucketId::DEBUG_NO_ZBUF, 0x8000);
   // an extra custom bucket!
   init_bucket_renderer<DirectRenderer>("subtitle", BucketCategory::OTHER, BucketId::SUBTITLE, 6000);
+  
+  // Initialize viewmodel bucket
+  init_bucket_renderer<ViewmodelBucketRenderer>("viewmodel", BucketCategory::OTHER,
+                                                BucketId::VIEWMODEL, m_viewmodel);
 
   // for now, for any unset renderers, just set them to an EmptyBucketRenderer.
   for (size_t i = 0; i < m_bucket_renderers.size(); i++) {

@@ -1,5 +1,6 @@
 ;;-*-Lisp-*-
 (in-package goal)
+(require "engine/mods/hl-weapons/hl-weapons.gc")
 
 ;; name: mod-custom-code.gc
 ;; name in dgo: mod-custom-code
@@ -28,6 +29,7 @@
   (send-event *camera* 'set-fov 16384.845)
   (send-event *camera* 'change-state cam-fps 0)
   (pc-get-mouse-data *mouse-data*)
+  (pc-get-keyboard-data *keyboard-data*)
   ;;(send-event *camera* 'set-slave-option (cam-slave-options ALLOW_Z_ROT))
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
   (when *debug-segment*
@@ -87,6 +89,7 @@
   ;; Code here runs every time jak spawns (loading a file new game or death)
   ;;uncomment this to use custom music for custom levels - the function is in mod-common-functions.gc
   ;;(process-spawn-function process music-manager-proc)
+  (init-hl-weapons!)
   (none))
 
 (defun runs-on-jak-death ((death-event symbol))
