@@ -548,9 +548,13 @@
 
 (define-extern pc-set-viewmodel-active-animation (function int none))
 
+(define-extern pc-set-viewmodel-animation-speed (function float none))
+
 (define-extern pc-set-viewmodel-offset-z (function float none))
 
 (define-extern pc-set-viewmodel-rotation-x (function float none))
+
+(define-extern pc-set-crosshair-current-crosshair (function int none))
 
 (define-extern pc-set-letterbox (function int int none))
 

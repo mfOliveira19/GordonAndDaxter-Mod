@@ -105,8 +105,11 @@ struct GfxGlobalSettings {
   // Viewmodel stats
   int viewmodel_active_model = 0;
   int viewmodel_active_animation = 0;
+  float viewmodel_animation_speed = 1.0;
   float viewmodel_offset_z = 0.0;
   float viewmodel_rotation_x = 0.0;
+  // Crosshair
+  int current_crosshair = 0;
 };
 
 namespace Gfx {

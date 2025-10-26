@@ -2112,6 +2112,7 @@
 (goal-src "engine/mods/hl-weapons/hl-weapons.gc")
 (goal-src "engine/mods/hl-weapons/hl-weapons-crowbar.gc")
 (goal-src "engine/mods/hl-weapons/hl-weapons-pistol.gc")
+(goal-src "engine/mods/hl-weapons/hl-weapons-smg.gc")
 
 (goal-src-sequence
  ;; prefix

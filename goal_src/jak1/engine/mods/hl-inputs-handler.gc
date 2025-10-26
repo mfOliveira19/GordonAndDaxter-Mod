@@ -88,3 +88,7 @@
             (set! (-> self control pad-stick-speed) (* base-speed duck-mult)))
           (vector-matrix*! arg0 arg0 (matrix-local->world #t #f))
 ))))
+
+(defun get-camera-pitch ()
+  (-> (the-as camera-slave (-> *camera* slave 0))
+      tracking inv-mat vector 0 w))

@@ -133,6 +133,8 @@ ShaderLibrary::ShaderLibrary(GameVersion version) {
   at(ShaderId::PLAIN_TEXTURE) = {"plain_texture", version};
   at(ShaderId::TIE_WIND) = {"tie_wind", version};
   at(ShaderId::VIEWMODEL) = {"viewmodel", version};
+  at(ShaderId::CROSSHAIR) = {"crosshair", version};
+  at(ShaderId::MUZZLE_FLASH) = {"muzzle_flash", version};
 
   for (auto& shader : m_shaders) {
     ASSERT_MSG(shader.okay(), "error compiling shader");

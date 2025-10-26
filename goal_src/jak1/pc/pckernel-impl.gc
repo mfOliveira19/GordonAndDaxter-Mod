@@ -223,6 +223,6 @@
 
 ;; I dont know where to place this
 (define *mouse-data* (new 'global 'mouse-info 0))
-(define *mouse-sens* 8.0)
+(define *mouse-sens* 5.0)
 (define *auto-jump* #t)
 (define *keyboard-data* (new 'global 'keyboard-info 0))

@@ -162,8 +162,9 @@ struct Mesh {
   GLuint ibo = 0;
   GLuint index_count = 0;
   GLuint texture = 0;
-
+  float normal[3];
   float color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+  bool useNormalUV = false;
 };
 
 struct ViewmodelResource {
@@ -237,6 +238,15 @@ inline const char* viewmodelAnimationName(ViewmodelAnimations anim) {
   return g_viewmodelAnimationNames[idx];
 }
 
+struct Sprite {
+  GLuint texture = 0;
+  float size = 0.2f;
+  bool visible = false;
+  math::Vector3f position = {0.0f, 0.0f, 0.0f};
+  float rotation = 0.0f;
+  float alpha = 1.0f;
+};
+
 // ----------------------------------
 // Viewmodel class
 // ----------------------------------
@@ -253,6 +263,7 @@ class Viewmodel {
   void draw_debug_window(ViewmodelDebugStats* debug_stats);
   void play_animation_name(const std::string& name);
   int viewmodelActiveModel() { return Gfx::g_global_settings.viewmodel_active_model; };
+  float viewmodelAnimationSpeed() { return Gfx::g_global_settings.viewmodel_animation_speed; };
   ViewmodelAnimations viewmodelActiveAnimation() {
     int val = Gfx::g_global_settings.viewmodel_active_animation;
     if (val < 0 || val > smg_grenade) {
@@ -274,15 +285,15 @@ class Viewmodel {
    float offset_z = 0.0f;
    float scale = 1.0f;
 
-   float cam_x = -1.052f;
-   float cam_y = 2.105f;
-   float cam_z = 8.421f;
+   float cam_x = -0.8f;
+   float cam_y = 1.00f;
+   float cam_z = 1.685f;
 
    float DEG2RAD = 3.14159265f / 180.0f;
 
-   float rot_x = -7.0f * DEG2RAD;
+   float rot_x = -1.0f * DEG2RAD;
    float rot_y = 180.0f * DEG2RAD;
-   float rot_z = 2.0f * DEG2RAD;
+   float rot_z = 0.0f * DEG2RAD;
 
    // Animations
    std::vector<Animation> m_animations;
@@ -300,4 +311,28 @@ class Viewmodel {
    void play_animation(int index);
    bool load_from_file(const std::string& filename, ViewmodelResource& out);
    void set_active_model(int index);
+   GLuint load_texture(const std::string& filename);
+   void draw_muzzle_flash(SharedRenderState* render_state,
+                          GLuint sprite_texture_id,
+                          float size,
+                          const math::Vector3f& muzzle_pos_model,
+                          const math::Matrix4f& model,
+                          const math::Matrix4f& view,
+                          const math::Matrix4f& projection);
+
+   // Muzzle flash
+   Sprite m_muzzle_flash;
+   GLuint m_sprite_vao = 0;
+   GLuint m_sprite_vbo = 0;
+   GLuint m_muzzle_flash_texture_pistol = 0;
+   GLuint m_muzzle_flash_texture_smg = 0;
+   GLuint m_muzzle_flash_texture_smg_2 = 0;
+   float m_muzzle_flash_timer = 0.0f;
+   float m_muzzle_flash_duration = 0.040f;
+   GLuint m_muzzle_flash_texture_current = 0;
+   math::Vector3f m_muzzle_flash_local;
+
+  // Helper
+  //void draw_muzzle_flash(const math::Matrix4f& view_proj);
+  //void trigger_muzzle_flash(ViewmodelAnimations anim);
 };

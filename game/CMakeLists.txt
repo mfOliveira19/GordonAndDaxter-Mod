@@ -55,6 +55,10 @@ set(RUNTIME_SOURCE
         graphics/opengl_renderer/foreground/Merc2.cpp
         graphics/opengl_renderer/foreground/Merc2BucketRenderer.cpp
         graphics/opengl_renderer/foreground/Shadow2.cpp
+        graphics/opengl_renderer/foreground/ViewmodelBucketRenderer.cpp
+        graphics/opengl_renderer/foreground/Viewmodel.cpp
+        graphics/opengl_renderer/foreground/CrosshairBucketRenderer.cpp
+        graphics/opengl_renderer/foreground/Crosshair.cpp
         graphics/opengl_renderer/loader/Loader.cpp
         graphics/opengl_renderer/loader/LoaderStages.cpp
         graphics/opengl_renderer/ocean/CommonOceanRenderer.cpp
@@ -312,7 +316,7 @@ set(RUNTIME_SOURCE
 add_subdirectory(sound)
 
 # we build the runtime as a static library.
-add_library(runtime STATIC ${RUNTIME_SOURCE} "../third-party/glad/src/glad.c" "graphics/opengl_renderer/foreground/ViewmodelBucketRenderer.cpp" "graphics/opengl_renderer/foreground/Viewmodel.cpp" "graphics/opengl_renderer/foreground/Viewmodel.h")
+add_library(runtime STATIC ${RUNTIME_SOURCE} "../third-party/glad/src/glad.c")
 
 target_link_libraries(runtime common fmt SDL3::SDL3 imgui discord-rpc sound stb_image libco libcurl)
 if(WIN32)
@@ -321,7 +325,7 @@ else()
     target_link_libraries(runtime pthread dl)
 endif()
 
-add_executable(gk main.cpp "graphics/opengl_renderer/foreground/ViewmodelBucketRenderer.cpp" "graphics/opengl_renderer/foreground/Viewmodel.cpp" "graphics/opengl_renderer/foreground/Viewmodel.h")
+add_executable(gk main.cpp)
 target_link_libraries(gk runtime)
 if(WIN32)
     set_target_properties(gk PROPERTIES VS_DPI_AWARE "PerMonitor")

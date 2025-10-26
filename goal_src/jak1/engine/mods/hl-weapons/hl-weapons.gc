@@ -10,12 +10,14 @@
 (defenum viewmodel-animations-enum
   :type uint16
   (draw 0)
+  ;; crowbar
   (crowbar-attack1 1)
   (crowbar-attack1-miss 2)
   (crowbar-attack2 3)
   (crowbar-attack2-hit 4)
   (crowbar-attack3 5)
   (crowbar-attack3-hit 6)
+  ;; pistol
   (pistol-idle1 7)
   (pistol-idle2 8)
   (pistol-idle3 9)
@@ -23,6 +25,7 @@
   (pistol-shoot-empty 11)
   (pistol-reload 12)
   (pistol-reload-noshot 13)
+  ;; smg
   (smg-idle1 14)
   (smg-longidle 15)
   (smg-shoot 16)
@@ -32,21 +35,37 @@
   (smg-grenade 20))
 
 (deftype hl-weapons (process)
-  ((current-weapon          weapons-enum)
-   (weapon-last-attack-time time-frame)
-   (weapon-last-switch-time time-frame)
-   (weapon-last-reload-time time-frame)
-   (crowbar-swing-index     uint16))
+  ((current-weapon                 weapons-enum)
+   (weapon-last-attack-time        time-frame)
+   (weapon-last-second-attack-time time-frame)
+   (weapon-last-switch-time        time-frame)
+   (weapon-last-reload-time        time-frame)
+   (weapon-last-idle-time          time-frame)
+   (weapon-next-idle-wait          time-frame)
+   (current-aim-punch-last-update  time-frame)
+   (crowbar-swing-index            uint16)
+   (current-aim-punch              float))
   (:methods)
   (:states
-   crowbar-draw
-   crowbar-idle
-   crowbar-attack-miss
-   pistol-draw
-   pistol-idle
-   pistol-attack
-   pistol-reload-part1
-   pistol-reload-part2))
+    ;; crowbar
+    crowbar-draw
+    crowbar-idle
+    crowbar-attack-miss
+    ;; pistol
+    pistol-draw
+    pistol-idle
+    pistol-idle-anim
+    pistol-attack
+    pistol-reload-part1
+    pistol-reload-part2
+    ;; smg
+    smg-draw
+    smg-idle
+    smg-idle-anim
+    smg-attack
+    smg-reload-part1
+    smg-reload-part2
+    smg-grenade))
 
 (defconstant weapon-switch-cooldown (seconds 0.05))
 
@@ -56,31 +75,41 @@
   (go crowbar-draw))
 
 (defun init-hl-weapons! ()
-    (process-spawn hl-weapons :from *4k-dead-pool* :to *active-pool* :stack *kernel-dram-stack* :stack-size #x4000 :name 'hl-weapon-proc)
-  (none)
-)
-(defun viewmodel-play-animation ((animation viewmodel-animations-enum))
+    (process-spawn hl-weapons :from *nk-dead-pool* :to *active-pool* :stack *kernel-dram-stack* :stack-size #x4000 :name 'hl-weapon-proc)
+  (none))
+
+(defun viewmodel-play-animation ((animation viewmodel-animations-enum) (anim-speed float))
+  (pc-set-viewmodel-animation-speed anim-speed)
   (pc-set-viewmodel-active-animation (the-as int animation)))
+
+(defbehavior hl-set-crosshair hl-weapons ((weapon weapons-enum))
+  (pc-set-crosshair-current-crosshair (the-as int weapon)))
 
 (defbehavior hl-set-weapon hl-weapons ((weapon weapons-enum))
   (set! (-> self current-weapon) weapon)
-  (pc-set-viewmodel-active-model (the-as int weapon)))
-#|
-(defun target-set-weapon ((weapon weapons-enum))
   (pc-set-viewmodel-active-model (the-as int weapon))
-  (set-time! *weapon-last-attack-time*)
-  (set-time! *pistol-reload-part2-start-time*)
-  (set! *pistol-playing-reload-part2* #f)
-  (set-time! *smg-reload-part2-start-time*)
-  (set! *smg-playing-reload-part2* #f)
-  (set! *current-weapon* weapon))
-|#
+  (hl-set-crosshair weapon))
 
-#|
-(defun launch-weapon-process ()
-  "Call this to launch the weapons logic process"
-  (let ((proc (get-process *nk-dead-pool* process #x4000)))
-    (activate proc *target-pool* 'hl-weapons *kernel-dram-stack*)
-    (run-next-time-in-process proc (lambda () (let ((iter 0)) (while #t (go crowbar-idle) (suspend) (+! iter 1)))))
-    proc))
-|#
+(defbehavior hl-choose-idle-wait! hl-weapons ((min-secs float) (max-secs float))
+  (let ((rand-secs (rand-vu-float-range min-secs max-secs)))
+    (set! (-> self weapon-next-idle-wait) (the-as time-frame (seconds rand-secs)))
+    (set-time! (-> self weapon-last-idle-time))))
+
+(defun set-camera-pitch ((new-pitch float))
+  (set! (-> (the-as camera-slave (-> *camera* slave 0)) tracking inv-mat vector 0 w) new-pitch))
+
+(defbehavior add-aim-punch hl-weapons ((amount float))
+  (set-camera-pitch (+ (get-camera-pitch) amount))
+  (set! (-> self current-aim-punch) (+ (-> self current-aim-punch) amount)))
+
+(defbehavior update-aim-punch hl-weapons ((decay-rate float))
+  (let ((p (-> self current-aim-punch)))
+    (when (> (abs p) 0.0001) ;; only decay if there's actual punch left
+      (let ((decay (* p decay-rate)))
+        ;; decay shouldn't exceed the current punch
+        (when (> (abs decay) (abs p))
+          (set! decay p))
+        ;; apply decay to camera
+        (set-camera-pitch (- (get-camera-pitch) decay))
+        ;; update stored punch
+        (set! (-> self current-aim-punch) (- p decay))))))

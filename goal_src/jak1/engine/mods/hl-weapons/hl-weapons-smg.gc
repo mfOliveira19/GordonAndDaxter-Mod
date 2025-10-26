@@ -1,0 +1,214 @@
+(in-package goal)
+(require "engine/mods/hl-weapons.gc")
+(require "engine/mods/hl-inputs-handler.gc")
+(require "engine/mods/hl-weapons.gc")
+(require "engine/mods/hl-inputs-handler.gc")
+
+(defconstant smg-attack-cooldown (seconds 0.1))
+(defconstant smg-reload-duration (seconds 1.5))
+(defconstant smg-draw-duration (seconds 0.5))
+(defconstant smg-grenade-cooldown (seconds 1.0))
+(defconstant smg-attack-sound1 "sound_replacements/hks1.wav")
+(defconstant smg-attack-sound2 "sound_replacements/hks2.wav")
+(defconstant smg-attack-sound3 "sound_replacements/hks3.wav")
+(defconstant smg-reload-sound1 "sound_replacements/cliprelease1.wav")
+(defconstant smg-reload-sound2 "sound_replacements/clipinsert1.wav")
+(defconstant smg-grenade-sound "sound_replacements/glauncher.wav")
+(defconstant smg-grenade-sound2 "sound_replacements/glauncher2.wav")
+(defconstant smg-reload-part1-duration (seconds 0.8))
+(defconstant smg-reload-part2-duration (seconds 1.0))
+(defconstant smg-idle1-duration (seconds 5.0))
+(defconstant smg-idle2-duration (seconds 3.0))
+(defconstant smg-aim-punch-decay 0.1)
+(defconstant smg-aim-punch-amount 0.03)
+(defconstant smg-grenade-aim-punch 0.2)
+
+(defbehavior smg-switch-handle hl-weapons ()
+  (when (and (should-switch-slot1?)
+             (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
+             (not (= (-> self current-weapon) (weapons-enum crowbar))))
+    (set-time! (-> self weapon-last-switch-time))
+    (set-time! (-> self weapon-last-switch-time))
+    (go crowbar-draw))
+  (when (and (should-switch-slot2?)
+             (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
+             (not (= (-> self current-weapon) (weapons-enum pistol))))
+    (set-time! (-> self weapon-last-switch-time))
+    (set-time! (-> self weapon-last-switch-time))
+    (go pistol-draw)))
+
+(defstate smg-draw (hl-weapons)
+  :enter
+  (behavior ()
+    (hl-set-weapon (weapons-enum smg))
+    (viewmodel-play-animation (viewmodel-animations-enum draw) 0.5)
+    (hl-choose-idle-wait! 0.0 0.0)
+    (set-time! (-> self weapon-last-switch-time))
+    (set-time! (-> self weapon-last-second-attack-time))
+    (set-time! (-> self weapon-last-attack-time)))
+  :trans
+  (behavior ()
+    (smg-switch-handle)
+    (when (time-elapsed? (-> self weapon-last-attack-time) smg-draw-duration)
+      (go smg-idle)))
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post
+  (behavior ()
+    (update-aim-punch smg-aim-punch-decay)))
+
+(defstate smg-idle (hl-weapons)
+  :enter
+  (behavior ()
+    (when (= (-> self weapon-next-idle-wait) 0)
+      (hl-choose-idle-wait! 1.0 1.0)
+      (set-time! (-> self weapon-last-idle-time))))
+  :trans
+  (behavior ()
+    (smg-switch-handle)
+    ;; primary fire
+    (when (and (should-attack?)
+               (time-elapsed? (-> self weapon-last-attack-time) smg-attack-cooldown))
+      (go smg-attack))
+    ;; grenade / alt fire
+    (when (and (should-second-attack?)
+               (time-elapsed? (-> self weapon-last-second-attack-time) smg-grenade-cooldown))
+      (go smg-grenade))
+    ;; reload
+    (when (should-reload?)
+      (go smg-reload-part1))
+    ;; idle anims
+    (when (time-elapsed? (-> self weapon-last-idle-time) (-> self weapon-next-idle-wait))
+      (go smg-idle-anim)))
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post
+  (behavior ()
+    (update-aim-punch smg-aim-punch-decay)))
+
+(defstate smg-idle-anim (hl-weapons)
+  :enter
+  (behavior ()
+    (let ((idx (rand-vu-int-range 0 1)))
+      (case idx
+        ((0)
+         (viewmodel-play-animation (viewmodel-animations-enum smg-idle1) 1.8)
+         (set! (-> self weapon-next-idle-wait) smg-idle1-duration))
+        ((1)
+         (viewmodel-play-animation (viewmodel-animations-enum smg-longidle) 1.0)
+         (set! (-> self weapon-next-idle-wait) smg-idle2-duration))))
+    (set-time! (-> self weapon-last-idle-time)))
+  :trans
+  (behavior ()
+    (smg-switch-handle)
+    (when (should-reload?) (go smg-reload-part1))
+    (when (should-attack?) (go smg-attack))
+    (when (should-second-attack?) (go smg-grenade))
+    (when (time-elapsed? (-> self weapon-last-idle-time) (-> self weapon-next-idle-wait))
+      (go smg-idle)))
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post
+  (behavior ()
+    (update-aim-punch smg-aim-punch-decay)))
+
+(defstate smg-attack (hl-weapons)
+  :enter
+  (behavior ()
+    ;; randomly pick a firing sound like HL does
+    (let ((idx (rand-vu-int-range 0 2)))
+      (case idx
+        ((0) (play-sound-file smg-attack-sound1 50) (viewmodel-play-animation (viewmodel-animations-enum smg-shoot) 0.5))
+        ((1) (play-sound-file smg-attack-sound2 50) (viewmodel-play-animation (viewmodel-animations-enum smg-shoot2) 0.5))
+        ((2) (play-sound-file smg-attack-sound3 50) (viewmodel-play-animation (viewmodel-animations-enum smg-shoot3) 0.5))))
+    (when (< (rand-vu-float-range 0.0 1.0) 0.8)
+      (add-aim-punch smg-aim-punch-amount))
+    (hl-choose-idle-wait! 5.0 10.0)
+    (set-time! (-> self weapon-last-attack-time)))
+  :trans
+  (behavior ()
+    (smg-switch-handle)
+    (when (should-reload?) (go smg-reload-part1))
+    (when (time-elapsed? (-> self weapon-last-attack-time) smg-attack-cooldown)
+      (if (should-attack?)
+          (go smg-attack)
+          (go smg-idle))))
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post
+  (behavior ()
+    (update-aim-punch smg-aim-punch-decay)))
+
+(defstate smg-grenade (hl-weapons)
+  :enter
+  (behavior ()
+    (viewmodel-play-animation (viewmodel-animations-enum smg-grenade) 1.0)
+    (let ((idx (rand-vu-int-range 0 1)))
+      (case idx
+        ((0) (play-sound-file smg-grenade-sound 50))
+        ((1) (play-sound-file smg-grenade-sound2 50))))
+    (hl-choose-idle-wait! 5.0 10.0)
+    (add-aim-punch smg-grenade-aim-punch)
+    (set-time! (-> self weapon-last-second-attack-time)))
+  :trans
+  (behavior ()
+    (smg-switch-handle)
+    (when (time-elapsed? (-> self weapon-last-second-attack-time) smg-grenade-cooldown)
+      (go smg-idle)))
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post
+  (behavior ()
+    (update-aim-punch smg-aim-punch-decay)))
+
+(defstate smg-reload-part1 (hl-weapons)
+  :enter
+  (behavior ()
+    ;; play full reload anim (we can use the same animation for both stages)
+    (viewmodel-play-animation (viewmodel-animations-enum smg-reload) 1.3)
+    ;; first sound: mag release
+    (play-sound-file smg-reload-sound1 50)
+    (set-time! (-> self weapon-last-reload-time)))
+  
+  :trans
+  (behavior ()
+    (smg-switch-handle)
+    ;; move to part2 once first phase completes
+    (when (time-elapsed? (-> self weapon-last-reload-time) smg-reload-part1-duration)
+      (go smg-reload-part2)))
+  
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post
+  (behavior ()
+    (update-aim-punch smg-aim-punch-decay)))
+
+(defstate smg-reload-part2 (hl-weapons)
+  :enter
+  (behavior ()
+    ;; second phase: mag insert + bolt pull
+    (play-sound-file smg-reload-sound2 50)
+    (set-time! (-> self weapon-last-reload-time)))
+  
+  :trans
+  (behavior ()
+    (smg-switch-handle)
+    ;; go back to idle after full reload done
+    (when (time-elapsed? (-> self weapon-last-reload-time) smg-reload-part2-duration)
+      (go smg-idle))
+    ;; allow interruption if player attacks early
+    (when (should-attack?)
+      (go smg-attack)))
+  
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post
+  (behavior ()
+    (update-aim-punch smg-aim-punch-decay)))

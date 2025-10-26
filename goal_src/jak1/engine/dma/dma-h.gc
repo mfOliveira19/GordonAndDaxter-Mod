@@ -233,14 +233,15 @@
   (merc-water1 61)
   (generic-water1 62)
   (ocean-near 63) ; ocean
-  (viewmodel 64)
+  (viewmodel 64) ;; for hl mod
   (depth-cue 65)
   (common-page-tex 66)
   (sprite 67)
   (debug 68)
   (debug-no-zbuf 69)
   ;; extra buckets for pc port
-  (subtitle 70)
+  (crosshair 70) ;; for hl mod
+  (subtitle 71)
   )
 
 ;; A DMA bucket is a way of sorting data within a dma buffer.

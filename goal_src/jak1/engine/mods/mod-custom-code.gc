@@ -89,7 +89,8 @@
   ;; Code here runs every time jak spawns (loading a file new game or death)
   ;;uncomment this to use custom music for custom levels - the function is in mod-common-functions.gc
   ;;(process-spawn-function process music-manager-proc)
-  (init-hl-weapons!)
+    (when (not (process-by-name 'hl-weapon-proc *active-pool*))
+      (init-hl-weapons!))
   (none))
 
 (defun runs-on-jak-death ((death-event symbol))

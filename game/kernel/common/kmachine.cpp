@@ -1155,6 +1155,12 @@ void pc_renderer_viewmodel_set_active_animation(int animation) {
   Gfx::g_global_settings.viewmodel_active_animation = animation;
 }
 
+void pc_renderer_viewmodel_set_animation_speed(u32 animation_speed) {
+  float anim_speed;
+  memcpy(&anim_speed, &animation_speed, 4);
+  Gfx::g_global_settings.viewmodel_animation_speed = anim_speed;
+}
+
 void pc_renderer_viewmodel_set_offset_z(u32 offset_z) {
   float offset_val;
   memcpy(&offset_val, &offset_z, 4);
@@ -1165,6 +1171,10 @@ void pc_renderer_viewmodel_set_rotation_x(u32 rotation_x) {
   float rotation_val;
   memcpy(&rotation_val, &rotation_x, 4);
   Gfx::g_global_settings.viewmodel_rotation_x = rotation_val;
+}
+
+void pc_renderer_crosshair_set_current_crosshair(int crosshair) {
+  Gfx::g_global_settings.current_crosshair = crosshair;
 }
 
 void pc_renderer_tree_set_lod(Gfx::RendererTreeType tree, int lod) {
@@ -1371,8 +1381,10 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-set-gfx-hack", (void*)pc_set_gfx_hack);
   make_func_symbol_func("pc-set-viewmodel-active-model", (void*)pc_renderer_viewmodel_set_active_model);
   make_func_symbol_func("pc-set-viewmodel-active-animation", (void*)pc_renderer_viewmodel_set_active_animation);
+  make_func_symbol_func("pc-set-viewmodel-animation-speed", (void*)pc_renderer_viewmodel_set_animation_speed);
   make_func_symbol_func("pc-set-viewmodel-offset-z", (void*)pc_renderer_viewmodel_set_offset_z);
   make_func_symbol_func("pc-set-viewmodel-rotation-x", (void*)pc_renderer_viewmodel_set_rotation_x);
+  make_func_symbol_func("pc-set-crosshair-current-crosshair", (void*)pc_renderer_crosshair_set_current_crosshair);
 
   // -- OTHER --
   // Return the current OS as a symbol. Actually returns what it was compiled for!

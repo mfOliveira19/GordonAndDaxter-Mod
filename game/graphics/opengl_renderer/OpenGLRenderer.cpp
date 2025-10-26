@@ -26,6 +26,7 @@
 #include "game/graphics/opengl_renderer/ocean/OceanNear.h"
 #include "game/graphics/opengl_renderer/sprite/Sprite3.h"
 #include "game/graphics/opengl_renderer/foreground/ViewmodelBucketRenderer.h"
+#include "game/graphics/opengl_renderer/foreground/CrosshairBucketRenderer.h"
 #include "game/graphics/pipelines/opengl.h"
 #include "game/graphics/opengl_renderer/foreground/Viewmodel.h"
 
@@ -148,6 +149,7 @@ OpenGLRenderer::OpenGLRenderer(std::shared_ptr<TexturePool> texture_pool,
   m_merc2 = std::make_shared<Merc2>(m_render_state.shaders, anim_slot_array());
   m_generic2 = std::make_shared<Generic2>(m_render_state.shaders);
   m_viewmodel = std::make_shared<Viewmodel>();
+  m_crosshair = std::make_shared<Crosshair>();
 
   // initialize all renderers
   auto p = scoped_prof("init-bucket-renderers");
@@ -874,6 +876,10 @@ void OpenGLRenderer::init_bucket_renderers_jak1() {
   // Initialize viewmodel bucket
   init_bucket_renderer<ViewmodelBucketRenderer>("viewmodel", BucketCategory::OTHER,
                                                 BucketId::VIEWMODEL, m_viewmodel);
+
+  // Initialize crosshair bucket
+  init_bucket_renderer<CrosshairBucketRenderer>("crosshair", BucketCategory::OTHER,
+                                                BucketId::CROSSHAIR, m_crosshair);
 
   // for now, for any unset renderers, just set them to an EmptyBucketRenderer.
   for (size_t i = 0; i < m_bucket_renderers.size(); i++) {

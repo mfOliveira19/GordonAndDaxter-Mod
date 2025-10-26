@@ -11,10 +11,6 @@
 (define *duck-camera-offset* 0.0)
 (define *was-ducking* #f)
 
-(defun get-camera-pitch ()
-  (-> (the-as camera-slave (-> *camera* slave 0))
-      tracking inv-mat vector 0 w))
-
 (define *viewmodel-bob-phase* 0.0)
 (define *viewmodel-bob-speed* 500.0)        ;; phase advance multiplier
 (define *viewmodel-bob-amp-base* 1.0)       ;; base amplitude of bob
@@ -69,7 +65,7 @@
 (define *view-bob-y* 0.0)
 (define *view-bob-phase* 0.0)
 (define *view-bob-speed* 0.012)
-(define *view-bob-vert-amp-base* 350.0)
+(define *view-bob-vert-amp-base* 250.0)
 (define *view-bob-horiz-amp-base* 200.0)
 (define *view-bob-return-rate* 0.1)
 (define *view-bob-current-x* 0.0)

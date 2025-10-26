@@ -66,6 +66,8 @@ enum class ShaderId {
   PLAIN_TEXTURE = 39,
   TIE_WIND = 40,
   VIEWMODEL = 41,
+  CROSSHAIR = 42,
+  MUZZLE_FLASH = 43,
   MAX_SHADERS
 };
 

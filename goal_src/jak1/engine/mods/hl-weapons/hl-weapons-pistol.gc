@@ -5,27 +5,38 @@
 (defconstant pistol-attack-cooldown (seconds 0.3))
 (defconstant pistol-second-attack-cooldown  (seconds 0.22))
 (defconstant pistol-attack-sound-path "sound_replacements/pl_gun3.wav")
-(defconstant pistol-draw-duration (seconds 1.0))
-(defconstant pistol-reload-part1-duration (seconds 1.2)) ; mag out
-(defconstant pistol-reload-part2-duration (seconds 1.1)) ; mag in
-(defconstant pistol-reload-sound1 "sound_replacements/9mmclip2.wav") ; magazine out
-(defconstant pistol-reload-sound2 "sound_replacements/9mmclip1.wav") ; magazine in
+(defconstant pistol-draw-duration (seconds 0.8))
+(defconstant pistol-reload-part1-duration (seconds 1.2))
+(defconstant pistol-reload-part2-duration (seconds 1.1))
+(defconstant pistol-reload-sound1 "sound_replacements/9mmclip2.wav")
+(defconstant pistol-reload-sound2 "sound_replacements/9mmclip1.wav")
+(defconstant pistol-idle1-duration (seconds 3.75))
+(defconstant pistol-idle2-duration (seconds 2.5))
+(defconstant pistol-idle3-duration (seconds 3.06))
+(defconstant pistol-aim-punch-decay 0.1)
+(defconstant pistol-aim-punch-amount 0.05)
 
 (defbehavior pistol-switch-handle hl-weapons ()
   (when (and (should-switch-slot1?)
              (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
              (not (= (-> self current-weapon) (weapons-enum crowbar))))
     (set-time! (-> self weapon-last-switch-time))
-    (go crowbar-draw)))
+    (go crowbar-draw))
+  (when (and (should-switch-slot3?)
+             (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
+             (not (= (-> self current-weapon) (weapons-enum smg))))
+    (set-time! (-> self weapon-last-switch-time))
+    (go smg-draw)))
 
 (defstate pistol-draw (hl-weapons)
   :enter
   (behavior ()
     (hl-set-weapon (weapons-enum pistol))
-    (viewmodel-play-animation (viewmodel-animations-enum draw))
+    (viewmodel-play-animation (viewmodel-animations-enum draw) 0.6)
+    (hl-choose-idle-wait! 0.0 0.0)
     (set-time! (-> self weapon-last-switch-time))
     (set-time! (-> self weapon-last-reload-time))
-    (set! (-> self weapon-last-attack-time) (current-time)))
+    (set-time! (-> self weapon-last-attack-time)))
   
   :trans
   (behavior ()
@@ -35,32 +46,79 @@
   
   :code
   (behavior ()
-    (loop (suspend))))
+    (loop (suspend)))
+  :post
+  (behavior ()
+    (update-aim-punch pistol-aim-punch-decay)))
 
 (defstate pistol-idle (hl-weapons)
   :enter
-  (behavior ())
+  (behavior ()
+    (when (= (-> self weapon-next-idle-wait) 0)
+      (hl-choose-idle-wait! 1.5 1.5)))
   :trans
   (behavior ()
     (pistol-switch-handle)
+
     (when (and (should-attack?)
                (time-elapsed? (-> self weapon-last-attack-time) pistol-attack-cooldown))
       (go pistol-attack))
     (when (and (should-second-attack?)
                (time-elapsed? (-> self weapon-last-attack-time) pistol-second-attack-cooldown))
       (go pistol-attack))
-    (when (and (should-reload?) (time-elapsed? (-> self weapon-last-reload-time) pistol-reload-part1-duration))
-        (go pistol-reload-part1)))
+    (when (should-reload?)
+      (go pistol-reload-part1))
+
+    (when (time-elapsed? (-> self weapon-last-idle-time) (-> self weapon-next-idle-wait))
+      (go pistol-idle-anim)))
   :code
   (behavior ()
     (loop (suspend)))
-)
+
+  :post
+  (behavior ()
+    (update-aim-punch pistol-aim-punch-decay)))
+
+
+(defstate pistol-idle-anim (hl-weapons)
+  :enter
+  (behavior ()
+    (let ((idx (rand-vu-int-range 0 2))) ;; 0..2
+      (case idx
+        ((0)
+         (viewmodel-play-animation (viewmodel-animations-enum pistol-idle3) 1.0)
+         (set! (-> self weapon-next-idle-wait) pistol-idle3-duration))
+        ((1)
+         (viewmodel-play-animation (viewmodel-animations-enum pistol-idle1) 1.0)
+         (set! (-> self weapon-next-idle-wait) pistol-idle1-duration))
+        ((2)
+         (viewmodel-play-animation (viewmodel-animations-enum pistol-idle2) 1.0)
+         (set! (-> self weapon-next-idle-wait) pistol-idle2-duration)))
+      ;; mark start time for the idle animation so trans can measure it
+      (set-time! (-> self weapon-last-idle-time))))
+  :trans
+  (behavior ()
+    (pistol-switch-handle)
+    (when (time-elapsed? (-> self weapon-last-idle-time) (-> self weapon-next-idle-wait))
+      (go pistol-idle))
+    (when (should-attack?)
+      (go pistol-attack))
+    (when (should-reload?)
+      (go pistol-reload-part1)))
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post
+  (behavior ()
+    (update-aim-punch pistol-aim-punch-decay)))
 
 (defstate pistol-attack (hl-weapons)
   :enter
   (behavior ()
-    (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot))
+    (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot) 1.0)
+    (add-aim-punch pistol-aim-punch-amount)
     (play-sound-file pistol-attack-sound-path 50)
+    (hl-choose-idle-wait! 5.0 15.0)
     (set-time! (-> self weapon-last-attack-time)))
   :trans
   (behavior ()
@@ -73,12 +131,15 @@
   :code
   (behavior ()
     (loop (suspend)))
-)
+
+  :post
+  (behavior ()
+    (update-aim-punch pistol-aim-punch-decay)))
 
 (defstate pistol-reload-part1 (hl-weapons)
   :enter
   (behavior ()
-    (viewmodel-play-animation (viewmodel-animations-enum pistol-reload))
+    (viewmodel-play-animation (viewmodel-animations-enum pistol-reload) 1.0)
     (play-sound-file pistol-reload-sound1 50)
     (set-time! (-> self weapon-last-reload-time)))
   
@@ -91,7 +152,9 @@
   :code
   (behavior ()
     (loop (suspend)))
-)
+  :post
+  (behavior ()
+    (update-aim-punch pistol-aim-punch-decay)))
 
 (defstate pistol-reload-part2 (hl-weapons)
   :enter
@@ -109,36 +172,6 @@
   :code
   (behavior ()
     (loop (suspend)))
-)
-
-#|
-(defbehavior weapon-pistol-behavior target ()
-  ;; --- Primary attack ---
-  (when (and (should-attack?)
-             (time-elapsed? *weapon-last-attack-time* *pistol-attack-cooldown*))
-    (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot))
-    (play-sound-file "sound_replacements/pl_gun3.wav" 50)
-    (set-time! *weapon-last-attack-time*))
-
-  ;; --- Secondary attack ---
-  (when (and (should-second-attack?)
-             (time-elapsed? *weapon-last-attack-time* *pistol-second-attack-cooldown*))
-    (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot))
-    (play-sound-file "sound_replacements/pl_gun3.wav" 50)
-    (set-time! *weapon-last-attack-time*))
-
-  ;; --- Reload phase 1 (magazine out) ---
-  (when (and (should-reload?)
-             (time-elapsed? *weapon-last-reload-time* *pistol-reload-cooldown*))
-    (viewmodel-play-animation (viewmodel-animations-enum pistol-reload))
-    (play-sound-file "sound_replacements/9mmclip2.wav" 50) ; magazine out
-    (set-time! *weapon-last-reload-time*)
-    (set-time! *pistol-reload-part2-start-time*)
-    (set! *pistol-playing-reload-part2* #t))
-
-  ;; --- Reload phase 2 (magazine in) ---
-  (when (and *pistol-playing-reload-part2*
-             (time-elapsed? *pistol-reload-part2-start-time* *pistol-reload-part2-delay*))
-    (play-sound-file "sound_replacements/9mmclip1.wav" 50)
-    (set! *pistol-playing-reload-part2* #f))
-)|#
+  :post
+  (behavior ()
+    (update-aim-punch pistol-aim-punch-decay)))

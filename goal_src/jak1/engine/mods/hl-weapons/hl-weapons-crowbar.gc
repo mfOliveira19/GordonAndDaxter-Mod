@@ -4,7 +4,7 @@
 
 (defconstant crowbar-attack-cooldown (seconds 0.5))
 (defconstant crowbar-sound-path "sound_replacements/cbar_miss1.wav")
-(defconstant crowbar-draw-duration (seconds 1.0))
+(defconstant crowbar-draw-duration (seconds 0.5))
 
 (defbehavior crowbar-switch-handle hl-weapons ()
   (when (and (should-switch-slot2?)
@@ -12,13 +12,19 @@
              (not (= (-> self current-weapon) (weapons-enum pistol))))
     (set-time! (-> self weapon-last-switch-time))
     (set-time! (-> self weapon-last-switch-time))
-    (go pistol-draw)))
+    (go pistol-draw))
+  (when (and (should-switch-slot3?)
+             (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
+             (not (= (-> self current-weapon) (weapons-enum smg))))
+    (set-time! (-> self weapon-last-switch-time))
+    (set-time! (-> self weapon-last-switch-time))
+    (go smg-draw)))
 
 (defstate crowbar-draw (hl-weapons)
   :enter
   (behavior ()
     (hl-set-weapon (weapons-enum crowbar))
-    (viewmodel-play-animation (viewmodel-animations-enum draw))
+    (viewmodel-play-animation (viewmodel-animations-enum draw) 1.0)
     (set! (-> self weapon-last-attack-time) (current-time)))
   
   :trans
@@ -51,7 +57,7 @@
                   ((1) (viewmodel-animations-enum crowbar-attack2))
                   ((2) (viewmodel-animations-enum crowbar-attack3))
                   (else (viewmodel-animations-enum crowbar-attack1)))))
-      (viewmodel-play-animation anim)
+      (viewmodel-play-animation anim 1.0)
       (play-sound-file crowbar-sound-path 50)
       (set-time! (-> self weapon-last-attack-time))))
   
