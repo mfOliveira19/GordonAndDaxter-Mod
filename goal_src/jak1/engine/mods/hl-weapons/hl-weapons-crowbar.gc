@@ -3,22 +3,40 @@
 (require "engine/mods/hl-inputs-handler.gc")
 
 (defconstant crowbar-attack-cooldown (seconds 0.5))
-(defconstant crowbar-sound-path "sound_replacements/cbar_miss1.wav")
+(defconstant crowbar-hit-attack-cooldown (seconds 0.25))
+(defconstant crowbar-miss-sound-path "sound_replacements/cbar_miss1.wav")
+(defconstant crowbar-hit1-sound-path "sound_replacements/cbar_hit1.wav")
+(defconstant crowbar-hit2-sound-path "sound_replacements/cbar_hit2.wav")
+(defconstant crowbar-hitbod1-sound-path "sound_replacements/cbar_hitbod1.wav")
+(defconstant crowbar-hitbod2-sound-path "sound_replacements/cbar_hitbod2.wav")
 (defconstant crowbar-draw-duration (seconds 0.5))
+(defconstant wood-hit1-sound-path "sound_replacements/wood1.wav")
+(defconstant wood-hit3-sound-path "sound_replacements/wood3.wav")
 
 (defbehavior crowbar-switch-handle hl-weapons ()
   (when (and (should-switch-slot2?)
              (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
              (not (= (-> self current-weapon) (weapons-enum pistol))))
     (set-time! (-> self weapon-last-switch-time))
-    (set-time! (-> self weapon-last-switch-time))
+    (set! (-> self last-weapon) (weapons-enum crowbar))
     (go pistol-draw))
   (when (and (should-switch-slot3?)
              (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
              (not (= (-> self current-weapon) (weapons-enum smg))))
     (set-time! (-> self weapon-last-switch-time))
+    (set! (-> self last-weapon) (weapons-enum crowbar))
+    (go smg-draw))
+  (when (and (should-switch-last-weapon?)
+             (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
+             (not (= (-> self current-weapon) (-> self last-weapon))))
     (set-time! (-> self weapon-last-switch-time))
-    (go smg-draw)))
+    (case (-> self last-weapon)
+      (((weapons-enum pistol))
+        (set! (-> self last-weapon) (weapons-enum crowbar))
+        (go pistol-draw))
+      (((weapons-enum smg))
+        (set! (-> self last-weapon) (weapons-enum crowbar))
+        (go smg-draw)))))
 
 (defstate crowbar-draw (hl-weapons)
   :enter
@@ -26,7 +44,6 @@
     (hl-set-weapon (weapons-enum crowbar))
     (viewmodel-play-animation (viewmodel-animations-enum draw) 1.0)
     (set! (-> self weapon-last-attack-time) (current-time)))
-  
   :trans
   (behavior ()
     (when (time-elapsed? (-> self weapon-last-attack-time) crowbar-draw-duration)
@@ -40,12 +57,18 @@
   :trans
   (behavior ()
     (crowbar-switch-handle)
-    (when (and (should-attack?)
-               (time-elapsed? (-> self weapon-last-attack-time) crowbar-attack-cooldown))
-      (go crowbar-attack-miss)))
+    (when (and (should-attack?) (time-elapsed? (-> self weapon-last-attack-time) crowbar-attack-cooldown) (not (check-crowbar-in-range? *target*)))
+      (check-crowbar-collide-type? *target*)
+      (go crowbar-attack-miss))
+    (when (and (should-attack?) (time-elapsed? (-> self weapon-last-attack-time) crowbar-hit-attack-cooldown) (check-crowbar-in-range? *target*)
+      (check-crowbar-collide-type? *target*)
+      (go crowbar-attack-hit))))
   :code
   (behavior ()
     (loop (suspend)))
+  :post
+  (behavior ()
+  )
 )
 
 (defstate crowbar-attack-miss (hl-weapons)
@@ -58,13 +81,50 @@
                   ((2) (viewmodel-animations-enum crowbar-attack3))
                   (else (viewmodel-animations-enum crowbar-attack1)))))
       (viewmodel-play-animation anim 1.0)
-      (play-sound-file crowbar-sound-path 50)
+      (play-sound-file crowbar-miss-sound-path 50)
       (set-time! (-> self weapon-last-attack-time))))
   
   :trans
   (behavior ()
     (crowbar-switch-handle)
     (when (time-elapsed? (-> self weapon-last-attack-time) crowbar-attack-cooldown)
+      (go crowbar-idle)))
+  
+  :code
+  (behavior ()
+    (loop (suspend)))
+)
+
+(defstate crowbar-attack-hit (hl-weapons)
+  :enter
+  (behavior ()
+    (fire-crowbar-attack *target*)
+    (set! (-> self crowbar-swing-index) (mod (+ (-> self crowbar-swing-index) 1) 2))
+    (let ((coll-type (-> (check-crowbar-collide-type? *target*) pat)))
+    (let ((anim (case (-> self crowbar-swing-index)
+                  ((0)
+                    (if (= (-> coll-type mode) (pat-mode obstacle))
+                      (play-sound-file crowbar-hitbod1-sound-path 50)
+                      (play-sound-file crowbar-hit1-sound-path 50))
+                    (if (= (-> coll-type material) (pat-material wood))
+                      (play-sound-file wood-hit1-sound-path 50))
+                    (viewmodel-animations-enum crowbar-attack2-hit))
+                  ((1)
+                    (if (= (-> coll-type mode) (pat-mode obstacle))
+                      (play-sound-file crowbar-hitbod2-sound-path 50)
+                      (play-sound-file crowbar-hit2-sound-path 50))
+                    (if (= (-> coll-type material) (pat-material wood))
+                      (play-sound-file wood-hit3-sound-path 50))
+                    (viewmodel-animations-enum crowbar-attack3-hit))
+                  (else (viewmodel-animations-enum crowbar-attack2-hit)))))
+      (viewmodel-play-animation anim 1.0)
+      
+      (set-time! (-> self weapon-last-attack-time)))))
+
+  :trans
+  (behavior ()
+    (crowbar-switch-handle)
+    (when (time-elapsed? (-> self weapon-last-attack-time) crowbar-hit-attack-cooldown)
       (go crowbar-idle)))
   
   :code

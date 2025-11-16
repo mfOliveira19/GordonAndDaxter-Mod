@@ -13,7 +13,8 @@
    (strike-count int32)
    (angle        float)
    (vulnerable   symbol)
-   (part2        sparticle-launch-control))
+   (part2        sparticle-launch-control)
+   (health       int8))
   (:methods
    (lurkerworm-method-20 (_type_) none)
    (particle-effect (_type_) none))
@@ -217,7 +218,14 @@
 
 (defbehavior lurkerworm-default-event-handler lurkerworm ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
-    (('attack) (-> arg3 param 1) (go lurkerworm-die))
+    (('attack-hl) 
+      (let ((damage (the-as int8 (-> arg3 param 4))))
+          (-! (-> self health) damage)
+          (-> arg3 param 1)
+          (when (<= (-> self health) 0)
+            (go lurkerworm-die))))
+    (('attack) 
+      (go lurkerworm-die))
     (('touch)
      (if ((method-of-type touching-shapes-entry prims-touching?)
           (the-as touching-shapes-entry (-> arg3 param 0))
@@ -449,5 +457,6 @@ lurkerworm-default-post-behavior
   (set! (-> this skel postbind-function) lurkerworm-joint-callback)
   (set! (-> this root nav-radius) 12288.0)
   (nav-mesh-connect this (-> this root) (the-as nav-control #f))
+  (set! (-> this health) 100)
   (go lurkerworm-idle)
   (none))

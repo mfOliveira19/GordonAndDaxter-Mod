@@ -1,0 +1,61 @@
+(in-package goal)
+
+(defun projectile-hl-collision-reaction-stop ((arg0 collide-shape-moving) (arg1 collide-shape-intersect) (arg2 vector) (arg3 vector))
+  ;; Instantly stop on any hit
+  (send-event (-> arg0 process) 'die)
+  (the-as cshape-moving-flags 0))
+
+(defmethod projectile-hl-method-24 ((this hl-weapon-shot))
+  (with-pp
+    0
+    (none)))
+
+(defmethod projectile-hl-method-26 ((this hl-weapon-shot))
+  (let ((t9-0 (method-of-type projectile-hl projectile-hl-method-26))) (t9-0 this))
+  (logior! (-> this root root-prim collide-with) (collide-kind mother-spider))
+  (none))
+
+(defmethod projectile-hl-method-27 ((this hl-weapon-shot))
+  (if (and (= (-> *target* fact eco-type) (pickup-type eco-yellow))
+          (> (-> *target* fact eco-level) 0))
+      (set! (-> this attack-mode) 'eco-yellow)
+      (set! (-> this attack-mode) #t))
+  (set! (-> this mode) 1)
+  (set! (-> this max-speed) (vector-length (-> this root transv)))
+  (set! (-> this update-velocity) projectile-hl-update-velocity-space-wars)
+  (set! (-> this angle) (vector-y-angle (-> this root transv)))
+  (set! (-> this tween) 0.05)
+  (logior! (-> this options) 2)
+  0
+  (none))
+
+(defmethod projectile-hl-method-28 ((this hl-weapon-shot))
+  0
+  (none))
+
+
+;; crowbar
+(defmethod projectile-hl-method-24 ((this hl-crowbar-hit))
+  (with-pp
+    0
+    (none)))
+
+(defmethod projectile-hl-method-26 ((this hl-crowbar-hit))
+  (let ((t9-0 (method-of-type projectile-hl projectile-hl-method-26))) (t9-0 this))
+  (logior! (-> this root root-prim collide-with) (collide-kind mother-spider))
+  (none))
+
+(defmethod projectile-hl-method-27 ((this hl-crowbar-hit))
+  (set! (-> this attack-mode) 'uppercut)
+  (set! (-> this mode) 1)
+  (set! (-> this max-speed) (vector-length (-> this root transv)))
+  (set! (-> this update-velocity) projectile-hl-update-velocity-space-wars)
+  (set! (-> this angle) (vector-y-angle (-> this root transv)))
+  (set! (-> this tween) 0.05)
+  (logior! (-> this options) 2)
+  0
+  (none))
+
+(defmethod projectile-hl-method-28 ((this hl-crowbar-hit))
+  0
+  (none))

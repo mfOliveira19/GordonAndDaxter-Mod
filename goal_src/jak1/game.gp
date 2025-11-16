@@ -1663,6 +1663,7 @@
 ;; requires a .glb model file in custom_assets/jak1/models/custom_levels
 ;; to also generate a collide-mesh, add :gen-mesh #t
 (build-actor "test-actor" :gen-mesh #t)
+(build-actor "smg-grenade")
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; Game Engine Code
@@ -2106,13 +2107,6 @@
 
 (goal-src "engine/mods/input-display.gc")
 (goal-src "engine/mods/orb-placer.gc")
-(goal-src "engine/mods/target-hl-handler.gc")
-(goal-src "engine/mods/target-hl-movement.gc")
-(goal-src "engine/mods/hl-inputs-handler.gc")
-(goal-src "engine/mods/hl-weapons/hl-weapons.gc")
-(goal-src "engine/mods/hl-weapons/hl-weapons-crowbar.gc")
-(goal-src "engine/mods/hl-weapons/hl-weapons-pistol.gc")
-(goal-src "engine/mods/hl-weapons/hl-weapons-smg.gc")
 
 (goal-src-sequence
  ;; prefix
@@ -2125,7 +2119,17 @@
 )
 
 (goal-src "levels/test-zone/test-zone-obs.gc" "process-drawable")
-
+(goal-src "engine/mods/hl-target/target-hl-handler.gc")
+(goal-src "engine/mods/hl-target/target-hl-movement.gc")
+(goal-src "engine/mods/hl-inputs-handler.gc")
+(goal-src "engine/mods/hl-projectiles/hl-projectiles-h.gc")
+(goal-src "engine/mods/hl-projectiles/hl-projectiles.gc")
+(goal-src "engine/mods/hl-projectiles/hl-weapon-shot.gc")
+(goal-src "engine/mods/hl-grenade-launcher/hl-grenade-launcher.gc")
+(goal-src "engine/mods/hl-weapons/hl-weapons.gc")
+(goal-src "engine/mods/hl-weapons/hl-weapons-crowbar.gc")
+(goal-src "engine/mods/hl-weapons/hl-weapons-pistol.gc")
+(goal-src "engine/mods/hl-weapons/hl-weapons-smg.gc")
 
 (group-list "all-code"
   `(,@(reverse *all-gc*))

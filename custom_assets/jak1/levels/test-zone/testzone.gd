@@ -14,6 +14,7 @@
   "plat-eco-ag.go"
   "test-actor-ag.go"
   "babak-ag.go"
+  "smg-grenade-ag.go"
   "test-zone.go"
   )
  )

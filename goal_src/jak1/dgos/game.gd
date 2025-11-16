@@ -348,7 +348,11 @@
   "ticky.o"
   ;; hl mod stuff
   "hl-inputs-handler.o"
+  "hl-projectiles-h.o"
+  "hl-grenade-launcher.o"
   "hl-weapons.o"
+  "hl-projectiles.o"
+  "hl-weapon-shot.o"
   "hl-weapons-crowbar.o"
   "hl-weapons-pistol.o"
   "hl-weapons-smg.o"

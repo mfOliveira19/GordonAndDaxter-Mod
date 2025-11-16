@@ -179,9 +179,8 @@
 (defstate grottopole-idle (grottopole)
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
-      (when (= (-> proc type) target)
         (case message
-          (('attack)
+          (('attack 'attack-hl)
            (let ((v1-2 (-> block param 2)))
              (when (!= v1-2 (-> self incomming-attack-id))
                (set! (-> self incomming-attack-id) v1-2)
@@ -206,7 +205,7 @@
                               (the-as uint 1)))
                     (sound-play "grotto-pole-hit")
                     (sound-play "dirt-crumble")
-                    (go grottopole-moving-down))))))))))
+                    (go grottopole-moving-down)))))))))
   :code
     (behavior ()
       (set-time! (-> self state-time))

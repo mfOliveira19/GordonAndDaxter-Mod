@@ -34,8 +34,10 @@
   (smg-reload 19)
   (smg-grenade 20))
 
-(deftype hl-weapons (process)
+(deftype hl-weapons (process-drawable)
   ((current-weapon                 weapons-enum)
+   (last-weapon                    weapons-enum)
+   (last-hit-pat-mode              pat-mode)
    (weapon-last-attack-time        time-frame)
    (weapon-last-second-attack-time time-frame)
    (weapon-last-switch-time        time-frame)
@@ -44,18 +46,22 @@
    (weapon-next-idle-wait          time-frame)
    (current-aim-punch-last-update  time-frame)
    (crowbar-swing-index            uint16)
-   (current-aim-punch              float))
+   (current-aim-punch              float)
+   (current-pistol-mag-ammo        uint16)
+   (current-smg-mag-ammo           uint16))
   (:methods)
   (:states
     ;; crowbar
     crowbar-draw
     crowbar-idle
     crowbar-attack-miss
+    crowbar-attack-hit
     ;; pistol
     pistol-draw
     pistol-idle
     pistol-idle-anim
     pistol-attack
+    pistol-attack-secondary
     pistol-reload-part1
     pistol-reload-part2
     ;; smg
@@ -65,17 +71,41 @@
     smg-attack
     smg-reload-part1
     smg-reload-part2
-    smg-grenade))
+    smg-secondary))
+
+(define-perm *hl-weapons* hl-weapons #f)
 
 (defconstant weapon-switch-cooldown (seconds 0.05))
+(defconstant pistol-max-mag-ammo 17)
+(defconstant smg-max-mag-ammo 50)
 
+#|
 (defbehavior hl-weapons-init-by-other hl-weapons ()
   (set-time! (-> self weapon-last-attack-time))
+  (set! (-> self current-pistol-mag-ammo) pistol-max-mag-ammo)
+  (set! (-> self current-smg-mag-ammo) smg-max-mag-ammo)
   (format 0 "HL Weapons process initialized.~%")
   (go crowbar-draw))
 
 (defun init-hl-weapons! ()
-    (process-spawn hl-weapons :from *nk-dead-pool* :to *active-pool* :stack *kernel-dram-stack* :stack-size #x4000 :name 'hl-weapon-proc)
+  (set! *hl-weapons* (the-as hl-weapons 
+    (ppointer->process 
+      (process-spawn hl-weapons :from *nk-dead-pool* :to *active-pool* :stack *kernel-dram-stack* :stack-size #x4000 :name 'hl-weapon-proc))))
+  (none))
+|#
+
+(defbehavior init-hl-weapons hl-weapons ()
+  (stack-size-set! (-> self main-thread) 1024)
+  (set-time! (-> self weapon-last-attack-time))
+  (set! (-> self current-pistol-mag-ammo) pistol-max-mag-ammo)
+  (set! (-> self current-smg-mag-ammo) smg-max-mag-ammo)
+  (set! (-> self last-weapon) (weapons-enum crowbar))
+  (format 0 "HL Weapons process initialized.~%")
+  (go crowbar-draw))
+
+(defun start-hl-weapons ()
+  (let ((v1-3 (process-spawn hl-weapons :init init-hl-weapons :from *4k-dead-pool* :to *active-pool* :stack *kernel-dram-stack* :stack-size #x4000 :name 'hl-weapon-proc)))
+    (if v1-3 (set! *hl-weapons* (the-as hl-weapons (-> v1-3 0 self))) (set! *hl-weapons* #f)))
   (none))
 
 (defun viewmodel-play-animation ((animation viewmodel-animations-enum) (anim-speed float))
@@ -113,3 +143,530 @@
         (set-camera-pitch (- (get-camera-pitch) decay))
         ;; update stored punch
         (set! (-> self current-aim-punch) (- p decay))))))
+
+(defun fire-hl-shot ((shooter process-drawable) (is-debug? symbol) (offset-x float) (offset-y float))
+  (rlet ((vf0 :class vf)
+         (vf4 :class vf)
+         (vf5 :class vf)
+         (vf6 :class vf))
+    (init-vf0-vector)
+
+    (let ((max-dist (meters 1000))
+          (backoff-epsilon (the-as float 10.0))
+          (probe-radius 1.0))
+      (let* ((cam-pos (camera-pos))
+             (cam-forward (vector-float*! (new 'stack-no-clear 'vector)
+                                          (-> *math-camera* inv-camera-rot vector 2)
+                                          1.0))
+             (cam-right   (-> *math-camera* inv-camera-rot vector 0))
+             (cam-up      (-> *math-camera* inv-camera-rot vector 1))
+             (spread-dir (new 'stack-no-clear 'vector))
+             (probe-move (new 'stack-no-clear 'vector))
+             (probe-res (new 'stack-no-clear 'collide-tri-result))
+             (probe-pat (new 'static 'pat-surface :noentity #x1))
+             (spawn-pos (new 'stack-no-clear 'vector)))
+
+        (vector-! spread-dir cam-forward
+                  (vector-float*! (new 'stack-no-clear 'vector) cam-right offset-x))
+        (vector+! spread-dir spread-dir
+                  (vector-float*! (new 'stack-no-clear 'vector) cam-up offset-y))
+
+        (vector-float*! probe-move spread-dir max-dist)
+
+        (when (>= (fill-and-probe-using-line-sphere
+                    *collide-cache*
+                    cam-pos
+                    probe-move
+                    probe-radius
+                    (collide-kind
+                      water
+                      background
+                      crate
+                      cak-1
+                      cak-2 
+                      cak-3 
+                      enemy 
+                      wall-object
+                      ground-object
+                      target-attack
+                      mother-spider
+                      cak-14
+                      blue-eco-suck
+                      unknown-16
+                      unknown-17
+                      unknown-18
+                      unknown-19
+                      unknown-20
+                      unknown-21
+                      unknown-22
+                      unknown-23
+                      unknown-24
+                      unknown-25
+                      unknown-26
+                      unknown-27
+                      unknown-28
+                      unknown-29
+                      unknown-30
+                      unknown-31
+                      unknown-32
+                      unknown-33
+                      unknown-34
+                      unknown-35
+                      unknown-36
+                      unknown-37
+                      unknown-38
+                      unknown-39
+                      unknown-40
+                      unknown-41
+                      unknown-42
+                      unknown-43
+                      unknown-44
+                      unknown-45
+                      unknown-46
+                      unknown-47
+                      unknown-48
+                      unknown-49
+                      unknown-50
+                      unknown-51
+                      unknown-52
+                      unknown-53
+                      unknown-54
+                      unknown-55
+                      unknown-56
+                      unknown-57
+                      unknown-58
+                      unknown-59
+                      unknown-60
+                      unknown-61
+                      unknown-62
+                      unknown-63
+                    )
+                    (the-as process #f)
+                    probe-res
+                    probe-pat)
+                  0.0)
+
+          (let ((hit-pos (the-as vector (-> probe-res intersect))) (hit-pat (-> probe-res pat)))
+            (vector-! spawn-pos hit-pos
+                      (vector-float*! (new 'stack-no-clear 'vector) cam-forward backoff-epsilon))
+            (set! (-> *hl-weapons* last-hit-pat-mode) (-> hit-pat mode))
+            (when (not is-debug?)
+              (let ((s4-0 (get-process *default-dead-pool* hl-weapon-shot #x4000)))
+                (when s4-0
+                  (let ((t9-2 (method-of-type hl-weapon-shot activate)))
+                    (t9-2 (the-as hl-weapon-shot s4-0) shooter 'hl-weapon-shot (the-as pointer #x70004000)))
+                  (let ((s3-0 run-function-in-process)
+                        (s2-0 s4-0)
+                        (s1-0 projectile-hl-init-by-other)
+                        (s0-0 (-> shooter entity))
+                        (sv-48 spawn-pos)
+                        (gp-1 (vector-float*! (new-stack-vector0)
+                                              (-> *math-camera* inv-camera-rot vector 2)
+                                              (the-as float (meters 0.5))))
+                        (t1-0 40)
+                        (t2-0 #f))
+                    ((the-as (function object object object object object object object none) s3-0)
+                    s2-0 s1-0 s0-0 sv-48 gp-1 t1-0 t2-0))
+                  (-> s4-0 ppointer))))
+                  (if is-debug? (add-debug-sphere #t (bucket-id debug) hit-pos (meters 0.5) *color-white*))))))))
+
+(defun check-crowbar-in-range? ((shooter process-drawable))
+  (rlet ((vf0 :class vf)
+         (vf4 :class vf)
+         (vf5 :class vf)
+         (vf6 :class vf))
+    (init-vf0-vector)
+
+    (let ((max-dist (meters 3))
+          (backoff-epsilon (the-as float 10.0))
+          (probe-radius 2000.0))
+      (let* ((cam-pos (camera-pos))
+             (cam-forward (vector-float*! (new 'stack-no-clear 'vector)
+                                          (-> *math-camera* inv-camera-rot vector 2)
+                                          1.0))
+             (probe-move (vector-float*! (new 'stack-no-clear 'vector) cam-forward max-dist))
+             (probe-res (new 'stack-no-clear 'collide-tri-result))
+             (probe-pat (new 'static 'pat-surface :noentity #x1))
+             (spawn-pos (new 'stack-no-clear 'vector)))
+
+        (when (>= (fill-and-probe-using-line-sphere
+                    *collide-cache*
+                    cam-pos
+                    probe-move
+                    probe-radius
+                    (collide-kind
+                      water
+                      background
+                      crate
+                      cak-1
+                      cak-2 
+                      cak-3 
+                      enemy 
+                      wall-object
+                      ground-object
+                      target-attack
+                      mother-spider
+                      cak-14
+                      blue-eco-suck
+                      unknown-16
+                      unknown-17
+                      unknown-18
+                      unknown-19
+                      unknown-20
+                      unknown-21
+                      unknown-22
+                      unknown-23
+                      unknown-24
+                      unknown-25
+                      unknown-26
+                      unknown-27
+                      unknown-28
+                      unknown-29
+                      unknown-30
+                      unknown-31
+                      unknown-32
+                      unknown-33
+                      unknown-34
+                      unknown-35
+                      unknown-36
+                      unknown-37
+                      unknown-38
+                      unknown-39
+                      unknown-40
+                      unknown-41
+                      unknown-42
+                      unknown-43
+                      unknown-44
+                      unknown-45
+                      unknown-46
+                      unknown-47
+                      unknown-48
+                      unknown-49
+                      unknown-50
+                      unknown-51
+                      unknown-52
+                      unknown-53
+                      unknown-54
+                      unknown-55
+                      unknown-56
+                      unknown-57
+                      unknown-58
+                      unknown-59
+                      unknown-60
+                      unknown-61
+                      unknown-62
+                      unknown-63
+                    )
+                    (the-as process #f)
+                    probe-res
+                    probe-pat)
+                  0.0))
+          ))))
+
+(defun check-crowbar-collide-type? ((shooter process-drawable))
+  (rlet ((vf0 :class vf)
+         (vf4 :class vf)
+         (vf5 :class vf)
+         (vf6 :class vf))
+    (init-vf0-vector)
+
+    (let ((max-dist (meters 3))
+          (backoff-epsilon (the-as float 10.0))
+          (probe-radius 2000.0))
+      (let* ((cam-pos (camera-pos))
+             (cam-forward (vector-float*! (new 'stack-no-clear 'vector)
+                                          (-> *math-camera* inv-camera-rot vector 2)
+                                          1.0))
+             (probe-move (vector-float*! (new 'stack-no-clear 'vector) cam-forward max-dist))
+             (probe-res (new 'stack-no-clear 'collide-tri-result))
+             (probe-pat (new 'static 'pat-surface :noentity #x1))
+             (spawn-pos (new 'stack-no-clear 'vector)))
+
+        (when (>= (fill-and-probe-using-line-sphere
+                    *collide-cache*
+                    cam-pos
+                    probe-move
+                    probe-radius
+                    (collide-kind
+                      water
+                      background
+                      crate
+                      cak-1
+                      cak-2 
+                      cak-3 
+                      enemy 
+                      wall-object
+                      ground-object
+                      target-attack
+                      mother-spider
+                      cak-14
+                      blue-eco-suck
+                      unknown-16
+                      unknown-17
+                      unknown-18
+                      unknown-19
+                      unknown-20
+                      unknown-21
+                      unknown-22
+                      unknown-23
+                      unknown-24
+                      unknown-25
+                      unknown-26
+                      unknown-27
+                      unknown-28
+                      unknown-29
+                      unknown-30
+                      unknown-31
+                      unknown-32
+                      unknown-33
+                      unknown-34
+                      unknown-35
+                      unknown-36
+                      unknown-37
+                      unknown-38
+                      unknown-39
+                      unknown-40
+                      unknown-41
+                      unknown-42
+                      unknown-43
+                      unknown-44
+                      unknown-45
+                      unknown-46
+                      unknown-47
+                      unknown-48
+                      unknown-49
+                      unknown-50
+                      unknown-51
+                      unknown-52
+                      unknown-53
+                      unknown-54
+                      unknown-55
+                      unknown-56
+                      unknown-57
+                      unknown-58
+                      unknown-59
+                      unknown-60
+                      unknown-61
+                      unknown-62
+                      unknown-63
+                    )
+                    (the-as process #f)
+                    probe-res
+                    probe-pat)
+                  0.0))
+                  probe-res
+          ))))
+
+(defun fire-crowbar-attack ((shooter process-drawable))
+  (rlet ((vf0 :class vf)
+         (vf4 :class vf)
+         (vf5 :class vf)
+         (vf6 :class vf))
+    (init-vf0-vector)
+
+    (let ((max-dist (meters 3))
+          (spawn-forward-offset (the-as float 0.0))
+          (backoff-epsilon (the-as float 10.0))
+          (probe-radius 2000.0))
+      (let* ((cam-pos (camera-pos))
+             (cam-forward (vector-float*! (new 'stack-no-clear 'vector)
+                                          (-> *math-camera* inv-camera-rot vector 2)
+                                          1.0))
+             (probe-move (vector-float*! (new 'stack-no-clear 'vector) cam-forward max-dist))
+             (probe-res (new 'stack-no-clear 'collide-tri-result))
+             (probe-pat (new 'static 'pat-surface :noentity #x1))
+             (spawn-pos (new 'stack-no-clear 'vector)))
+
+        (when (>= (fill-and-probe-using-line-sphere
+                    *collide-cache*
+                    cam-pos
+                    probe-move
+                    probe-radius
+                    (collide-kind
+                      water
+                      background
+                      crate
+                      cak-1
+                      cak-2 
+                      cak-3 
+                      enemy 
+                      wall-object
+                      ground-object
+                      target-attack
+                      mother-spider
+                      cak-14
+                      blue-eco-suck
+                      unknown-16
+                      unknown-17
+                      unknown-18
+                      unknown-19
+                      unknown-20
+                      unknown-21
+                      unknown-22
+                      unknown-23
+                      unknown-24
+                      unknown-25
+                      unknown-26
+                      unknown-27
+                      unknown-28
+                      unknown-29
+                      unknown-30
+                      unknown-31
+                      unknown-32
+                      unknown-33
+                      unknown-34
+                      unknown-35
+                      unknown-36
+                      unknown-37
+                      unknown-38
+                      unknown-39
+                      unknown-40
+                      unknown-41
+                      unknown-42
+                      unknown-43
+                      unknown-44
+                      unknown-45
+                      unknown-46
+                      unknown-47
+                      unknown-48
+                      unknown-49
+                      unknown-50
+                      unknown-51
+                      unknown-52
+                      unknown-53
+                      unknown-54
+                      unknown-55
+                      unknown-56
+                      unknown-57
+                      unknown-58
+                      unknown-59
+                      unknown-60
+                      unknown-61
+                      unknown-62
+                      unknown-63
+                    )
+                    (the-as process #f)
+                    probe-res
+                    probe-pat)
+                  0.0)
+          (let (
+              (hit-pos (the-as vector (-> probe-res intersect)))
+              (hit-pat (-> probe-res pat))
+              )
+            (set! (-> *hl-weapons* last-hit-pat-mode) (-> hit-pat mode))
+            (vector-! spawn-pos hit-pos (vector-float*! (new 'stack-no-clear 'vector) cam-forward backoff-epsilon))
+              (let ((s4-0 (get-process *default-dead-pool* hl-crowbar-hit #x4000)))
+                (when s4-0
+                  (let ((t9-2 (method-of-type hl-crowbar-hit activate)))
+                    (t9-2 (the-as hl-crowbar-hit s4-0) shooter 'hl-crowbar-hit (the-as pointer #x70004000)))
+                  (let ((s3-0 run-function-in-process)
+                        (s2-0 s4-0)
+                        (s1-0 projectile-hl-init-by-other)
+                        (s0-0 (-> shooter entity))
+                        (sv-48 spawn-pos)
+                        (gp-1 (vector-float*! (new-stack-vector0)
+                                              (-> *math-camera* inv-camera-rot vector 2)
+                                              (the-as float (meters 0.5))))
+                        (t1-0 40)
+                        (t2-0 #f))
+                    ((the-as (function object object object object object object object none) s3-0)
+                    s2-0 s1-0 s0-0 sv-48 gp-1 t1-0 t2-0))
+                  (-> s4-0 ppointer)))
+ 
+            ))
+          ))))
+
+
+(defun draw-ammo ((arg0 dma-buffer))
+  (case (-> *hl-weapons* current-weapon)
+    (((weapons-enum pistol))
+      (draw-string-xy-scaled
+        (string-format "~d" (-> *hl-weapons* current-pistol-mag-ammo))
+        arg0
+        490
+        212
+        (the font-color 4)
+        (font-flags shadow kerning)
+        1.2)          
+    )
+    (((weapons-enum smg))
+      (draw-string-xy-scaled
+        (string-format "~d" (-> *hl-weapons* current-smg-mag-ammo))
+        arg0
+        490
+        212
+        (the font-color 4)
+        (font-flags shadow kerning)
+        1.2)
+    ))
+
+)
+
+
+(defun hud-hl-display-on ()
+  (when (and (not (process-by-name 'hl-hud-proc *active-pool*)) (process-by-name 'hl-weapon-proc *active-pool*))
+    ;process-spawn-function, spawns a process that runs the function you give it
+    (process-spawn-function process
+      :name 'hl-hud-proc
+      ;This lambda is our function
+      (lambda :behavior process ()
+        ;Code before the loop runs once on process spawn
+        ;
+        ;Loop runs once per frame while process is active
+        (loop
+          ;Start a bucket thing block so we can use draw functions
+          (with-dma-buffer-add-bucket ((testbuf (-> (current-frame) global-buf)) (bucket-id debug-no-zbuf))
+            ;Other draw stuff
+            (draw-ammo testbuf))
+          ;Processes should suspend themselves, the loop will resume next frame
+          (suspend)))))
+  ;Lisp returns the last form as the function return
+  (none))
+
+(defun hud-hl-display-off ()
+  "Kill the hl hud process"
+  (when (process-by-name 'hl-hud-proc *active-pool*)
+    (kill-by-name 'hl-hud-proc *active-pool*))
+  (none))
+
+(defun fire-hl-grenade ((shooter process-drawable))
+  (rlet ((vf0 :class vf))
+    (init-vf0-vector)
+
+    (let* ((spawn-forward-offset (the-as float (meters -0.0)))
+           (grenade-speed (the-as float (meters 25.0)))
+           (rotate (the-as float 0.0))
+           (blast-radius (the-as float (meters 6.0)))
+
+           ;; camera axes / pos
+           (cam-pos (camera-pos))
+           (cam-forward (-> *math-camera* inv-camera-rot vector 2))
+           (cam-right   (-> *math-camera* inv-camera-rot vector 0))
+           (cam-up      (-> *math-camera* inv-camera-rot vector 1))
+
+           ;; temps
+           (spawn-pos (new 'stack-no-clear 'vector))
+           (vel       (new-stack-vector0))
+           (tmp       (new 'stack-no-clear 'vector)))
+
+      ;; spawn position = camera position + forward * spawn-forward-offset
+      (vector-float*! tmp cam-forward spawn-forward-offset)
+      (vector+! spawn-pos cam-pos tmp)
+
+      ;; add height offset (move upward relative to camera)
+      (let ((spawn-up-offset (the-as float (meters 0))))
+        (vector-float*! tmp cam-up spawn-up-offset)
+        (vector+! spawn-pos spawn-pos tmp))
+
+      (vector-float*! vel cam-forward grenade-speed)
+
+      (let ((forward cam-forward))
+        (set! rotate (atan (-> forward x) (-> forward z))))
+
+      (spawn-smg-grenade
+        *entity-pool*
+        spawn-pos
+        vel
+        rotate
+        blast-radius
+        (-> shooter entity)))))

@@ -164,7 +164,7 @@
 ;; order that textures are uploaded and things are drawn.
 
 ;; there is typically a texture upload bucket followed by renderer-specific draw buckets.
-(defconstant BUCKET_COUNT (#if PC_PORT 71 70))
+(defconstant BUCKET_COUNT (#if PC_PORT 72 70))
 
 (defenum bucket-id
   :type int32
@@ -240,8 +240,8 @@
   (debug 68)
   (debug-no-zbuf 69)
   ;; extra buckets for pc port
-  (crosshair 70) ;; for hl mod
-  (subtitle 71)
+  (subtitle 70)
+  (crosshair 71) ;; for hl mod
   )
 
 ;; A DMA bucket is a way of sorting data within a dma buffer.

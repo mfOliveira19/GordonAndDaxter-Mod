@@ -129,7 +129,8 @@
    (nav-enemy-flags     nav-enemy-flags)
    (incomming-attack-id handle)
    (jump-return-state   (state process))
-   (rand-gen            random-generator))
+   (rand-gen            random-generator)
+   (health              int8))
   (:state-methods
    nav-enemy-attack
    nav-enemy-chase

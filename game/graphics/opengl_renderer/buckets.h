@@ -74,8 +74,8 @@ enum class BucketId {
   SPRITE = 67,
   DEBUG = 68,
   DEBUG_NO_ZBUF = 69,
-  CROSSHAIR = 70,
-  SUBTITLE = 71,
+  SUBTITLE = 70,
+  CROSSHAIR = 71,
   MAX_BUCKETS = 72
 };
 }

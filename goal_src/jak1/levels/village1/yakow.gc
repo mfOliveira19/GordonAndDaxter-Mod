@@ -129,7 +129,7 @@
        (when (and v1-2 (< 8192.0 (- (-> v1-2 root trans y) (-> self root trans y))))
          (do-push-aways! (-> self root))
          (send-shove-back (-> self root) arg0 (the-as touching-shapes-entry (-> arg3 param 0)) 0.7 6144.0 16384.0))))
-    (('attack)
+    (('attack 'attack-hl)
      (let ((v1-9 (-> arg3 param 2)))
        (cond
          ((!= v1-9 (-> self player-attack-id))

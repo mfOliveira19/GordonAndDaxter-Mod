@@ -235,6 +235,7 @@
   (set! (-> this neck up) (the-as uint 0))
   (set! (-> this neck nose) (the-as uint 1))
   (set! (-> this neck ear) (the-as uint 2))
+  (set! (-> this health) 120)
   0
   (none))
 

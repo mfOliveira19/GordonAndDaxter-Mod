@@ -195,6 +195,7 @@ nav-enemy-default-event-handler
     (set! (-> s4-0 nav-radius) (* 0.75 (-> s4-0 root-prim local-sphere w)))
     (backup-collide-with-as s4-0)
     (set! (-> this collide-info) s4-0))
+  (set! (-> this health) 1)
   (process-drawable-from-entity! this arg0)
   (initialize-skeleton this *junglefish-sg* '())
   (init-defaults! this *junglefish-nav-enemy-info*)

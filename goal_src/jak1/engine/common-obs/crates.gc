@@ -447,7 +447,7 @@
 
 (defbehavior crate-standard-event-handler crate ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
-    (('attack)
+    (('attack 'attack-hl)
      (let ((s4-0 (-> arg3 param 2))
            (s5-0 (-> arg3 param 3)))
        (case (-> self defense)

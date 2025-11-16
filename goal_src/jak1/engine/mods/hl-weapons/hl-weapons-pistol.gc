@@ -21,12 +21,26 @@
              (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
              (not (= (-> self current-weapon) (weapons-enum crowbar))))
     (set-time! (-> self weapon-last-switch-time))
+    (set! (-> self last-weapon) (weapons-enum pistol))
     (go crowbar-draw))
   (when (and (should-switch-slot3?)
              (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
              (not (= (-> self current-weapon) (weapons-enum smg))))
     (set-time! (-> self weapon-last-switch-time))
-    (go smg-draw)))
+    (set! (-> self last-weapon) (weapons-enum pistol))
+    (go smg-draw))
+
+  (when (and (should-switch-last-weapon?)
+             (time-elapsed? (-> self weapon-last-switch-time) weapon-switch-cooldown)
+             (not (= (-> self current-weapon) (-> self last-weapon))))
+    (set-time! (-> self weapon-last-switch-time))
+    (case (-> self last-weapon)
+      (((weapons-enum crowbar))
+        (set! (-> self last-weapon) (weapons-enum pistol))
+        (go crowbar-draw))
+      (((weapons-enum smg))
+        (set! (-> self last-weapon) (weapons-enum pistol))
+        (go smg-draw)))))
 
 (defstate pistol-draw (hl-weapons)
   :enter
@@ -65,10 +79,11 @@
       (go pistol-attack))
     (when (and (should-second-attack?)
                (time-elapsed? (-> self weapon-last-attack-time) pistol-second-attack-cooldown))
-      (go pistol-attack))
-    (when (should-reload?)
+      (go pistol-attack-secondary))
+    (when (and (should-reload?) (!= (-> self current-pistol-mag-ammo) pistol-max-mag-ammo))
       (go pistol-reload-part1))
-
+    (when (and (= (-> self current-pistol-mag-ammo) 0) (not (should-attack?)))
+      (go pistol-reload-part1))
     (when (time-elapsed? (-> self weapon-last-idle-time) (-> self weapon-next-idle-wait))
       (go pistol-idle-anim)))
   :code
@@ -77,13 +92,15 @@
 
   :post
   (behavior ()
-    (update-aim-punch pistol-aim-punch-decay)))
+    ;;(fire-hl-shot *target* #t 0.0 0.0)
+    (update-aim-punch pistol-aim-punch-decay)
+    ))
 
 
 (defstate pistol-idle-anim (hl-weapons)
   :enter
   (behavior ()
-    (let ((idx (rand-vu-int-range 0 2))) ;; 0..2
+    (let ((idx (rand-vu-int-range 0 2)))
       (case idx
         ((0)
          (viewmodel-play-animation (viewmodel-animations-enum pistol-idle3) 1.0)
@@ -94,31 +111,41 @@
         ((2)
          (viewmodel-play-animation (viewmodel-animations-enum pistol-idle2) 1.0)
          (set! (-> self weapon-next-idle-wait) pistol-idle2-duration)))
-      ;; mark start time for the idle animation so trans can measure it
       (set-time! (-> self weapon-last-idle-time))))
   :trans
   (behavior ()
     (pistol-switch-handle)
     (when (time-elapsed? (-> self weapon-last-idle-time) (-> self weapon-next-idle-wait))
       (go pistol-idle))
-    (when (should-attack?)
+    (when (and (should-attack?)
+               (time-elapsed? (-> self weapon-last-attack-time) pistol-attack-cooldown))
       (go pistol-attack))
-    (when (should-reload?)
+    (when (and (should-second-attack?)
+               (time-elapsed? (-> self weapon-last-attack-time) pistol-second-attack-cooldown))
+      (go pistol-attack-secondary))
+    (when (and (should-reload?) (!= (-> self current-pistol-mag-ammo) pistol-max-mag-ammo))
       (go pistol-reload-part1)))
   :code
   (behavior ()
     (loop (suspend)))
   :post
   (behavior ()
-    (update-aim-punch pistol-aim-punch-decay)))
+    ;;(fire-hl-shot *target* #t)
+    (update-aim-punch pistol-aim-punch-decay)
+    ))
 
 (defstate pistol-attack (hl-weapons)
   :enter
   (behavior ()
-    (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot) 1.0)
-    (add-aim-punch pistol-aim-punch-amount)
-    (play-sound-file pistol-attack-sound-path 50)
-    (hl-choose-idle-wait! 5.0 15.0)
+    (when (> (-> self current-pistol-mag-ammo) 0)
+      (-! (-> self current-pistol-mag-ammo) 1)
+      (let ((spread-x (rand-vu-float-range -0.01 0.01))
+            (spread-y (rand-vu-float-range -0.01 0.01)))
+        (fire-hl-shot *target* #f spread-x spread-y))
+      (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot) 1.0)
+      (add-aim-punch pistol-aim-punch-amount)
+      (play-sound-file pistol-attack-sound-path 50)
+      (hl-choose-idle-wait! 5.0 15.0))
     (set-time! (-> self weapon-last-attack-time)))
   :trans
   (behavior ()
@@ -134,7 +161,38 @@
 
   :post
   (behavior ()
-    (update-aim-punch pistol-aim-punch-decay)))
+    (update-aim-punch pistol-aim-punch-decay)
+    ))
+
+(defstate pistol-attack-secondary (hl-weapons)
+  :enter
+  (behavior ()
+    (when (> (-> self current-pistol-mag-ammo) 0)
+      (-! (-> self current-pistol-mag-ammo) 1)
+      (let ((spread-x (rand-vu-float-range -0.1 0.1))
+            (spread-y (rand-vu-float-range -0.1 0.1)))
+        (fire-hl-shot *target* #f spread-x spread-y))
+      (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot) 1.0)
+      (add-aim-punch pistol-aim-punch-amount)
+      (play-sound-file pistol-attack-sound-path 50)
+      (hl-choose-idle-wait! 5.0 15.0))
+    (set-time! (-> self weapon-last-attack-time)))
+  :trans
+  (behavior ()
+    (pistol-switch-handle)
+    (when (time-elapsed? (-> self weapon-last-attack-time) pistol-attack-cooldown)
+      (go pistol-idle))
+    (when (time-elapsed? (-> self weapon-last-attack-time) pistol-second-attack-cooldown)
+      (go pistol-idle)))
+  
+  :code
+  (behavior ()
+    (loop (suspend)))
+
+  :post
+  (behavior ()
+    (update-aim-punch pistol-aim-punch-decay)
+    ))
 
 (defstate pistol-reload-part1 (hl-weapons)
   :enter
@@ -154,11 +212,13 @@
     (loop (suspend)))
   :post
   (behavior ()
-    (update-aim-punch pistol-aim-punch-decay)))
+    (update-aim-punch pistol-aim-punch-decay)
+    ))
 
 (defstate pistol-reload-part2 (hl-weapons)
   :enter
   (behavior ()
+    (set! (-> self current-pistol-mag-ammo) pistol-max-mag-ammo)
     (play-sound-file pistol-reload-sound2 50)
     (set-time! (-> self weapon-last-reload-time)))
   :trans
@@ -174,4 +234,5 @@
     (loop (suspend)))
   :post
   (behavior ()
-    (update-aim-punch pistol-aim-punch-decay)))
+    (update-aim-punch pistol-aim-punch-decay)
+    ))

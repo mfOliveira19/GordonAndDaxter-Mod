@@ -65,7 +65,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack) (go cavecrystal-active))))
+        (('attack 'attack-hl) (go cavecrystal-active))))
   :trans
     (behavior ()
       (if (and *target* (>= 40960.0 (vector-vector-distance (-> self root trans) (-> *target* control trans))))
@@ -81,7 +81,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack)
+        (('attack 'attack-hl)
          (let ((v1-1 (-> block param 2)))
            (cond
              ((!= v1-1 (-> self player-attack-id))

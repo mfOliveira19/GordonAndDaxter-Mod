@@ -101,7 +101,8 @@
          (else
           (do-push-aways! (-> self root))
           (send-event arg0 'shove (-> arg3 param 0) (static-attack-info ((shove-back (meters 2)) (shove-up (meters 0.5)))))))))
-    (('attack) (go junglesnake-die))))
+    (('attack) (go junglesnake-die)
+    )))
 
 junglesnake-default-event-handler
 

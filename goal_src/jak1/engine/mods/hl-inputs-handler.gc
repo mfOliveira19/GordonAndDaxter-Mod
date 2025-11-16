@@ -59,6 +59,17 @@
   (!= (-> *keyboard-data* key_3) 0)
 )
 
+(define *last-q-state* 0)
+(defun should-switch-last-weapon? ()
+  (let ((pressed (-> *keyboard-data* key_q))
+        (should-switch #f))
+    ;; Detect rising edge — pressed now, not pressed before
+    (when (and (!= pressed 0) (= *last-q-state* 0))
+      (set! should-switch #t))
+    ;; Update state for next frame
+    (set! *last-q-state* (the-as int pressed))
+    should-switch))
+
 (defbehavior read-input target ((arg0 vector))
   (when (!= (-> self control pad-read-time) (-> *display* real-frame-counter))
     (set! (-> self control last-stick-vec quad) (-> self control stick-vec quad))

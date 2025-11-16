@@ -1,0 +1,53 @@
+;;-*-Lisp-*-
+(in-package goal)
+(bundles "ENGINE.CGO" "GAME.CGO")
+(require "engine/game/game-h.gc")
+(declare-type projectile-hl process-drawable)
+(define-extern projectile-hl-init-by-other (function entity-actor vector vector uint handle none :behavior projectile-hl)) ;; 4th arg is `options`, 5th is `last-target`
+
+;; DECOMP BEGINS
+
+(deftype projectile-hl (process-drawable)
+  ((root            collide-shape-moving :override)
+   (base-trans      vector :inline)
+   (target          vector :inline)
+   (target-base     vector :inline)
+   (parent-base     vector :inline)
+   (parent-quat     vector :inline)
+   (base-vector     vector :inline)
+   (timeout         time-frame)
+   (options         uint64)
+   (last-target     handle)
+   (notify-handle   handle)
+   (max-speed       float)
+   (max-turn        float)
+   (old-dist        float 16)
+   (old-dist-count  int32)
+   (hits            int32)
+   (max-hits        int32)
+   (tween           float)
+   (attack-mode     symbol)
+   (update-velocity (function projectile-hl none))
+   (counter         int32)
+   (target-count    int32)
+   (sound-id        sound-id)
+   (has-damaged?    symbol))
+  (:state-methods
+   projectile-hl-die
+   projectile-hl-dissipate
+   projectile-hl-impact
+   projectile-hl-moving)
+  (:methods
+   (projectile-hl-method-24 (_type_) none)
+   (projectile-hl-method-25 (_type_) none)
+   (projectile-hl-method-26 (_type_) none)
+   (projectile-hl-method-27 (_type_) none)
+   (projectile-hl-method-28 (_type_) none)))
+
+(deftype hl-weapon-shot (projectile-hl)
+  ((mode  int32)
+   (angle float)))
+
+(deftype hl-crowbar-hit (projectile-hl)
+  ((mode  int32)
+   (angle float)))

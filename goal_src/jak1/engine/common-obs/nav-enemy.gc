@@ -97,15 +97,28 @@
   (send-event arg0 'get-attack-count 1)
   (logclear! (-> this mask) (process-mask actor-pause attackable))
   (go (method-of-object this nav-enemy-die))
-  'die)
+  'die
+  )
 
 (defmethod attack-handler ((this nav-enemy) (arg0 process) (arg1 event-message-block))
-  (cond
-    ((logtest? (-> this nav-enemy-flags) (nav-enemy-flags navenmf5))
-     (send-event arg0 'get-attack-count 1)
-     (logclear! (-> this mask) (process-mask actor-pause attackable))
-     (go (method-of-object this nav-enemy-die)))
-    (else (touch-handler this arg0 arg1))))
+  (case (-> arg1 message)
+    (('attack) 
+      (cond
+        ((logtest? (-> this nav-enemy-flags) (nav-enemy-flags navenmf5))
+        (send-event arg0 'get-attack-count 1)
+        (logclear! (-> this mask) (process-mask actor-pause attackable))
+        (go (method-of-object this nav-enemy-die)))
+        (else (touch-handler this arg0 arg1))))
+    (('attack-hl)
+      (let ((damage (the-as int8 (-> arg1 param 4))))
+        (cond
+          ((logtest? (-> this nav-enemy-flags) (nav-enemy-flags navenmf5))
+          (send-event arg0 'get-attack-count 1)
+          (logclear! (-> this mask) (process-mask actor-pause attackable))
+          (-! (-> this health) damage)
+          (when (<= (-> this health) 0)
+            (go (method-of-object this nav-enemy-die))))
+          (else (touch-handler this arg0 arg1)))))))
 
 (defbehavior nav-enemy-send-attack nav-enemy ((arg0 process) (arg1 touching-shapes-entry) (arg2 symbol))
   (when (send-event arg0
@@ -120,6 +133,7 @@
   (case arg2
     (('touch) (set-time! (-> self touch-time)) (touch-handler self arg0 arg3))
     (('attack) (nav-enemy-set-hit-from-direction arg0) (attack-handler self arg0 arg3))
+    (('attack-hl) (nav-enemy-set-hit-from-direction arg0) (attack-handler self arg0 arg3))
     (('instant-death)
      (let ((gp-1 (-> self hit-from-dir)))
        (vector-z-quaternion! gp-1 (-> self collide-info quat))

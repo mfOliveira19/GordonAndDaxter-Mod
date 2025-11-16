@@ -357,7 +357,7 @@
    (min-fov     float)))
 
 (define *CAM_FPS-bank*
-  (new 'static 'cam-fps-bank :rot-speed 5.0889 :max-degrees 14743.111 :max-fov 11650.845 :min-fov 11650.845))
+  (new 'static 'cam-fps-bank :rot-speed 5.0889 :max-degrees 15000.000 :max-fov 11650.845 :min-fov 11650.845))
 
 ;; main first-person camera for half-jak mod
 ;; og:preserve-this modified for high fps

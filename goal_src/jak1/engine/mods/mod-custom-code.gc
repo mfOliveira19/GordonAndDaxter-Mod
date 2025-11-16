@@ -24,12 +24,14 @@
 
 (defun runs-every-frame ()
   (if *show-input-display* (input-display-on) (input-display-off))
+  (hud-hl-display-on)
   (set! (-> *target* draw status) (draw-status hidden))
   ;;(set! *display-collision-marks* #t)
   (send-event *camera* 'set-fov 16384.845)
   (send-event *camera* 'change-state cam-fps 0)
   (pc-get-mouse-data *mouse-data*)
   (pc-get-keyboard-data *keyboard-data*)
+  ;;(draw-debug-sphere-in-front-of-camera!)
   ;;(send-event *camera* 'set-slave-option (cam-slave-options ALLOW_Z_ROT))
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
   (when *debug-segment*
@@ -90,7 +92,7 @@
   ;;uncomment this to use custom music for custom levels - the function is in mod-common-functions.gc
   ;;(process-spawn-function process music-manager-proc)
     (when (not (process-by-name 'hl-weapon-proc *active-pool*))
-      (init-hl-weapons!))
+      (start-hl-weapons))
   (none))
 
 (defun runs-on-jak-death ((death-event symbol))
