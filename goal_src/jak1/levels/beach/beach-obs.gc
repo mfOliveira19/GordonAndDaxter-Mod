@@ -454,7 +454,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack)
+        (('attack 'attack-hl)
          (sound-play "cannon-shot")
          (increment-success-for-hint (text-id sidekick-hint-ecorocks))
          (go ecoventrock-break #f))))
@@ -784,9 +784,7 @@
 (defstate flutflutegg-idle (flutflutegg)
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
-      (when (and (= message 'attack)
-                 (or (= (-> block param 1) 'punch) (= (-> block param 1) 'spin) (= (-> block param 1) 'spin-air))
-                 (!= (-> self incomming-attack-id) (-> block param 2)))
+      (when (or (= message 'attack) (= message 'attack-hl))
         (set! (-> self incomming-attack-id) (-> block param 2))
         (flutflutegg-hit-sounds)
         (let ((s5-1 (vector-! (new-stack-vector0) (-> (the-as process-drawable proc) root trans) (-> self root trans))))
@@ -833,9 +831,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (when (and (time-elapsed? (-> self state-time) (seconds 0.5))
-                 (= message 'attack)
-                 (or (= (-> block param 1) 'punch) (= (-> block param 1) 'spin) (= (-> block param 1) 'spin-air))
-                 (!= (-> self incomming-attack-id) (-> block param 2)))
+                 (or (= message 'attack) (= message 'attack-hl)))
         (set! (-> self incomming-attack-id) (-> block param 2))
         (flutflutegg-hit-sounds)
         (let ((s5-1 (vector-! (new-stack-vector0) (-> (the-as process-drawable proc) root trans) (-> self root trans))))

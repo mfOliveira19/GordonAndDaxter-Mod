@@ -22,16 +22,77 @@
 ;; Begin function defintions.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun in-zoomer? ()
+  (or (= (-> *target* state name) 'target-hl-racing)
+  (= (-> *target* state name) 'target-hl-racing-grab)
+  (= (-> *target* state name) 'target-hl-racing-clone-anim)
+  (= (-> *target* state name) 'target-hl-racing-hit) 
+  (= (-> *target* state name) 'target-hl-racing-jump)
+  (= (-> *target* state name) 'target-hl-racing-smack)
+  (= (-> *target* state name) 'target-hl-racing-bounce)
+  (= (-> *target* state name) 'target-hl-racing-falling)
+  (= (-> *target* state name) 'target-hl-racing-start)
+  (= (-> *target* state name) 'target-hl-racing-get-on)
+  (= (-> *target* state name) 'target-hl-racing-get-off)
+  (= (-> *target* state name) 'target-hl-racing-get-off-jump)
+  (= (-> *target* state name) 'target-hl-racing-get-off-hit-ground)
+  (= (-> *target* state name) 'target-hl-racing-death)
+  ))
+
+(defun in-hl-state? ()
+  (let ((st (-> *target* state name)))
+    (and
+      (= (-> *target* game mode) 'play)
+
+      ;; explicitly exclude these states
+      (not (or (= st 'target-hl-periscope)
+               (= st 'target-hl-death)
+               (= st 'target-hl-fishing)
+               (= st 'target-hl-clone-anim)
+               (in-zoomer?))))))
+
+(defun in-cutscene? ()
+    (or (= (-> *target* state name) 'target-hl-clone-anim) (= (-> *target* state name) 'target-hl-grab)))
+
 (defun runs-every-frame ()
   (if *show-input-display* (input-display-on) (input-display-off))
-  (hud-hl-display-on)
-  (set! (-> *target* draw status) (draw-status hidden))
   ;;(set! *display-collision-marks* #t)
-  (send-event *camera* 'set-fov 16384.845)
-  (send-event *camera* 'change-state cam-fps 0)
-  (pc-get-mouse-data *mouse-data*)
-  (pc-get-keyboard-data *keyboard-data*)
-  ;;(draw-debug-sphere-in-front-of-camera!)
+  ;; hide stuff while in cutscenes
+  (if (or (in-cutscene?))
+    (begin
+      (hud-hl-display-off)
+      (pc-set-viewmodel-enabled #f)
+      (pc-set-crosshair-enabled #f)
+      (pc-get-keyboard-data *keyboard-data*)
+      (clear-mouse *mouse-data*)
+      (logclear! (-> *target* draw status) (draw-status hidden)))
+    (begin
+      (when (in-hl-state?)
+        (send-event *camera* 'set-fov 16384.845)
+        (send-event *camera* 'change-state cam-fps 0)
+        (set! (-> *target* draw status) (draw-status hidden)))
+      (hud-hl-display-on)
+      (pc-get-mouse-data *mouse-data*)
+      (pc-get-keyboard-data *keyboard-data*)
+      (pc-set-viewmodel-enabled #t)
+      (pc-set-crosshair-enabled #t)))
+  ;; hide stuff too on other states
+  (when (not (in-hl-state?))
+      (hud-hl-display-off)
+      (pc-set-viewmodel-enabled #f)
+      (pc-set-crosshair-enabled #f))
+
+  ;; show target when fishing
+  (when (= (-> *target* state name) 'target-hl-fishing)
+    (logclear! (-> *target* draw status) (draw-status hidden)))
+
+
+  (when (in-zoomer?)
+    (send-event *camera* 'change-state cam-string 0)
+    ;;(logclear! (-> *target* draw status) (draw-status hidden))
+  )
+  ;;(send-event *camera* 'change-state cam-bike 0))
+
   ;;(send-event *camera* 'set-slave-option (cam-slave-options ALLOW_Z_ROT))
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
   (when *debug-segment*
@@ -99,6 +160,10 @@
   (case death-event
     (('dying)
      ;; Code here runs immediately every time jak dies, before any death animation or death cutscene
+      ;; hide stuff too when we die
+      (hud-hl-display-off)
+      (pc-set-viewmodel-enabled #f)
+      (pc-set-crosshair-enabled #f)  
      )
     (('blackout)
      ;; Code here runs after jak dies (and any death cutscene finishes), during the blackout before he spawns

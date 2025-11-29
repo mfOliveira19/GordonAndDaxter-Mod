@@ -155,6 +155,32 @@
    target-hl-movement-air
    target-hl-movement-ground-duck
    target-hl-movement-air-duck
+   (target-hl-jump float float surface)
+   (target-hl-high-jump float float basic)
+   (target-hl-play-anim string handle)
+   (target-hl-clone-anim handle)
+   target-hl-grab
+   (target-hl-hit symbol attack-info)
+   (target-hl-hit-ground symbol)
+   (target-hl-death symbol)
+   (target-hl-launch float symbol vector int)
+   (target-hl-periscope handle)
+   (target-hl-fishing handle)
+   target-hl-racing
+   (target-hl-racing-bounce float float symbol)
+   (target-hl-racing-clone-anim handle)
+   (target-hl-racing-death symbol)
+   target-hl-racing-falling
+   (target-hl-racing-get-off handle)
+   (target-hl-racing-get-off-hit-ground symbol)
+   (target-hl-racing-get-off-jump handle)
+   (target-hl-racing-get-on handle)
+   target-hl-racing-grab
+   (target-hl-racing-hit handle attack-info)
+   (target-hl-racing-jump float float symbol)
+   (target-hl-racing-smack float symbol)
+   (target-hl-racing-start handle)
+    target-hl-billy-game
    ))
 
 (define-perm *target* target #f)

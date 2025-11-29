@@ -79,7 +79,7 @@
 
 (defbehavior puffer-default-event-handler puffer ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
-    (('touch 'attack)
+    (('touch 'attack 'attack-hl)
      (when (and (= arg2 'attack) (!= (-> self cprims-type) 2))
        (let* ((gp-0 arg0)
               (v1-7 (if (and (nonzero? gp-0) (type-type? (-> gp-0 type) process-drawable)) gp-0)))

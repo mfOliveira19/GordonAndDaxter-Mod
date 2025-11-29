@@ -500,7 +500,7 @@
          (case (-> (level-get-target-inside *level*) name)
            (('training)
             (level-hint-spawn (text-id training-eco-reminder) "sagevb23" (the-as entity #f) *entity-pool* (game-task none)))))
-        (((pickup-type eco-green)) (sound-play "g-eco-pickup"))
+        (((pickup-type eco-green)) (sound-play "g-eco-pickup") (sound-play "smallmedkit1")) ;; added medkit sound
         (((pickup-type eco-green) (pickup-type eco-pill)) (sound-play "pill-pickup")))
       (runs-on-eco-pickup (-> self fact pickup-type) (ppointer->process (-> self parent))) ;; trigger hook for mod base
       (if (nonzero? (-> self part)) (kill-and-free-particles (-> self part)))

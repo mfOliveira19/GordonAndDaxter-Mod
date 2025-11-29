@@ -47,6 +47,7 @@ class Crosshair {
     int raw_value = Gfx::g_global_settings.current_crosshair;
     return int_to_crosshair(raw_value);
   }
+  bool crosshairShow() { return Gfx::g_global_settings.crosshair_show; };
 
  private:
   void draw_crosshair(SharedRenderState* render_state);

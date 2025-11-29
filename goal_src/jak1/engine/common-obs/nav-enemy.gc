@@ -160,7 +160,7 @@
 (defbehavior nav-enemy-jump-event-handler nav-enemy ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
     (('touch) (set-time! (-> self touch-time)) (nav-enemy-touch-handler self arg0 arg3))
-    (('attack) (nav-enemy-set-hit-from-direction arg0) (nav-enemy-attack-handler self arg0 arg3))))
+    (('attack 'attack-hl) (nav-enemy-set-hit-from-direction arg0) (nav-enemy-attack-handler self arg0 arg3))))
 
 (defbehavior process-drawable-death-event-handler process-drawable ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2

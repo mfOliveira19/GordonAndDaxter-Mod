@@ -46,7 +46,10 @@
   (none))
 
 (defmethod projectile-hl-method-27 ((this hl-crowbar-hit))
-  (set! (-> this attack-mode) 'uppercut)
+  (if (and (= (-> *target* fact eco-type) (pickup-type eco-yellow))
+        (> (-> *target* fact eco-level) 0))
+    (set! (-> this attack-mode) 'eco-yellow)
+    (set! (-> this attack-mode) 'uppercut))
   (set! (-> this mode) 1)
   (set! (-> this max-speed) (vector-length (-> this root transv)))
   (set! (-> this update-velocity) projectile-hl-update-velocity-space-wars)

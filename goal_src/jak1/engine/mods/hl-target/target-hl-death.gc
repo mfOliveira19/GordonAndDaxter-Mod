@@ -1,0 +1,273 @@
+(in-package goal)
+
+(defstate target-hl-death (target)
+  :enter
+  (behavior ()
+  ;; lower the camera when we die
+  (let ((cam-pos (new 'stack-no-clear 'vector)))
+    (vector-copy! cam-pos (-> self control trans))
+    (-! (-> cam-pos y) 5500.0)
+    ;; set final camera pos
+    (set! (-> (&-> (-> self control) unknown-qword00) 0) (-> cam-pos quad)))  
+  )
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (case message
+        (('end-mode) (let ((v0-0 (the-as object #t))) (set! (-> self control temp-flop-end-checks) (the-as uint v0-0)) v0-0))
+        (('change-mode)
+         (case (-> block param 0)
+           (('grab) #t)))
+        (('notify)
+         (when (type-type? (-> proc type) pov-camera)
+           (case (-> block param 0)
+             (('die 'abort-request) (set! (-> self control temp-flop-end-checks) (the-as uint #t)) (set-blackout-frames (seconds 0.2))))))
+        (('get-pickup) #f)
+        (('touched) #f)
+        (else (target-generic-event-handler proc argc message block))))
+  :exit
+    (behavior ()
+      (logclear! (-> self state-flags) (state-flags being-attacked dying))
+      (target-exit)
+      (remove-setting! 'process-mask)
+      (remove-setting! 'allow-progress)
+      (restore-collide-with-as (-> self control))
+      (set! (-> self control pat-ignore-mask) (new 'static 'pat-surface :noentity #x1))
+      (set! (-> self control dynam gravity-max) (-> self control cur-dynam gravity-max))
+      (set! (-> self control dynam gravity-length) (-> self control cur-dynam gravity-length)))
+  :trans
+    (-> target-hit
+        trans)
+  :code
+    (behavior ((arg0 symbol))
+      (runs-on-jak-death 'dying) ;;mod-base-change
+      (set! (-> self control temp-flop-end-checks) (the-as uint #f))
+      (set! (-> self control unknown-int21)
+            (the-as int (send-event (handle->process (-> self attack-info attacker)) 'target 'die arg0)))
+      (set! (-> self neck flex-blend) 0.0)
+      (target-hl-timed-invulnerable-off self)
+      (set-setting! 'process-mask 'set 0.0 (process-mask enemy platform projectile death))
+      (apply-settings *setting-control*)
+      (set! (-> self control transv quad) (the-as uint128 0))
+      (logior! (-> self state-flags) (state-flags dying))
+      (case arg0
+        (('none 'instant-death) (sound-play "hev_flatline"))
+        (('ogreboss-super-boulder)
+         ;; og:preserve-this PAL patch here
+         (process-spawn part-tracker
+                        :init
+                        part-tracker-init
+                        (-> *part-group-id-table* 32)
+                        -1
+                        #f
+                        #f
+                        #f
+                        (-> self control trans)
+                        :to
+                        *entity-pool*)
+         (set! (-> self post-hook) target-no-ja-move-post)
+         (-> self attack-info attacker)
+         (ja-channel-set! 0)
+         (ja-post)
+         (suspend-for (seconds 1)))
+        (('drown 'drown-death)
+         (sound-play "death-drown")
+         (logclear! (-> self water flags) (water-flags wt04))
+         (clear-collide-with-as (-> self control))
+         (set! (-> self control cur-surf) *dive-mods*)
+         (set! (-> self control dynam gravity-max) 6144.0)
+         (set! (-> self control dynam gravity-length) 6144.0)
+         (ja-channel-push! 1 (seconds 0.1))
+         (let ((f30-0 0.7)
+               (gp-3 (-> self skel root-channel 0)))
+           (set! (-> gp-3 frame-group) (the-as art-joint-anim eichar-swim-walk-to-down-ja))
+           (set! (-> gp-3 param 0) (ja-aframe (the-as float 73.0) 0))
+           (let ((f30-1 (seek f30-0 (the-as float 0.05) (* 1.5 (seconds-per-frame)))))
+             (set! (-> gp-3 param 1) f30-1)
+             (set! (-> gp-3 frame-num) 0.0)
+             (joint-control-channel-group! gp-3 (the-as art-joint-anim eichar-swim-walk-to-down-ja) num-func-seek!)
+             (until (ja-done? 0)
+               (suspend)
+               (let ((gp-4 (-> self skel root-channel 0)))
+                 (set! (-> gp-4 param 0) (ja-aframe (the-as float 73.0) 0))
+                 (set! f30-1 (seek f30-1 (the-as float 0.05) (* 1.5 (seconds-per-frame))))
+                 (set! (-> gp-4 param 1) f30-1)
+                 (joint-control-channel-group-eval! gp-4 (the-as art-joint-anim #f) num-func-seek!))))))
+        (('lava 'dark-eco-pool 'melt)
+         (let ((s5-1 (handle->process (-> self attack-info attacker))))
+           (when (if (and (nonzero? s5-1) (type-type? (-> s5-1 type) water-vol)) s5-1)
+             (logior! (-> self state-flags) (state-flags falling-into-pool-of-bad))
+             (set! (-> self alt-cam-pos y) (+ 4096.0 (-> self water height)))))
+         (cond
+           ((= arg0 'dark-eco-pool)
+            (sound-play "death-darkeco")
+            (process-spawn part-tracker
+                           :init
+                           part-tracker-init
+                           (-> *part-group-id-table* 31)
+                           -1
+                           #f
+                           #f
+                           #f
+                           (-> self control trans)
+                           :to
+                           *entity-pool*))
+           ((or (= arg0 'lava) (= arg0 'melt))
+            (sound-play "bodysplat") ;; was death-melt
+            (process-spawn part-tracker
+                           :init
+                           part-tracker-init
+                           (-> *part-group-id-table* 32)
+                           -1
+                           #f
+                           #f
+                           #f
+                           (-> self control trans)
+                           :to
+                           *entity-pool*)))
+         (clear-collide-with-as (-> self control))
+         (set! (-> self post-hook) target-no-ja-move-post)
+         (ja-channel-set! 0)
+         (ja-post)
+         (suspend-for (seconds 2)))
+        (('endlessfall)
+         (initialize! (-> self game) 'dead (the-as game-save #f) (the-as string #f)) ;; this was added so we instantly die when we fall
+         (sound-play "bodysplat") ;; was death-fall
+         (camera-change-to (the-as string cam-endlessfall) 30 #f)
+         (set! (-> self control pat-ignore-mask unknown-bit) 1)
+         (logclear! (-> self water flags) (water-flags wt04))
+         (let ((f30-2 (fmin -4096.0 (- (-> self control ground-impact-vel)))))
+           (set! (-> self control temp-flop-end-checks) (the-as uint f30-2))
+           (let ((gp-11 (new-stack-vector0)))
+             (let ((f0-14 (vector-dot (-> self control dynam gravity-normal) (-> self control transv))))
+               0.0
+               (vector-! gp-11 (-> self control transv) (vector-float*! gp-11 (-> self control dynam gravity-normal) f0-14)))
+             (let* ((f0-15 (vector-length gp-11))
+                    (f1-6 f0-15))
+               (vector+! (-> self control transv)
+                         (vector-float*! (-> self control transv) (-> self control dynam gravity-normal) f30-2)
+                         (vector-float*! gp-11 gp-11 (/ f0-15 f1-6))))))
+         (set! (-> self trans-hook)
+               (lambda :behavior target ()
+                 (vector-seek! (-> self draw color-mult) *zero-vector* (seconds-per-frame))
+                 (let ((gp-0 (new-stack-vector0))
+                       (f30-0 (the-as number (vector-dot (-> self control dynam gravity-normal) (-> self control transv)))))
+                   0.0
+                   (vector-! gp-0
+                             (-> self control transv)
+                             (vector-float*! gp-0 (-> self control dynam gravity-normal) (the-as float f30-0)))
+                   (let* ((f0-4 (vector-length gp-0))
+                          (f1-0 f0-4))
+                     (if (< (the-as float (-> self control temp-flop-end-checks)) (the-as float f30-0)) (set! f30-0 (-> self control temp-flop-end-checks)))
+                     (vector+! (-> self control transv)
+                               (vector-float*! (-> self control transv) (-> self control dynam gravity-normal) (the-as float f30-0))
+                               (vector-float*! gp-0 gp-0 (/ f0-4 f1-0)))))
+                 ((-> target-hit trans))
+                 (none)))
+         ;;(target-falling-anim (seconds 0.1) (seconds 0.33))
+         (ja-channel-push! 1 (seconds 0.3))
+         (ja-no-eval :group! eichar-launch-jump-loop-ja :num! (loop! 0.5) :frame-num 0.0)
+         (suspend-for (seconds 0.8) (ja :group! eichar-launch-jump-loop-ja :num! (loop! 0.5)))
+         (camera-change-to (the-as string 'base) 0 #f))
+        (('target-hit-ground-hard)
+         (set! (-> self control cur-surf) *neutral-mods*)
+         (ja-channel-push! 1 (seconds 0.1))
+         (ja-no-eval :group! eichar-death-painful-land-ja :num! (seek!) :frame-num 0.0)
+         (until (ja-done? 0)
+           (suspend)
+           (ja :num! (seek!))))
+        (('sharkey)
+         (send-event self 'dry)
+         (set! (-> self post-hook) target-no-ja-move-post)
+         (let ((gp-13 (-> self attack-info attacker)))
+           (ja-channel-set! 0)
+           (ja-post)
+           (while (and (handle->process gp-13) (not (-> self control temp-spool)))
+             (send-event *camera* 'joystick 0.0 0.0)
+             (suspend))))
+        (('plant-boss)
+         (set! (-> self trans-hook) #f)
+         (let ((gp-14 (-> self attack-info attacker))
+               (a1-44 (new 'stack-no-clear 'event-message-block)))
+           (set! (-> a1-44 from) self)
+           (set! (-> a1-44 num-params) 0)
+           (set! (-> a1-44 message) 'joint)
+           (let ((s5-5 (the-as int (send-event-function (handle->process gp-14) a1-44))))
+             (send-event (ppointer->process (-> self sidekick)) 'matrix 'copy-parent)
+             (set! (-> self post-hook) target-no-ja-move-post)
+             (let ((a0-98 (-> self node-list data)))
+               (set! (-> a0-98 0 param0) nothing)
+               (set! (-> a0-98 0 param1) #f)
+               (set! (-> a0-98 0 param2) #f))
+             (while (and (handle->process gp-14) (not (-> self control temp-spool)) (-> self control unknown-int21))
+               (let* ((v1-205 (-> (the-as process-drawable (handle->process gp-14)) node-list data s5-5 bone transform))
+                      (a3-9 (-> self node-list data 0 bone transform))
+                      (a0-106 (-> v1-205 vector 0 quad))
+                      (a1-47 (-> v1-205 vector 1 quad))
+                      (a2-26 (-> v1-205 vector 2 quad))
+                      (v1-206 (-> v1-205 vector 3 quad)))
+                 (set! (-> a3-9 vector 0 quad) a0-106)
+                 (set! (-> a3-9 vector 1 quad) a1-47)
+                 (set! (-> a3-9 vector 2 quad) a2-26)
+                 (set! (-> a3-9 vector 3 quad) v1-206))
+               (clone-anim-once gp-14 33 #f "")
+               (suspend)
+               0))))
+        (('burn 'burnup)
+          (sound-play "hev_flatline")
+         (process-spawn part-tracker
+                        :init
+                        part-tracker-init
+                        (-> *part-group-id-table* 708)
+                        -1
+                        #f
+                        #f
+                        #f
+                        (-> self control trans)
+                        :to
+                        *entity-pool*)
+         (target-death-anim (the-as spool-anim #f)))
+        (else
+         (case arg0
+           (('tar) (sound-play "death-drown")))
+          (sound-play "hev_flatline")
+         (+! (-> *game-info* death-movie-tick) 1)
+         (if (= (death-movie-remap (+ (-> *game-info* death-movie-tick) -1) (-> *death-spool-array* length))
+                (death-movie-remap (-> *game-info* death-movie-tick) (-> *death-spool-array* length)))
+           (+! (-> *game-info* death-movie-tick) 1))
+         (let ((gp-18 (-> *death-spool-array* (death-movie-remap (-> *game-info* death-movie-tick) (-> *death-spool-array* length)))))
+           (set-setting! 'allow-progress #f 0.0 0)
+           (target-death-anim gp-18)
+           (when (and (< (rand-vu-int-count (-> *game-info* death-movie-tick)) (* (-> *death-spool-array* length) 2))
+                      (not (logtest? (-> self water flags) (water-flags wt09)))
+                      (!= (-> self control ground-pat material) 9)
+                      (!= (-> self control ground-pat material) 10))
+             (iterate-process-tree *entity-pool*
+                                   (lambda :behavior target ((arg0 process))
+                                     (if (and (logtest? (process-mask enemy) (-> arg0 mask))
+                                              (type-type? (-> arg0 type) process-drawable)
+                                              (nonzero? (-> (the-as process-drawable arg0) root))
+                                              (< (vector-vector-distance (-> (the-as process-drawable arg0) root trans) (-> *target* control trans)) 61440.0))
+                                       (process-entity-status! arg0 (entity-perm-status bit-9) #t)))
+                                   *null-kernel-context*)
+             (set! (-> *ACTOR-bank* birth-max) 1000)
+             (set! (-> self trans-hook) #f)
+             (send-event (ppointer->process (-> self sidekick)) 'matrix 'play-anim)
+             (send-event (ppointer->process (-> self sidekick)) 'shadow #f)
+             (send-event self 'blend-shape #t)
+             (let ((s5-8 (ppointer->handle (process-spawn pov-camera (-> self control trans) *deathcam-sg* gp-18 4 self '() :to *target-pool*))))
+               (send-event (handle->process s5-8) 'music-movie-volume 0.0)
+               (send-event (handle->process s5-8) 'sfx-movie-volume 50.0)
+               (set! (-> self post-hook) target-no-ja-move-post)
+               (while (not (-> self control temp-spool))
+                 (spool-push *art-control* (-> gp-18 name) 0 self (the-as float -99.0))
+                 (clone-anim-once s5-8 33 #f "")
+                 (suspend))
+               (let ((a0-155 (handle->process s5-8))) (if a0-155 (deactivate a0-155))))
+             (send-event (ppointer->process (-> self sidekick)) 'shadow #t)
+             (suspend)
+             0))))
+      (set! (-> self control transv quad) (the-as uint128 0))
+      (initialize! (-> self game) 'dead (the-as game-save #f) (the-as string #f))
+      (set-time! (-> self state-time))
+      (anim-loop))
+  :post target-hl-no-stick-post)

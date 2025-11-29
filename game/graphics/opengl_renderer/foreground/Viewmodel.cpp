@@ -78,6 +78,13 @@ void Viewmodel::render(DmaFollower& dma,
     once++;
   }
 
+  while (dma.current_tag_offset() != render_state->next_bucket)
+    dma.read_and_advance();
+
+  if (!viewmodelShow()) {
+    return;
+  }
+
   // Handle model switch
   if (viewmodelActiveModel() != m_active_model) {
     m_active_model = viewmodelActiveModel();
@@ -142,9 +149,6 @@ void Viewmodel::render(DmaFollower& dma,
 
   // select active model
   auto& modelRes = m_models[m_active_model];
-
-  while (dma.current_tag_offset() != render_state->next_bucket)
-    dma.read_and_advance();
 
   auto& shader = render_state->shaders[ShaderId::VIEWMODEL];
   GLuint prog = shader.id();

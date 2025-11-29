@@ -110,6 +110,7 @@ void KeyboardDevice::poll_state(std::shared_ptr<PadData> data) {
   m_key_status.d = keyboard_state[SDL_SCANCODE_D];
   m_key_status.r = keyboard_state[SDL_SCANCODE_R];
   m_key_status.q = keyboard_state[SDL_SCANCODE_Q];
+  m_key_status.e = keyboard_state[SDL_SCANCODE_E];
   m_key_status.space = keyboard_state[SDL_SCANCODE_SPACE];
   m_key_status.shift = (keyboard_state[SDL_SCANCODE_LSHIFT] || keyboard_state[SDL_SCANCODE_RSHIFT]);
   m_key_status.ctrl = (keyboard_state[SDL_SCANCODE_LCTRL] || keyboard_state[SDL_SCANCODE_RCTRL]);

@@ -8,13 +8,6 @@
 (defconstant smg-reload-duration (seconds 1.5))
 (defconstant smg-draw-duration (seconds 0.5))
 (defconstant smg-grenade-cooldown (seconds 1.0))
-(defconstant smg-attack-sound1 "sound_replacements/hks1.wav")
-(defconstant smg-attack-sound2 "sound_replacements/hks2.wav")
-(defconstant smg-attack-sound3 "sound_replacements/hks3.wav")
-(defconstant smg-reload-sound1 "sound_replacements/cliprelease1.wav")
-(defconstant smg-reload-sound2 "sound_replacements/clipinsert1.wav")
-(defconstant smg-grenade-sound "sound_replacements/glauncher.wav")
-(defconstant smg-grenade-sound2 "sound_replacements/glauncher2.wav")
 (defconstant smg-reload-part1-duration (seconds 0.8))
 (defconstant smg-reload-part2-duration (seconds 1.0))
 (defconstant smg-idle1-duration (seconds 5.0))
@@ -135,11 +128,11 @@
 
         (let ((idx (rand-vu-int-range 0 2)))
           (case idx
-            ((0) (play-sound-file smg-attack-sound1 50)
+            ((0) (sound-play "hks1")
                 (viewmodel-play-animation (viewmodel-animations-enum smg-shoot) 0.5))
-            ((1) (play-sound-file smg-attack-sound2 50)
+            ((1) (sound-play "hks2")
                 (viewmodel-play-animation (viewmodel-animations-enum smg-shoot2) 0.5))
-            ((2) (play-sound-file smg-attack-sound3 50)
+            ((2) (sound-play "hks3")
                 (viewmodel-play-animation (viewmodel-animations-enum smg-shoot3) 0.5))))
 
         ;; Add slight aim punch randomly
@@ -171,8 +164,8 @@
     (viewmodel-play-animation (viewmodel-animations-enum smg-grenade) 1.0)
     (let ((idx (rand-vu-int-range 0 1)))
       (case idx
-        ((0) (play-sound-file smg-grenade-sound 50))
-        ((1) (play-sound-file smg-grenade-sound2 50))))
+        ((0) (sound-play "glauncher"))
+        ((1) (sound-play "glauncher2"))))
     (hl-choose-idle-wait! 5.0 10.0)
     (add-aim-punch smg-grenade-aim-punch)
     (set-time! (-> self weapon-last-second-attack-time)))
@@ -192,7 +185,7 @@
   :enter
   (behavior ()
     (viewmodel-play-animation (viewmodel-animations-enum smg-reload) 1.3)
-    (play-sound-file smg-reload-sound1 50)
+    (sound-play "cliprelease1")
     (set-time! (-> self weapon-last-reload-time)))
   
   :trans
@@ -212,7 +205,7 @@
   :enter
   (behavior ()
     (set! (-> self current-smg-mag-ammo) smg-max-mag-ammo)
-    (play-sound-file smg-reload-sound2 50)
+    (sound-play "clipinsert1")
     (set-time! (-> self weapon-last-reload-time)))
   :trans
   (behavior ()

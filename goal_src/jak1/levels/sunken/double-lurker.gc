@@ -416,6 +416,13 @@
   (local-vars (v0-0 object))
   (case arg2
     (('touch) (set-time! (-> self touch-time)) (touch-handler self arg0 arg3))
+    (('attack-hl)
+      (if (-> self buddy-on-shoulders?)
+        (begin 
+          (nav-enemy-set-hit-from-direction arg0)
+          (go double-lurker-buddy-was-hit))
+        (begin
+          (nav-enemy-set-hit-from-direction arg0) (attack-handler self arg0 arg3))))
     (('attack)
      (when (= (-> arg0 type) target)
        (nav-enemy-set-hit-from-direction arg0)

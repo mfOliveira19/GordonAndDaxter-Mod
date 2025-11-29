@@ -281,5 +281,6 @@ nav-enemy-default-event-handler
   (initialize-skeleton this *hopper-sg* '())
   (init-defaults! this *hopper-nav-enemy-info*)
   (set! (-> this shadow-min-y) (+ (-> this collide-info trans y) (-> this nav-info shadow-min-y)))
+  (set! (-> this health) 1)
   0
   (none))

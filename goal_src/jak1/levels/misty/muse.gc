@@ -123,7 +123,9 @@
   (go muse-caught))
 
 (defmethod attack-handler ((this muse) (arg0 process) (arg1 event-message-block))
-  (go muse-caught))
+  ;;(go muse-caught)
+  #f
+  )
 
 nav-enemy-default-event-handler
 

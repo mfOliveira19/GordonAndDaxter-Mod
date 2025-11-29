@@ -554,6 +554,10 @@
 
 (define-extern pc-set-viewmodel-rotation-x (function float none))
 
+(define-extern pc-set-viewmodel-enabled (function symbol none))
+
+(define-extern pc-set-crosshair-enabled (function symbol none))
+
 (define-extern pc-set-crosshair-current-crosshair (function int none))
 
 (define-extern pc-set-letterbox (function int int none))

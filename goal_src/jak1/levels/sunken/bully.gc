@@ -223,7 +223,7 @@
 (defbehavior bully-default-event-handler bully ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (local-vars (v0-0 object))
   (case arg2
-    (('touch 'touched 'attack)
+    (('touch 'touched 'attack 'attack-hl)
      (cond
        ((= (-> arg0 type) bully)
         (let ((v1-3 (new 'stack-no-clear 'vector)))

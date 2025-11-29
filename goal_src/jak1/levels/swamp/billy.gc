@@ -664,7 +664,7 @@
         (billy-game-update)
         (if (or (zero? (-> self num-snacks))
                 (and (zero? (-> self num-rats)) (-> self passed-last-stage))
-                (and *cheat-mode* (cpad-pressed? 1 x)))
+                (and *cheat-mode* (or (cpad-pressed? 1 x) (should-use?))))
           (go billy-done))
         (suspend)))
   :post

@@ -21,6 +21,10 @@ void Crosshair::render(DmaFollower& dma,
   while (dma.current_tag_offset() != render_state->next_bucket)
     dma.read_and_advance();
 
+  if (!crosshairShow()) {
+    return;
+  }
+
   draw_crosshair(render_state);
   debug_stats->num_draws = 1;
 

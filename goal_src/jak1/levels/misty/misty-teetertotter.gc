@@ -31,9 +31,9 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack)
+        (('attack 'attack-hl)
          (case (-> block param 1)
-           (('flop)
+           (('flop 'uppercut)
             (when (target-on-end-of-teetertotter? self)
               (set! (-> self in-launch-window) #f)
               (increment-success-for-hint (text-id misty-teetertotter))

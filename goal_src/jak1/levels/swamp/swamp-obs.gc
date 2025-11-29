@@ -514,7 +514,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack) (if (and (>= argc 2) (= (-> block param 1) 'eco-yellow)) (go swamp-rock-break)))))
+        (('attack 'attack-hl) (if (and (>= argc 2) (= (-> block param 1) 'eco-yellow)) (go swamp-rock-break)))))
   :code
     (behavior ()
       (transform-post)

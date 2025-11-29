@@ -1,7 +1,7 @@
 (in-package goal)
 (require "engine/game/game-h.gc")
 (define *grenade-explosion-position* (new 'global 'vector))
-(defconstant grenade-rotate-speed 1000.0)
+(defconstant grenade-rotate-speed 600.0)
 
 (defpartgroup group-smg-grenade-explosion
   :id 710
@@ -297,10 +297,6 @@
 (defstate smg-grenade-explode (smg-grenade)
   :enter 
   (behavior ()
-    (format 0 "Explosion position: ~6,,2m ~6,,2m ~6,,2m~%" 
-            (-> self root trans x)
-            (-> self root trans y)
-            (-> self root trans z))
     (set-vector! *grenade-explosion-position* (-> self root trans x) (-> self root trans y) (-> self root trans z) (-> self root trans w))
   )
   :event
@@ -344,7 +340,7 @@
     (behavior ()
         (let ((idx (rand-vu-int-range 0 2)))
         (case idx
-            ((0) (sound-play "explosion"))
+            ((0) (sound-play "explosion1"))
             ((1) (sound-play "explosion2"))
             ((2) (sound-play "explosion3"))))
       (ja-channel-set! 0)

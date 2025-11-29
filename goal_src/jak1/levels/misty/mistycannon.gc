@@ -1119,7 +1119,7 @@
               (let ((v1-16 gp-0)) (set! (-> v1-16 height) (the float 80)))
               (set! (-> gp-0 flags) (font-flags shadow kerning large))
               (print-game-text (lookup-text! *common-text* (text-id press-to-use) #f) gp-0 #f 128 22))
-            (when (cpad-pressed? 0 circle)
+            (when (or (cpad-pressed? 0 circle) (should-use?))
               (loop
                 (send-event *target* 'change-mode 'periscope self)
                 (suspend)
@@ -1170,14 +1170,29 @@
             (s5-0 0))
         (loop
           (when *camera-read-analog*
-            (let ((f30-0 (analog-input (the-as int (-> *cpad-list* cpads 0 leftx)) 128.0 48.0 110.0 -1.0))
-                  (f28-0 (analog-input (the-as int (-> *cpad-list* cpads 0 lefty)) 128.0 48.0 110.0 -1.0)))
+            (let* ((analog-x (analog-input (the-as int (-> *cpad-list* cpads 0 leftx))
+                                          128.0 48.0 110.0 -1.0))
+                  (analog-y (analog-input (the-as int (-> *cpad-list* cpads 0 lefty))
+                                          128.0 48.0 110.0 -1.0))
+
+                  ;; add keyboard override:
+                  (kbd-x (+ (if (should-move-right?)  -1.0 0.0)
+                            (if (should-move-left?)  1.0 0.0)))
+
+                  (kbd-y (+ (if (should-move-back?)   -1.0 0.0)
+                            (if (should-move-forward?) 1.0 0.0)))
+
+                  ;; final combined inputs
+                  (f30-0 (+ analog-x kbd-x)) ;; horizontal
+                  (f28-0 (+ analog-y kbd-y))) ;; vertical
+
               (rotate! self f30-0)
               (tilt! self (- f28-0))
+
               (if (or (!= f30-0 0.0) (!= f28-0 0.0))
-                (sound-play "telescope" :id (-> self aim-sound-id))
-                (sound-stop (-> self aim-sound-id)))))
-          (when (cpad-pressed? 0 triangle)
+                  (sound-play "telescope" :id (-> self aim-sound-id))
+                  (sound-stop (-> self aim-sound-id)))))
+          (when (or (cpad-pressed? 0 triangle) (should-use?))
             (process-entity-status! self (entity-perm-status bit-3) #t)
             (sound-stop (-> self sound-id))
             (send-event *camera* 'change-to-entity-by-name "camera-111")
@@ -1188,12 +1203,12 @@
                 (process-entity-status! self (entity-perm-status bit-3) #f)
                 (go mistycannon-waiting-for-player-to-fuck-off))
               (suspend)))
-          (let ((v1-45 (and (cpad-hold? 0 x) (time-elapsed? (-> self state-time) (seconds 1)))))
+          (let ((v1-45 (and (or (cpad-hold? 0 x) (mouse1?))(time-elapsed? (-> self state-time) (seconds 1)))))
             (when (zero? s5-0)
               (when v1-45
                 (set! gp-0 (seekl gp-0 300 (the-as int (- (current-time) (-> *display* old-base-frame-counter)))))
                 (sound-play "cannon-charge" :id (-> self sound-id) :pitch (* 0.008 (the float gp-0))))
-              (when (or (= gp-0 300) (and (not (cpad-hold? 0 x)) (nonzero? gp-0)))
+              (when (or (= gp-0 300) (and (not (or (cpad-hold? 0 x) (mouse1?))) (nonzero? gp-0)))
                 (let ((gp-1 (+ 50 (the int (* 0.16666667 (the float gp-0))))))
                   (level-hint-spawn (text-id sidekick-mistycannon) "sksp009f" (the-as entity #f) *entity-pool* (game-task none))
                   (mistycannon-method-22 self (* 4096.0 (the float gp-1)) 2.0 40960.0))
@@ -1203,7 +1218,7 @@
                 (sound-stop (-> self sound-id)))
               (if (nonzero? gp-0)
                 (debug-percent-bar #t (bucket-id debug) 192 160 (* 0.0033333334 (the float gp-0)) (new 'static 'rgba :r #xff :a #x80)))))
-          (if (not (cpad-hold? 0 x)) (set! s5-0 0))
+          (if (not (or (cpad-hold? 0 x) (mouse1?))) (set! s5-0 0))
           (suspend))))
   :post rider-post)
 

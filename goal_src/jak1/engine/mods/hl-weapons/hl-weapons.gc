@@ -79,21 +79,6 @@
 (defconstant pistol-max-mag-ammo 17)
 (defconstant smg-max-mag-ammo 50)
 
-#|
-(defbehavior hl-weapons-init-by-other hl-weapons ()
-  (set-time! (-> self weapon-last-attack-time))
-  (set! (-> self current-pistol-mag-ammo) pistol-max-mag-ammo)
-  (set! (-> self current-smg-mag-ammo) smg-max-mag-ammo)
-  (format 0 "HL Weapons process initialized.~%")
-  (go crowbar-draw))
-
-(defun init-hl-weapons! ()
-  (set! *hl-weapons* (the-as hl-weapons 
-    (ppointer->process 
-      (process-spawn hl-weapons :from *nk-dead-pool* :to *active-pool* :stack *kernel-dram-stack* :stack-size #x4000 :name 'hl-weapon-proc))))
-  (none))
-|#
-
 (defbehavior init-hl-weapons hl-weapons ()
   (stack-size-set! (-> self main-thread) 1024)
   (set-time! (-> self weapon-last-attack-time))

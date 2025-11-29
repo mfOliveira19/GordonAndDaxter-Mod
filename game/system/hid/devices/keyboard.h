@@ -27,6 +27,7 @@ class KeyboardDevice : public InputDevice {
     bool d = false;
     bool r = false;
     bool q = false;
+    bool e = false;
     bool space = false;
     bool shift = false;
     bool ctrl = false;

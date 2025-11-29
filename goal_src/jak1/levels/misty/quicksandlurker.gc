@@ -418,7 +418,7 @@
 
 (defbehavior quicksandlurker-default-event-handler quicksandlurker ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
-    (('attack) enter-state (go quicksandlurker-die))
+    (('attack 'attack-hl) enter-state (go quicksandlurker-die))
     (('victory) (go quicksandlurker-victory))))
 
 (defun inc-angle ((arg0 (pointer float)) (arg1 float))

@@ -1173,6 +1173,14 @@ void pc_renderer_viewmodel_set_rotation_x(u32 rotation_x) {
   Gfx::g_global_settings.viewmodel_rotation_x = rotation_val;
 }
 
+void pc_renderer_viewmodel_set_enabled(u32 val) {
+  Gfx::g_global_settings.viewmodel_show = symbol_to_bool(val);
+}
+
+void pc_renderer_crosshair_set_enabled(u32 val) {
+  Gfx::g_global_settings.crosshair_show = symbol_to_bool(val);
+}
+
 void pc_renderer_crosshair_set_current_crosshair(int crosshair) {
   Gfx::g_global_settings.current_crosshair = crosshair;
 }
@@ -1384,7 +1392,9 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-set-viewmodel-animation-speed", (void*)pc_renderer_viewmodel_set_animation_speed);
   make_func_symbol_func("pc-set-viewmodel-offset-z", (void*)pc_renderer_viewmodel_set_offset_z);
   make_func_symbol_func("pc-set-viewmodel-rotation-x", (void*)pc_renderer_viewmodel_set_rotation_x);
+  make_func_symbol_func("pc-set-viewmodel-enabled", (void*)pc_renderer_viewmodel_set_enabled);
   make_func_symbol_func("pc-set-crosshair-current-crosshair", (void*)pc_renderer_crosshair_set_current_crosshair);
+  make_func_symbol_func("pc-set-crosshair-enabled", (void*)pc_renderer_crosshair_set_enabled);
 
   // -- OTHER --
   // Return the current OS as a symbol. Actually returns what it was compiled for!

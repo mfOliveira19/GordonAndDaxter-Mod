@@ -1,146 +1,206 @@
 (in-package goal)
-(defconstant hl-invinc-time (seconds 0.5))
+(defconstant hl-explosion-invinc-time (seconds 0.2))
+(define *hl-target-explosion-invinc-time* 0)
+
+(defbehavior target-hl-no-stick-post target ()
+  (let ((gp-0 (the int (-> *display* time-ratio))))
+    (set-time-ratios *display* 1.0)
+    (countdown (s5-0 gp-0)
+      (set! (-> self control unknown-int40) s5-0)
+      (flag-setup)
+      (build-conversions (-> self control transv))
+      (do-rotations1)
+      (let ((s4-0 (new-stack-vector0))) (read-pad s4-0) (turn-to-vector s4-0 0.0))
+      (add-thrust)
+      (add-gravity)
+      (do-rotations2)
+      (reverse-conversions (-> self control transv))
+      (if *debug-segment*
+        (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
+                   'draw
+                   (new 'static 'rgba :r #x40 :b #x40 :a #x80)))
+      (fill-cache-integrate-and-collide! (-> self control) (-> self control transv) (-> self control root-prim collide-with))
+      (if (logtest? (-> self control root-prim prim-core action) (collide-action edgegrab-possible))
+        (find-edge-grabs! *target* *collide-cache*))
+      (if *debug-segment*
+        (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
+                   'draw
+                   (new 'static 'rgba :r #x80 :g #x60 :b #x40 :a #x80)))
+      (bend-gravity)
+      (hl-post-flag-setup))
+    (set-time-ratios *display* (the float gp-0)))
+  (if *debug-segment*
+    (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
+               'draw
+               (new 'static 'rgba :r #x40 :b #x40 :a #x80)))
+  (ja-post)
+  (if *debug-segment*
+    (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0) 'draw (new 'static 'rgba :r #x80 :a #x80)))
+  (joint-points)
+  (do-target-shadow)
+  (target-powerup-process)
+  (none))
 
 (defbehavior target-hl-explosion-handler target ((arg0 symbol) (arg1 attack-info) (arg2 process) (arg3 touching-shapes-entry) (arg4 (state symbol attack-info target)) (arg5 event-message-block))
 ;; Only process if invincibility timer allows
-(when (time-elapsed? (-> self attack-info invinc-time) hl-invinc-time)
-
-  ;; Update invincibility timer
-  (set-time! (-> self attack-info invinc-time))
-
-  ;; ----- Update intersection point -----
-  (when arg3
-    (let ((hit-prim (prims-touching? arg3 (-> self control) (the-as uint -1))))
-      (when hit-prim
-        (get-intersect-point (-> self attack-info-rec intersection) hit-prim (-> self control) arg3)
-        (logior! (-> self attack-info-rec mask) (attack-mask intersection)))))
-
-  (format 0 "Explosion pos: ~6,,2m ~6,,2m ~6,,2m~%" 
-          (-> *grenade-explosion-position* x)
-          (-> *grenade-explosion-position* y)
-          (-> *grenade-explosion-position* z))
-
-  ;; ----- Apply explosion push -----
-  (let* ((explosion-pos *grenade-explosion-position*)
-         (player-pos    (-> self control trans))
-         (horizontal-radius (meters 5.0))  ;; distance for horizontal push
-         (vertical-radius   (meters 5.0))) ;; distance for vertical dominance
-
-    ;; Compute horizontal distance
-    (let* ((dx (- (-> player-pos x) (-> explosion-pos x)))
-           (dz (- (-> player-pos z) (-> explosion-pos z)))
-           (dist-xz (sqrtf (+ (* dx dx) (* dz dz))))
-
-           ;; Falloff factors
-           (t-horizontal (max 0.0 (- 1.0 (/ dist-xz horizontal-radius))))
-           (t-vertical   (max 0.0 (- 1.0 (/ dist-xz vertical-radius)))))
-
-      (when (> t-horizontal 0.0)
-        ;; Build final direction
-        (let ((dir (new 'stack-no-clear 'vector)))
-
-          ;; Horizontal unit vector in XZ
-          (if (> dist-xz 0.0)
-              (set-vector! dir (/ dx dist-xz) 0.0 (/ dz dist-xz) 0.0)
-              (set-vector! dir 0.0 0.0 0.0 0.0))
-
-          ;; Vertical lift
-          (set! (-> dir y) (* t-vertical 1.8))  ;; max vertical lift = 1.5
-
-          ;; Normalize so ratio stays consistent
-          (vector-normalize! dir 1.0)
-
-          ;; Apply force based on horizontal falloff
-          (let* ((base-force 95000.0)
-                 (force (* base-force t-horizontal)))
-            (when (> force 0.0)
-              (vector+! (-> self control transv)
-                        (-> self control transv)
-                        (vector-float*! (new-stack-vector0) dir force)))))))))
-
-
-  ;; ----- Copy attack info and handle masks -----
-  (when (not (logtest? (-> self state-flags) (state-flags being-attacked)))
-    (mem-copy! (the-as pointer (-> self attack-info-rec)) (the-as pointer arg1) 104)
-
-    ;; Record attacker if not already set
-    (when (not (logtest? (-> self attack-info-rec mask) (attack-mask attacker)))
-      (set! (-> self attack-info-rec attacker) (process->handle arg2))
-      (logior! (-> self attack-info-rec mask) (attack-mask attacker)))
-
-    ;; Handle other attack modes (health, invulnerability, etc.)
-    (cond
-      ((and (logtest? (-> self attack-info-rec mask) (attack-mask mode))
-            (= (-> self attack-info-rec mode) 'damage)
-            (not (and (= (-> self game mode) 'play) (>= 1.0 (-> self fact health)))))
-       (pickup-collectable! (-> self fact) (pickup-type eco-green) (- (-> *FACT-bank* health-single-inc)) (the-as handle #f))
-       (process-spawn part-tracker
-                      :init part-tracker-init
-                      (-> *part-group-id-table* 1)
-                      -1 #f #f #f
-                      (if (logtest? (-> self attack-info-rec mask) (attack-mask intersection))
-                          (-> self attack-info-rec intersection)
-                          (-> self control root-prim prim-core))
-                      :to self)
-       (target-timed-invulnerable (if (logtest? (-> self attack-info-rec mask) (attack-mask invinc-time))
-                                      (-> self attack-info-rec invinc-time)
-                                      (-> *TARGET-bank* hit-invulnerable-timeout))
-                                  self)
-       (cpad-set-buzz! (-> *cpad-list* cpads 0) 0 255 (seconds 0.5))
-       (sound-play "oof")
-       #t)
-      (else
-       ;; Set being-attacked flag and dying flag if needed
-       (logior! (-> self state-flags) (state-flags being-attacked))
-       (if (and (= (-> self game mode) 'play)
-                (>= 1.0 (-> self fact health))
-                (= arg0 'attack))
-         (logior! (-> self state-flags) (state-flags dying)))))))
-
-(defbehavior target-hl-attacked target ((arg0 symbol) (arg1 attack-info) (arg2 process) (arg3 touching-shapes-entry) (arg4 (state symbol attack-info target)))
-  ;; Only process if invincibility timer allows
-  (when (time-elapsed? (-> self attack-info invinc-time) hl-invinc-time)
+  (when (time-elapsed? *hl-target-explosion-invinc-time* hl-explosion-invinc-time)
 
     ;; Update invincibility timer
-    (set-time! (-> self attack-info invinc-time)))
+    (set-time! *hl-target-explosion-invinc-time*)
 
-  ;; ----- Copy attack info and handle masks -----
+    (when arg3
+      (let ((hit-prim (prims-touching? arg3 (-> self control) (the-as uint -1))))
+        (when hit-prim
+          (get-intersect-point (-> self attack-info-rec intersection) hit-prim (-> self control) arg3)
+          (logior! (-> self attack-info-rec mask) (attack-mask intersection)))))
+    #|
+    (format 0 "Explosion pos: ~6,,2m ~6,,2m ~6,,2m~%" 
+            (-> *grenade-explosion-position* x)
+            (-> *grenade-explosion-position* y)
+            (-> *grenade-explosion-position* z))|#
+
+    ;; ----- Apply explosion push -----
+    (let* ((explosion-pos *grenade-explosion-position*)
+          (player-pos    (-> self control trans))
+          (radius        (meters 5.0))
+
+          ;; horizontal difference
+          (dx (- (-> player-pos x) (-> explosion-pos x)))
+          (dz (- (-> player-pos z) (-> explosion-pos z)))
+          (dist-xz (sqrtf (+ (* dx dx) (* dz dz))))
+
+          ;; falloff (0..1)
+          (raw-t (max 0.0 (- 1.0 (/ dist-xz radius))))
+          (t (sqrtf raw-t))   ;; slow dropoff curve
+
+          ;; smooth horizontal shaping
+          (horizontal-strength (- 1.0 (* t t)))  ; stronger near edge
+          (vertical-strength   t))               ; strongest at center
+
+      (when (> t 0.0)
+        (let ((dir (new 'stack-no-clear 'vector)))
+
+          ;; horizontal direction
+          (if (> dist-xz 0.001)
+              (set-vector! dir (* horizontal-strength (/ dx dist-xz))
+                              0.0
+                              (* horizontal-strength (/ dz dist-xz))
+                              0.0)
+              (set-vector! dir 0.0 0.0 0.0 0.0))
+
+          ;; vertical component
+        (set! (-> dir y)
+              (+ (-> dir y) (* vertical-strength 0.5)))  ;; lift amount
+
+          (vector-normalize! dir 1.0)
+
+          (let* ((base-force 100000.0)
+                (force (* base-force t)))
+            (vector+! (-> self control transv)
+                      (-> self control transv)
+                      (vector-float*! (new-stack-vector0) dir force))))))))
+
+(defstate target-hl-hit-ground (target)
+  :enter
+    (behavior ((arg0 symbol))
+      (cond
+        ((= arg0 'stuck))
+        ((let ((v1-4 (ja-group))) (or (= v1-4 eichar-launch-jump-ja) (= v1-4 eichar-launch-jump-loop-ja)))
+         (effect-control-method-10 (-> self skel effect) 'group-blue-hit-ground-effect (the-as float 0.0) -1)
+         (cpad-set-buzz! (-> *cpad-list* cpads 0) 1 255 (seconds 0.3)))
+        (else
+         (let ((f0-1 (vector-dot (-> self control dynam gravity-normal)
+                                 (vector-! (new 'stack-no-clear 'vector) (-> self control last-air-trans) (-> self control trans)))))
+           (if (and (< (-> *TARGET-bank* fall-far) f0-1) (not (logtest? (-> self control status) (cshape-moving-flags on-water))))
+             (go target-hit-ground-hard f0-1)))))
+      #|(cond
+        ((= arg0 'stuck))
+        (else (target-land-effect)))|#
+      (set! (-> self control hands-used-time) 0)
+      (set! (-> self control feet-used-time) 0)
+      (if (>= (-> self control ground-impact-vel) (-> *TARGET-bank* fall-stumble-threshold)) (set-forward-vel (the-as float 0.0)))
+      (if (!= (-> self control ground-pat material) (pat-material ice)) (delete-back-vel))
+      (set! (-> self control cur-surf) *walk-mods*)
+      (start-bobbing! (-> self water)
+                      (lerp-scale (the-as float 0.0)
+                                  (the-as float 4096.0)
+                                  (-> self control ground-impact-vel)
+                                  (the-as float 40960.0)
+                                  (the-as float 102400.0))
+                      600
+                      1500))
+  :trans
+    (behavior ()
+      )
+  :code
+    (behavior ((arg0 symbol))
+      ;;(target-hit-ground-anim #f)
+      (go target-hl-movement-ground))
+  :post target-hl-movement-post)
+
+(defbehavior target-hl-hit-effect target ((arg0 attack-info))
+  (let ((v1-9 (-> arg0 mode)))
+    (cond
+      ((or (= v1-9 'endlessfall) (= v1-9 'instant-death)))
+      ((begin
+         (target-timed-invulnerable (-> arg0 invinc-time) self)
+         (cpad-set-buzz! (-> *cpad-list* cpads 0) 0 255 (seconds 0.5))
+         (let ((v1-13 (-> arg0 angle))) (= v1-13 'up)))
+       (sound-play "hit-up"))
+      (else
+        (when (>= (-> self fact health) 1.0) (sound-play "hev_beep")))))
+  (case (-> arg0 mode)
+    (('burn 'burnup)
+     ;; og:preserve-this
+     (if (not (handle->process (-> self burn-proc)))
+       (set! (-> self burn-proc)
+             (ppointer->handle (process-spawn-function process process-drawable-burn-effect (seconds 4) :to self)))))
+    (('tar) (sound-play "get-burned")))
+  0
+  (none))
+
+(defbehavior target-hl-attacked target ((arg0 symbol) (arg1 attack-info) (arg2 process) (arg3 touching-shapes-entry) (arg4 (state symbol attack-info target)))
   (when (not (logtest? (-> self state-flags) (state-flags being-attacked)))
+    (cond
+      ((or (logtest? (-> self state-flags) (state-flags invulnerable timed-invulnerable invuln-powerup))
+           (and (logtest? (-> arg1 mask) (attack-mask mode))
+                (= (-> arg1 mode) 'darkeco)
+                (and (and (= (-> self fact eco-type) (pickup-type eco-red)) (>= (-> self fact eco-level) 1.0))
+                     (logtest? (state-flags dangerous flop-hit-ground) (-> self state-flags)))))
+       (case arg0
+         (('attack-or-shove))
+         (('attack-invinc) (set! arg0 'attack))
+         (else (return #f))))
+      (else
+       (case arg0
+         (('attack-or-shove 'attack-invinc) (set! arg0 'attack)))))
     (mem-copy! (the-as pointer (-> self attack-info-rec)) (the-as pointer arg1) 104)
-
-    ;; Record attacker if not already set
+    (when arg3
+      (let ((a1-2 (prims-touching? arg3 (-> self control) (the-as uint -1))))
+        (when a1-2
+          (get-intersect-point (-> self attack-info-rec intersection) a1-2 (-> self control) arg3)
+          (logior! (-> self attack-info-rec mask) (attack-mask intersection)))))
+    (set! (-> self attack-info-rec prev-state) (-> self state))
+    (logior! (-> self attack-info-rec mask) (attack-mask atki13))
     (when (not (logtest? (-> self attack-info-rec mask) (attack-mask attacker)))
       (set! (-> self attack-info-rec attacker) (process->handle arg2))
       (logior! (-> self attack-info-rec mask) (attack-mask attacker)))
-
-    ;; Handle other attack modes (health, invulnerability, etc.)
     (cond
       ((and (logtest? (-> self attack-info-rec mask) (attack-mask mode))
-            (= (-> self attack-info-rec mode) 'damage)
-            (not (and (= (-> self game mode) 'play) (>= 1.0 (-> self fact health)))))
+            (and (= (-> self attack-info-rec mode) 'damage) (not (and (= (-> self game mode) 'play) (>= 1.0 (-> self fact health))))))
        (pickup-collectable! (-> self fact) (pickup-type eco-green) (- (-> *FACT-bank* health-single-inc)) (the-as handle #f))
-       (process-spawn part-tracker
-                      :init part-tracker-init
-                      (-> *part-group-id-table* 1)
-                      -1 #f #f #f
-                      (if (logtest? (-> self attack-info-rec mask) (attack-mask intersection))
-                          (-> self attack-info-rec intersection)
-                          (-> self control root-prim prim-core))
-                      :to self)
+
        (target-timed-invulnerable (if (logtest? (-> self attack-info-rec mask) (attack-mask invinc-time))
-                                      (-> self attack-info-rec invinc-time)
-                                      (-> *TARGET-bank* hit-invulnerable-timeout))
+                                    (-> self attack-info-rec invinc-time)
+                                    (-> *TARGET-bank* hit-invulnerable-timeout))
                                   self)
        (cpad-set-buzz! (-> *cpad-list* cpads 0) 0 255 (seconds 0.5))
-       (sound-play "oof")
        #t)
       (else
-       ;; Set being-attacked flag and dying flag if needed
        (logior! (-> self state-flags) (state-flags being-attacked))
-       (if (and (= (-> self game mode) 'play)
-                (>= 1.0 (-> self fact health))
-                (= arg0 'attack))
-         (logior! (-> self state-flags) (state-flags dying)))))))
+       (if (and (= (-> self game mode) 'play) (and (>= 1.0 (-> self fact health)) (= arg0 'attack)))
+         (logior! (-> self state-flags) (state-flags dying)))
+       (go arg4 arg0 (-> self attack-info-rec))))))
 
 (defbehavior target-hl-generic-event-handler target ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (local-vars (v0-0 object))
@@ -300,6 +360,201 @@
          (-> arg3 param 3)
          (-> arg3 param 4)))))
 
+(defstate target-hl-clone-anim (target)
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (if (and (= message 'trans) (= (-> block param 0) 'restore)) (set! (-> self control temp-flop-end-checks) (the-as uint #f)))
+      ((-> target-hl-grab event) proc argc message block))
+  :enter
+    (behavior ((arg0 handle))
+      (set! (-> self control pole) arg0)
+      (set! (-> self control last-transv2 quad) (-> self control trans quad))
+      (set! (-> self control temp-flop-end-checks) (the-as uint #t))
+      (quaternion-copy! (the-as quaternion (-> self control last-transv3)) (-> self control quat))
+      (logior! (-> self state-flags) (state-flags grabbed))
+      (vector-reset! (-> self control transv))
+      (set! (-> self neck flex-blend) 0.0)
+      (send-event (ppointer->process (-> self sidekick)) 'shadow #t))
+  :exit
+    (behavior ()
+      (send-event (ppointer->process (-> self sidekick)) 'matrix 'normal)
+      (send-event (ppointer->process (-> self sidekick)) 'shadow #t)
+      (let ((gp-0 (joint-node eichar-lod0-jg main))
+            (a1-2 (&-> (-> self control) unknown-qword00)))
+        (cond
+          ((not (-> self control temp-spool)))
+          ((not (logtest? (-> self draw status) (draw-status hidden)))
+           (move-to-point! (-> self control) (the-as vector a1-2))
+           (matrix->quaternion (-> self control quat-targ) (-> gp-0 bone transform))
+           (quaternion-copy! (-> self control quat) (-> self control quat-targ))
+           (move-to-ground (-> self control)
+                           (the-as float 4096.0)
+                           (the-as float 40960.0)
+                           #t
+                           (-> self control root-prim collide-with))
+           (when (logtest? (-> self control status) (cshape-moving-flags on-water))
+             (let ((a1-6 (new-stack-vector0)))
+               (set! (-> a1-6 x) (-> self control trans x))
+               (set! (-> a1-6 y) (-> self water height))
+               (set! (-> a1-6 z) (-> self control trans z))
+               (set! (-> a1-6 w) 1.0)
+               (move-to-point! (-> self control) a1-6))))
+          (else
+           (format 0 "ERROR: <ASG>: camera used backup position~%")
+           (move-to-point! (-> self control) (-> self control last-transv2))
+           (quaternion-copy! (-> self control quat) (the-as quaternion (-> self control last-transv3))))))
+      (rot->dir-targ! (-> self control))
+      (logior! (-> self control status) (cshape-moving-flags onsurf onground tsurf))
+      (set-time! (-> self control last-ground-time))
+      (ja-channel-set! 0)
+      (ja-post)
+      (target-exit))
+  :code
+    (behavior ((arg0 handle))
+      (clone-anim arg0 (the-as int (-> self draw origin-joint-index)) #t "")
+      (go target-hl-movement-ground))
+  :post target-no-ja-move-post)
+
+(defstate target-hl-grab (target)
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (cond
+        ((and (= message 'query) (= (-> block param 0) 'mode)) (-> self state name))
+        (else
+         (case message
+           (('end-mode) (go target-hl-movement-ground))
+           (('play-anim)
+            (let ((v0-0 (the-as object (-> block param 0)))) (set! (-> self control temp-flop-end-checks) (the-as uint v0-0)) v0-0))
+           (('clone-anim) (go target-hl-clone-anim (process->handle (the-as process (-> block param 0)))))
+           (('change-mode)
+            (case (-> block param 0)
+              (('final-door)
+               (go target-final-door
+                   (the-as basic (process->handle (the-as process (-> block param 1))))
+                   (process->handle (the-as process (-> block param 2)))))))
+           (else (target-generic-event-handler proc argc message block))))))
+  :enter
+    (behavior ()
+      (set! (-> self control cur-surf) *grab-mods*)
+      (set! (-> self neck flex-blend) 0.0)
+      (logior! (-> self state-flags) (state-flags invulnerable grabbed))
+      (set! (-> self control temp-flop-end-checks) (the-as uint 'stance)))
+  :exit
+    (behavior ()
+      (logclear! (-> self state-flags) (state-flags invulnerable))
+      (target-exit)
+        (set! (-> self draw status) (draw-status hidden))
+        (set! (-> *sidekick* draw status) (draw-status hidden))
+      )
+  :code
+    (behavior ()
+      (set-forward-vel (the-as float 0.0))
+      (let ((gp-0 0))
+        (while (not (logtest? (-> self control status) (cshape-moving-flags onsurf)))
+          ;;(target-falling-anim-trans)
+          (+! gp-0 (- (current-time) (-> *display* old-base-frame-counter)))
+          (suspend))
+        #|
+        (if (or (> gp-0 0)
+                (let ((v1-11 (ja-group)))
+                  (or (= v1-11 eichar-jump-ja)
+                      (= v1-11 eichar-jump-loop-ja)
+                      (= v1-11 eichar-launch-jump-ja)
+                      (= v1-11 eichar-launch-jump-loop-ja)
+                      (= v1-11 eichar-duck-high-jump-ja))))
+          (target-hit-ground-anim #f))|#
+          )
+      (-> self control temp-spool)
+      (loop
+        (let ((gp-1 (-> self control temp-spool)))
+          (case gp-1
+            (('stance)
+             (cond
+               ((or (and (ja-group? eichar-walk-ja) (< 0.5 (-> self skel root-channel 6 frame-interp)))
+                    (let ((v1-32 (ja-group)))
+                      (or (= v1-32 eichar-run-squash-ja)
+                          (= v1-32 eichar-run-squash-weak-ja)
+                          (= v1-32 eichar-attack-from-stance-run-end-ja)
+                          (= v1-32 eichar-attack-from-stance-run-alt-end-ja))))
+                (ja-channel-push! 1 (seconds 0.15))
+                (ja-no-eval :group! eichar-run-to-stance-loop-ja :num! (seek!) :frame-num 0.0)
+                (until (ja-done? 0)
+                  (suspend)
+                  (ja :num! (seek!)))
+                (ja-no-eval :group! eichar-run-to-stance-ja :num! (seek!) :frame-num 0.0)
+                (until (ja-done? 0)
+                  (suspend)
+                  (ja :num! (seek!)))
+                (ja-channel-push! 1 (seconds 0.15)))
+               ((let ((v1-87 (ja-group)))
+                  (and (or (= v1-87 eichar-jump-short-land-ja) (= v1-87 eichar-jump-land-ja)) (not (ja-max? 0))))
+                (ja-no-eval :num! (seek!))
+                (while (not (ja-done? 0))
+                  (suspend)
+                  (ja-eval))
+                (ja-channel-push! 1 (seconds 0.075)))
+               ((not (and (ja-group? eichar-stance-loop-ja) (= (ja-group-size) 1))) (ja-channel-push! 1 (seconds 0.075))))
+             (loop
+               (ja-no-eval :group! eichar-stance-loop-ja :num! (seek!) :frame-num 0.0)
+               (until (ja-done? 0)
+                 (if (!= gp-1 (-> self control temp-spool)) (goto cfg-94))
+                 (suspend)
+                 (ja :num! (seek!)))))
+            (('shock-in)
+             (ja-channel-push! 1 (seconds 0.2))
+             (ja-no-eval :group! eichar-shocked-ja :num! (seek! (ja-aframe (the-as float 18.0) 0)) :frame-num 0.0)
+             (until (ja-done? 0)
+               (if (!= gp-1 (-> self control temp-spool)) (goto cfg-94))
+               (suspend)
+               (ja :num! (seek! (ja-aframe (the-as float 18.0) 0))))
+             (loop
+               (if (!= gp-1 (-> self control temp-spool)) (goto cfg-94))
+               (suspend)))
+            (('shock-out)
+             (if (not (ja-group? eichar-shocked-ja)) (ja-channel-push! 1 (seconds 0.2)))
+             (ja-no-eval :group! eichar-shocked-ja :num! (seek!) :frame-num (ja-aframe (the-as float 18.0) 0))
+             (until (ja-done? 0)
+               (if (!= gp-1 (-> self control temp-spool)) (goto cfg-94))
+               (suspend)
+               (ja :num! (seek!)))
+             (set! (-> self control temp-flop-end-checks) (the-as uint 'stance)))))
+        (label cfg-94)))
+  :post
+    (behavior ()
+      (if (logtest? (-> self control status) (cshape-moving-flags onsurf))
+        (set! (-> self control transv quad) (the-as uint128 0)))
+      (target-hl-no-stick-post)))
+
+(defstate target-hl-play-anim (target)
+  :event target-generic-event-handler
+  :enter
+    (behavior ((arg0 string) (arg1 handle))
+      (set! (-> self control pole) arg1)
+      (move-to-ground (-> self control)
+                      (the-as float 40960.0)
+                      (the-as float 40960.0)
+                      #f
+                      (-> self control root-prim collide-with))
+      (logior! (-> self state-flags) (state-flags grabbed))
+      (set! (-> self neck flex-blend) 0.0))
+  :exit
+    (behavior ()
+      (send-event (handle->process (-> self control pole)) 'end-mode)
+      (target-exit))
+  :code
+    (behavior ((arg0 string) (arg1 handle))
+      (let ((gp-0 (the-as art-joint-anim (lookup-art (-> self draw art-group) arg0 art-joint-anim))))
+        (when gp-0
+          (send-event (ppointer->process (-> self sidekick)) 'matrix 'play-anim)
+          (ja-channel-set! 1)
+          (ja-no-eval :group! gp-0 :num! (seek!) :frame-num 0.0)
+          (until (ja-done? 0)
+            (suspend)
+            (ja :num! (seek!)))
+          (send-event (ppointer->process (-> self sidekick)) 'matrix 'normal)))
+      (go target-hl-movement-ground))
+  :post target-hl-no-stick-post)
+
 (defbehavior target-hl-standard-event-handler target ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
     (('attack 'attack-or-shove 'attack-invinc)
@@ -307,21 +562,21 @@
                       (the-as attack-info (-> arg3 param 1))
                       arg0
                       (the-as touching-shapes-entry (-> arg3 param 0))
-                      target-hit))
+                      target-hl-hit))
     (('attack-hl)
      (target-hl-explosion-handler arg2
                       (the-as attack-info (-> arg3 param 1))
                       arg0
                       (the-as touching-shapes-entry (-> arg3 param 0))
-                      target-hit
+                      target-hl-hit
                       arg3))
     (('shove)
-     (when (!= (-> self next-state name) 'target-hit)
+     (when (!= (-> self next-state name) 'target-hl-hit)
        (mem-copy! (the-as pointer (-> self attack-info-rec)) (the-as pointer (-> arg3 param 1)) 104)
        (when (not (logtest? (-> self attack-info-rec mask) (attack-mask attacker)))
          (set! (-> self attack-info-rec attacker) (process->handle arg0))
          (logior! (-> self attack-info-rec mask) (attack-mask attacker)))
-       (go target-hit 'shove (-> self attack-info-rec))))
+       (go target-hl-hit 'shove (-> self attack-info-rec))))
     (('launch) (mem-copy! (&-> (-> self control) unknown-pointer00) (the-as pointer arg3) 72) #t)
     (('loading)
      (if (not (or (and (logtest? (-> self control cur-surf flags) (surface-flags jump))
@@ -334,25 +589,193 @@
        (go target-load-wait)))
     (('change-mode)
      (case (-> arg3 param 0)
-       (('billy) (go target-billy-game))
+       (('grab) (go target-hl-grab))
+       (('look-around) (go target-look-around))
+       (('billy) (go target-hl-billy-game))
        (('falling) (go target-falling #f))
-       (('racing) (go target-racing-start (process->handle (the-as process (-> arg3 param 1)))))
+       (('racing) (go target-hl-racing-start (process->handle (the-as process (-> arg3 param 1)))))
        (('flut) (go target-flut-start (process->handle (the-as process (-> arg3 param 1)))))
        (('snowball) (go target-snowball-start (process->handle (the-as process (-> arg3 param 1)))))
        (('tube)
+       #|
         (if (and (logtest? (-> self control status) (cshape-moving-flags onsurf))
                  (not (logtest? (-> self water flags) (water-flags wt09))))
-          (go target-tube-start (process->handle (the-as process (-> arg3 param 1))))))
+          (go target-tube-start (process->handle (the-as process (-> arg3 param 1)))))|#)
        (('periscope)
         (if (logtest? (-> self control status) (cshape-moving-flags onsurf))
-          (go target-periscope (process->handle (the-as process (-> arg3 param 1))))))
-       (('fishing) (go target-fishing (process->handle (the-as process (-> arg3 param 1)))))
+          (go target-hl-periscope (process->handle (the-as process (-> arg3 param 1))))))
+       (('fishing) (go target-hl-fishing (process->handle (the-as process (-> arg3 param 1)))))
        (('final-door)
         (go target-final-door
             (the-as basic (process->handle (the-as process (-> arg3 param 1))))
             (process->handle (the-as process (-> arg3 param 2)))))))
-    (('play-anim) (go target-play-anim (the-as string (-> arg3 param 0)) (the-as handle arg1)))
-    (('clone-anim) (go target-clone-anim (process->handle (the-as process (-> arg3 param 0)))))
+    (('play-anim) (go target-hl-play-anim (the-as string (-> arg3 param 0)) (the-as handle arg1)))
+    (('clone-anim) (go target-hl-clone-anim (process->handle (the-as process (-> arg3 param 0)))))
+    ;;(('edge-grab) (go target-edge-grab))
+    (('pole-grab)
+     (if (not (logtest? (-> self control root-prim prim-core action) (collide-action swingpole-active)))
+       (go target-pole-cycle (process->handle (the-as process (-> arg3 param 0))))))
     (('tongue) (target-apply-tongue (the-as vector (-> arg3 param 0))))
     (else (target-hl-generic-event-handler arg0 arg1 arg2 arg3))
     ))
+
+(defstate target-hl-hit (target)
+  :enter
+  ;; this was added so we instantly die when we lose all health
+  (behavior ()
+    (when (and (= (-> self game mode) 'play) (<= (-> self fact health) 1.0))
+      (pickup-collectable! (-> self fact) (pickup-type eco-green) (- (-> *FACT-bank* health-single-inc)) (the-as handle #f))
+      (go target-hl-death (-> self attack-info mode)))
+  )
+  :event target-hl-standard-event-handler
+  :exit
+    (behavior ()
+      (let ((gp-0 (new-stack-vector0))
+            (f30-0 (vector-dot (-> self control dynam gravity-normal) (-> self control transv))))
+        0.0
+        (vector-! gp-0 (-> self control transv) (vector-float*! gp-0 (-> self control dynam gravity-normal) f30-0))
+        (let* ((f1-0 (vector-length gp-0))
+               (f0-3 f1-0))
+          (if (< 40960.0 f1-0) (set! f1-0 40960.0))
+          (vector+! (-> self control transv)
+                    (vector-float*! (-> self control transv) (-> self control dynam gravity-normal) f30-0)
+                    (vector-float*! gp-0 gp-0 (/ f1-0 f0-3)))))
+      (if (!= (-> self next-state name) 'target-hl-death) (logclear! (-> self state-flags) (state-flags being-attacked dying)))
+      (target-exit))
+  :trans
+    (behavior ()
+      (when (= *cheat-mode* 'debug)
+        (when (and (not *pause-lock*) (cpad-hold? (-> self control cpad number) r2))
+          (pickup-collectable! (-> self fact) (pickup-type eco-green) (the-as float 1.0) (the-as handle #f))
+          (go target-hl-movement-ground))))
+  :code
+    (behavior ((arg0 symbol) (arg1 attack-info))
+      (logclear! (-> self water flags) (water-flags wt16))
+      (set-time! (-> self state-time))
+      (let ((gp-0 (-> self attack-info)))
+        (let ((s5-0 (new 'stack-no-clear 'vector)))
+          (let ((v1-4 gp-0))
+            (set! (-> v1-4 attacker) (the-as handle #f))
+            (set! (-> v1-4 mode) 'generic)
+            (set! (-> v1-4 shove-back) 6144.0)
+            (set! (-> v1-4 shove-up) 4915.2)
+            (set! (-> v1-4 angle) #f)
+            (set! (-> v1-4 trans quad) (-> self control trans quad))
+            (set! (-> v1-4 control) 0.0)
+            (set! (-> v1-4 invinc-time) (-> *TARGET-bank* hit-invulnerable-timeout)))
+          (case arg0
+            (('shove)
+             (let ((v1-7 gp-0))
+               (set! (-> v1-7 shove-back) (-> *TARGET-bank* smack-surface-dist))
+               (set! (-> v1-7 shove-up) (-> *TARGET-bank* smack-surface-height))
+               (set! (-> v1-7 angle) 'shove))))
+          (combine! gp-0 arg1)
+          (when (not (logtest? (-> gp-0 mask) (attack-mask vector)))
+            (vector-z-quaternion! (-> gp-0 vector) (-> self control quat-targ))
+            (vector-xz-normalize! (-> gp-0 vector) (- (fabs (-> gp-0 shove-back))))
+            (set! (-> gp-0 vector y) (-> gp-0 shove-up)))
+          (set! (-> s5-0 quad) (-> gp-0 vector quad))
+          (let ((f0-10 (vector-dot (vector-normalize-copy! (new 'stack-no-clear 'vector) s5-0 (the-as float 1.0))
+                                   (vector-z-quaternion! (new 'stack-no-clear 'vector) (-> self control quat-targ)))))
+            (if (not (-> self attack-info angle)) (set! (-> self attack-info angle) (if (>= 0.0 f0-10) 'front 'back))))
+          (cond
+            ((= arg0 'attack)
+             (logior! (-> self state-flags) (state-flags being-attacked))
+             (set-time! (-> self game hit-time))
+             (case (-> gp-0 mode)
+               (('endlessfall)
+                (cond
+                  ((= (-> self game mode) 'debug)
+                   (let ((s4-1 (new-stack-vector0)))
+                     (set! (-> s4-1 quad) (-> self control last-known-safe-ground quad))
+                     (ja-channel-set! 0)
+                     (let ((s3-1 (current-time))) (until (time-elapsed? s3-1 (seconds 1)) (suspend)))
+                     (move-to-point! (-> self control) s4-1))
+                   (set! (-> (&-> (-> self control) unknown-qword00) 0) (-> self control trans quad))
+                   (send-event *camera* 'teleport)
+                   (go target-hl-movement-ground))
+                  (else
+                   (pickup-collectable! (-> self fact) (pickup-type eco-green) (the-as float -1000.0) (the-as handle #f))
+                   (go target-hl-death (-> gp-0 mode)))))
+               (('drown-death 'sharkey 'lava 'dark-eco-pool 'ogreboss-super-boulder 'melt 'instant-death)
+                (pickup-collectable! (-> self fact) (pickup-type eco-green) (the-as float -1000.0) (the-as handle #f))
+                (if (= (-> self game mode) 'play) (go target-hl-death (-> gp-0 mode))))
+               (('death) (pickup-collectable! (-> self fact) (pickup-type eco-green) (the-as float -1000.0) (the-as handle #f)))
+               (('plant-boss)
+                (pickup-collectable! (-> self fact) (pickup-type eco-green) (- (-> *FACT-bank* health-single-inc)) (the-as handle #f))
+                (if (and (= (-> self game mode) 'play) (>= 0.0 (-> self fact health))) (go target-hl-death (-> gp-0 mode))))
+               (else
+                (pickup-collectable! (-> self fact) (pickup-type eco-green) (- (-> *FACT-bank* health-single-inc)) (the-as handle #f))))
+             (target-hl-hit-effect gp-0))
+            (else
+             (case (-> gp-0 mode)
+               (('burn 'burnup) (sound-play "get-burned")))))
+          (set! (-> self control cur-surf) *smack-mods*)
+          (target-hit-setup-anim gp-0)
+          (target-hit-move gp-0 (target-hit-orient gp-0 s5-0) target-falling-anim-trans (the-as float 1.0))
+          )
+          (when (= (-> self fact health) 1.0) (sound-play "health_critical"))
+        (if (and (= (-> self game mode) 'play) (>= 0.0 (-> self fact health))) (go target-hl-death (-> gp-0 mode)))
+        (go target-hl-hit-ground #f)
+        )
+      )
+  :post 
+  (behavior ()
+    (target-post)
+    (set! (-> self draw status) (draw-status hidden))
+    (set! (-> *sidekick* draw status) (draw-status hidden))
+  ))
+
+(defbehavior target-hl-bonk-event-handler target ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
+  (let ((s4-0 (new 'stack-no-clear 'vector)))
+    (cond
+      ((and (= arg2 'touched)
+            ((method-of-type touching-shapes-entry prims-touching?)
+             (the-as touching-shapes-entry (-> arg3 param 0))
+             (-> self control)
+             (the-as uint 6))
+            (< (* 16384.0 (-> *display* time-adjust-ratio))
+               (vector-dot (-> self control dynam gravity-normal)
+                           (vector-! (new 'stack-no-clear 'vector) (-> self control transv) (-> self control last-transv))))
+            (begin
+              (vector-normalize! (vector-! s4-0 (the-as vector (-> self control body-spheres 0 prim-core)) (-> self control best-cshape-intersect))
+                                 (the-as float 1.0))
+              (< 0.01 (-> s4-0 y))))
+       (if (< 0.75 (-> s4-0 y))
+         (send-event arg0
+                     'bonk
+                     (-> arg3 param 0)
+                     (fmax (-> self control ground-impact-vel)
+                           (- (vector-dot (-> self control transv) (-> self control dynam gravity-normal))))))
+       (let ((f0-7 (vector-dot (-> self control dynam gravity-normal)
+                               (vector-! (new 'stack-no-clear 'vector) (-> self control racer-cushion-targ1) (-> self control trans)))))
+         (when (< (-> *TARGET-bank* fall-far) f0-7)
+           (when (and (target-send-attack arg0
+                                          (the-as uint 'bonk)
+                                          (the-as touching-shapes-entry (-> arg3 param 0))
+                                          (-> self control unknown-dword50)
+                                          (-> self control unknown-dword51))
+                      (not (logtest? (-> self state-flags) (state-flags being-attacked dying))))
+             (set! (-> self control last-air-trans quad) (-> self control trans quad))
+             (target-timed-invulnerable (seconds 0.1) self)
+             (go target-hl-jump (-> *TARGET-bank* jump-height-min) (-> *TARGET-bank* jump-height-max) (the-as surface #f)))))
+       #f)
+      ((= arg2 'jump)
+       (sound-play "jump-long")
+       (go target-hl-jump (the-as float (-> arg3 param 0)) (the-as float (-> arg3 param 1)) (the-as surface (-> arg3 param 2)))
+       
+       )
+       )))
+
+(defbehavior target-hl-walk-event-handler target ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
+  (let ((v0-0 (target-hl-bonk-event-handler arg0 arg1 arg2 arg3)))
+    (cond
+      (v0-0 (empty) v0-0)
+      (else (target-hl-standard-event-handler arg0 arg1 arg2 arg3)))))
+
+(defbehavior target-hl-jump-event-handler target ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
+  (if (and (= arg2 'swim) (< 0.0 (vector-dot (-> self control dynam gravity-normal) (-> self control transv)))) (return #f))
+  (let ((v0-0 (target-hl-bonk-event-handler arg0 arg1 arg2 arg3)))
+    (cond
+      (v0-0 (empty) v0-0)
+      (else (target-hl-standard-event-handler arg0 arg1 arg2 arg3)))))

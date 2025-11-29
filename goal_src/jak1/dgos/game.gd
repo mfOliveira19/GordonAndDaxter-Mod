@@ -35,6 +35,7 @@
   "pckernel-impl.o" ;; added
   "pc-debug-common.o" ;; added
   "pc-debug-methods.o" ;; added
+  "hl-inputs-handler.o" ;; added for hl mod
   "pad.o"
   "gs.o"
   "display-h.o"
@@ -347,7 +348,7 @@
   "ropebridge.o"
   "ticky.o"
   ;; hl mod stuff
-  "hl-inputs-handler.o"
+  "logic-target-hl.o"
   "hl-projectiles-h.o"
   "hl-grenade-launcher.o"
   "hl-weapons.o"
@@ -356,8 +357,9 @@
   "hl-weapons-crowbar.o"
   "hl-weapons-pistol.o"
   "hl-weapons-smg.o"
+  "target-hl-death.o"
   "target-hl-handler.o"
-  "target-hl-movement.o"
+  "target-hl.o"
   ;;
   "hud-classes-pc.o" ;; added
   "mod-settings.o" ;; added mod-base-change
@@ -371,6 +373,7 @@
   "racer.o"
   "target-racer.o"
   "racer-states.o"
+  "racer-hl-states.o"
   "collide-reaction-racer.o"
   "racer-ag.go"
   "eichar-racer+0-ag.go"

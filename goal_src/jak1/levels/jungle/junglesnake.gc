@@ -67,7 +67,8 @@
    (track-player-ry   symbol)
    (track-player-tilt symbol)
    (twist-joints      junglesnake-twist-joint 24 :inline :offset 220)
-   (tilt-joints       junglesnake-tilt-joint 3 :inline :offset 604))
+   (tilt-joints       junglesnake-tilt-joint 3 :inline :offset 604)
+   (health            uint8))
   (:methods
    (junglesnake-method-20 (_type_) symbol)
    (junglesnake-method-21 (_type_) symbol)
@@ -101,6 +102,12 @@
          (else
           (do-push-aways! (-> self root))
           (send-event arg0 'shove (-> arg3 param 0) (static-attack-info ((shove-back (meters 2)) (shove-up (meters 0.5)))))))))
+    (('attack-hl) 
+      (let ((damage (the-as int8 (-> arg3 param 4))))
+          (-! (-> self health) damage)
+          (-> arg3 param 1)
+          (when (<= (-> self health) 0)
+            (go junglesnake-die))))
     (('attack) (go junglesnake-die)
     )))
 
@@ -559,5 +566,6 @@ junglesnake-default-event-handler
   (junglesnake-method-22 this (-> this ry))
   (junglesnake-method-21 this)
   (logior! (-> this skel status) (janim-status inited))
+  (set! (-> this health) 100)
   (go junglesnake-sleeping)
   (none))

@@ -608,7 +608,7 @@
 (defbehavior swamp-rat-nest-dummy-event-handler swamp-rat-nest-dummy ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
     (('shake) (if (= (-> self next-state name) 'swamp-rat-nest-dummy-idle) (go swamp-rat-nest-dummy-shake)))
-    (('attack)
+    (('attack 'attack-hl)
      (send-event (ppointer->process (-> self parent-process)) 'hit)
      (let ((v1-7 (-> arg3 param 2)))
        (when (!= v1-7 (-> self parent-process 0 player-attack-id))

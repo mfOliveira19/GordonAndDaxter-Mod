@@ -4,6 +4,7 @@
   ;;"racer.o"
   ;;"target-racer.o"
   ;;"racer-states.o"
+  ;;"racer-hl-states.o"
   ;;"collide-reaction-racer.o"
   "eichar-racer+0-ag.go"
   "tpage-1119.go"

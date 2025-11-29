@@ -501,6 +501,7 @@
    "racer_common/racer.gc"
    "racer_common/target-racer.gc"
    "racer_common/racer-states.gc"
+   "racer_common/racer-hl-states.gc"
    "racer_common/collide-reaction-racer.gc"
 
    "flut_common/flut-part.gc"
@@ -1720,7 +1721,7 @@
 
 
 (goal-src "engine/ps2/pad.gc" "pckernel-h" "pc-cheats")
-
+(goal-src "engine/mods/hl-inputs-handler.gc")
 (goal-src-sequence
  ;; prefix
  "engine/"
@@ -2119,9 +2120,10 @@
 )
 
 (goal-src "levels/test-zone/test-zone-obs.gc" "process-drawable")
+(goal-src "engine/mods/hl-target/logic-target-hl.gc")
+(goal-src "engine/mods/hl-target/target-hl-death.gc")
 (goal-src "engine/mods/hl-target/target-hl-handler.gc")
-(goal-src "engine/mods/hl-target/target-hl-movement.gc")
-(goal-src "engine/mods/hl-inputs-handler.gc")
+(goal-src "engine/mods/hl-target/target-hl.gc")
 (goal-src "engine/mods/hl-projectiles/hl-projectiles-h.gc")
 (goal-src "engine/mods/hl-projectiles/hl-projectiles.gc")
 (goal-src "engine/mods/hl-projectiles/hl-weapon-shot.gc")

@@ -339,6 +339,7 @@ swamp-rat-default-event-handler
     (set! (-> s5-0 nav-radius) (* 0.75 (-> s5-0 root-prim local-sphere w)))
     (backup-collide-with-as s5-0)
     (set! (-> this collide-info) s5-0))
+    (set! (-> this health) 40)
   0
   (none))
 

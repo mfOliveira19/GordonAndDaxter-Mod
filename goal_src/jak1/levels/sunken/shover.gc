@@ -26,7 +26,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('touch 'attack)
+        (('touch 'attack 'attack-hl)
          (when (= (-> proc type) target)
            (when ((method-of-type touching-shapes-entry prims-touching-action?)
                   (the-as touching-shapes-entry (-> block param 0))

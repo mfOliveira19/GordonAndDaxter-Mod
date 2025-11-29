@@ -1,5 +1,8 @@
 (in-package goal)
 
+(defun in-hl-state? ()
+  (and (= (-> *target* game mode) 'play) (or (-> *target* state name) 'target-hl-movement-ground 'target-hl-movement-ground-duck 'target-hl-movement-air 'target-hl-movement-air-duck) (!= (-> *target* state name) 'target-hl-periscope) (!= (-> *target* state name) 'target-hl-death) (!= (-> *target* state name) 'target-hl-fishing)))
+
 (defun should-jump? ()
   ;;(or (< (-> *mouse-data* mouse-scrolly) 0.0) (when *auto-jump* (cpad-hold? 0 x)) (cpad-pressed? 0 x))
   (or (< (-> *mouse-data* mouse-scrolly) 0.0) (when *auto-jump* (!= (-> *keyboard-data* key_space) 0)))
@@ -25,6 +28,10 @@
   (!= (-> *keyboard-data* key_d) 0)
 )
 
+(defun should-be-moving? ()
+  (or (should-move-forward?) (should-move-back?) (should-move-left?) (should-move-right?))
+)
+
 (defun should-duck? ()
   ;;(or (> (-> *mouse-data* mouse-scrolly) 0.0) (cpad-hold? 0 l1))
   (or (> (-> *mouse-data* mouse-scrolly) 0.0) (!= (-> *keyboard-data* key_ctrl) 0))
@@ -36,15 +43,17 @@
 )
 
 (defun should-reload? ()
-  (!= (-> *keyboard-data* key_r) 0)
+  (and (!= (-> *target* state name) 'target-hl-death) (!= (-> *keyboard-data* key_r) 0))
 )
 
 (defun should-attack? ()
-  (!= (-> *mouse-data* mouse1) 0)
-)
+  (and (in-hl-state?) (!= (-> *mouse-data* mouse1) 0)))
+
+(defun mouse1? ()
+  (!= (-> *mouse-data* mouse1) 0))
 
 (defun should-second-attack? ()
-  (!= (-> *mouse-data* mouse2) 0)
+  (and (in-hl-state?) (!= (-> *mouse-data* mouse2) 0))
 )
 
 (defun should-switch-slot1? ()
@@ -59,7 +68,25 @@
   (!= (-> *keyboard-data* key_3) 0)
 )
 
+(define *last-e-state* 0)
+
+(defun should-use? ()
+  (let ((pressed (-> *keyboard-data* key_e))
+        (should-switch #f))
+    ;; Detect rising edge — pressed now, not pressed before
+    (when (and (!= pressed 0) (= *last-e-state* 0))
+      (set! should-switch #t))
+    ;; Update state for next frame
+    (set! *last-e-state* (the-as int pressed))
+    should-switch)
+)
+
+(defun should-exit? ()
+  (!= (-> *keyboard-data* key_esc) 0)
+)
+
 (define *last-q-state* 0)
+
 (defun should-switch-last-weapon? ()
   (let ((pressed (-> *keyboard-data* key_q))
         (should-switch #f))
@@ -94,7 +121,7 @@
         (begin
           (vector-normalize! arg0 1.0)
           (set! (-> self control stick-vec quad) (-> arg0 quad))
-          (let ((base-speed (if (should-walk?) 0.5 1.5))
+          (let ((base-speed (if (should-walk?) 0.5 1.5)) ;; was 1.5
                 (duck-mult (if (should-duck?) 0.333 1.0)))
             (set! (-> self control pad-stick-speed) (* base-speed duck-mult)))
           (vector-matrix*! arg0 arg0 (matrix-local->world #t #f))

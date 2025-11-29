@@ -875,7 +875,8 @@
         (set! (-> a1-1 param 0) (the-as uint 'ground-height))
         (let* ((f0-4 (the-as float (send-event-function (-> this process) a1-1)))
                (f30-0 (lerp-scale 0.3 1.0 f0-4 2048.0 24576.0)))
-          (if (nonzero? (-> this process skel effect)) (effect-control-method-10 (-> this process skel effect) 'swim-stroke 0.0 -1))
+          ;; This was causing a crash
+          ;;(if (nonzero? (-> this process skel effect)) (effect-control-method-10 (-> this process skel effect) 'swim-stroke 0.0 -1))
           (create-splash this f30-0 (-> this enter-water-pos) 1 (-> this process root transv)))))
     (if (logtest? (water-flags wt17) (-> this flags)) (set! (-> this swim-height) 2867.2))
     0

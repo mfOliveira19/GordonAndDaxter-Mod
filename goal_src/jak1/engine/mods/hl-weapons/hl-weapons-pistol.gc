@@ -4,12 +4,9 @@
 
 (defconstant pistol-attack-cooldown (seconds 0.3))
 (defconstant pistol-second-attack-cooldown  (seconds 0.22))
-(defconstant pistol-attack-sound-path "sound_replacements/pl_gun3.wav")
 (defconstant pistol-draw-duration (seconds 0.8))
 (defconstant pistol-reload-part1-duration (seconds 1.2))
 (defconstant pistol-reload-part2-duration (seconds 1.1))
-(defconstant pistol-reload-sound1 "sound_replacements/9mmclip2.wav")
-(defconstant pistol-reload-sound2 "sound_replacements/9mmclip1.wav")
 (defconstant pistol-idle1-duration (seconds 3.75))
 (defconstant pistol-idle2-duration (seconds 2.5))
 (defconstant pistol-idle3-duration (seconds 3.06))
@@ -92,7 +89,7 @@
 
   :post
   (behavior ()
-    ;;(fire-hl-shot *target* #t 0.0 0.0)
+    (fire-hl-shot *target* #t 0.0 0.0)
     (update-aim-punch pistol-aim-punch-decay)
     ))
 
@@ -144,7 +141,7 @@
         (fire-hl-shot *target* #f spread-x spread-y))
       (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot) 1.0)
       (add-aim-punch pistol-aim-punch-amount)
-      (play-sound-file pistol-attack-sound-path 50)
+      (sound-play "pl_gun3")
       (hl-choose-idle-wait! 5.0 15.0))
     (set-time! (-> self weapon-last-attack-time)))
   :trans
@@ -174,7 +171,7 @@
         (fire-hl-shot *target* #f spread-x spread-y))
       (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot) 1.0)
       (add-aim-punch pistol-aim-punch-amount)
-      (play-sound-file pistol-attack-sound-path 50)
+      (sound-play "pl_gun3")
       (hl-choose-idle-wait! 5.0 15.0))
     (set-time! (-> self weapon-last-attack-time)))
   :trans
@@ -198,7 +195,7 @@
   :enter
   (behavior ()
     (viewmodel-play-animation (viewmodel-animations-enum pistol-reload) 1.0)
-    (play-sound-file pistol-reload-sound1 50)
+    (sound-play "9mmclip2")
     (set-time! (-> self weapon-last-reload-time)))
   
   :trans
@@ -219,7 +216,7 @@
   :enter
   (behavior ()
     (set! (-> self current-pistol-mag-ammo) pistol-max-mag-ammo)
-    (play-sound-file pistol-reload-sound2 50)
+    (sound-play "9mmclip1")
     (set-time! (-> self weapon-last-reload-time)))
   :trans
   (behavior ()

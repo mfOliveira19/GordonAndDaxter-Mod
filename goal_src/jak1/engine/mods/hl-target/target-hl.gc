@@ -1,0 +1,555 @@
+(in-package goal)
+
+;; Lots of global variables (i know, its not the best approach, but i did not want to mess with the target struct)
+
+(defbehavior target-hl-falling-trans target ((arg0 basic) (arg1 time-frame))
+  (if (and (cpad-pressed? (-> self control cpad number) circle) (can-feet?)) (go target-attack-air #f))
+  (when (= arg0 'target-eco-powerup)
+    ;; og:preserve-this - High FPS Fix
+    (if (and (recently-pressed? x)
+             (not (logtest? (-> self water flags) (water-flags wt09)))
+             (not (time-elapsed? (-> self state-time) (seconds 3)))
+             (not (logtest? (-> self state-flags) (state-flags prevent-jump))))
+      (go target-hl-movement-ground)))
+  (if (logtest? (-> self control status) (cshape-moving-flags onsurf)) (go target-hl-movement-ground))
+  (when (if (and (< (target-move-dist (-> *TARGET-bank* stuck-time)) (-> *TARGET-bank* stuck-distance))
+                 (>= arg1 0)
+                 (time-elapsed? (-> self state-time) arg1)
+                 (not (and *cheat-mode* (cpad-hold? (-> self control cpad number) r2))))
+          #t)
+    (logior! (-> self control status) (cshape-moving-flags onsurf))
+    (go target-hl-movement-ground))
+  (if (!= (-> self state-time) (current-time)) (slide-down-test))
+  0
+  (none))
+
+(defstate target-hl-duck-high-jump-jump (target)
+  :event target-hl-jump-event-handler
+  :enter
+    (behavior ((arg0 float) (arg1 float) (arg2 symbol))
+      (set-time! (-> self state-time))
+      (sound-play "jump" :vol 80 :pitch -0.4)
+      (init-var-jump arg0 arg1 (the-as vector #t) (the-as vector #f) (-> self control transv))
+      (logclear! (-> self control status) (cshape-moving-flags onsurf onground tsurf))
+      (cond
+        ((= arg2 'launch) (set! (-> self neck flex-blend) 0.0) (set! (-> self control cur-surf) *launch-jump-mods*))
+        (else (set! (-> self control cur-surf) *high-jump-mods*))))
+  :exit target-exit
+  ;; og:preserve-this PAL patch here
+  :trans
+  (behavior ()
+    ((-> target-hl-high-jump trans))
+    (case (-> self control unknown-int37)
+      (('launch)
+       (let ((gp-0 (the-as sound-rpc-set-param (get-sound-buffer-entry))))
+         (set! (-> gp-0 command) (sound-command set-param))
+         (set! (-> gp-0 id) (-> self control unknown-soundid01))
+         (let ((a1-0 (ear-trans)))
+           (let ((s5-0 self))
+             (when (= a1-0 #t)
+               (if (and s5-0 (type-type? (-> s5-0 type) process-drawable) (nonzero? (-> s5-0 control)))
+                 (set! a1-0 (-> s5-0 control trans))
+                 (set! a1-0 (the-as vector #f)))))
+           (sound-trans-convert (-> gp-0 parms trans) a1-0))
+         (set! (-> gp-0 parms mask) (sound-mask trans))
+         (-> gp-0 id)))))
+  :code
+  (behavior ((arg0 float) (arg1 float) (arg2 symbol))
+    (let ((f30-0 (the-as float (if (= arg2 'launch) 110.0 35.0)))
+          (f28-0 1.0))
+      (until (ja-done? 0)
+        (let* ((f24-0 (vector-dot (-> self control dynam gravity-normal) (-> self control transv)))
+               (f26-0 (- f30-0 (ja-aframe-num 0)))
+               (f22-1 (fmin (fmin 3.0 f26-0) (/ (* 5.0 f26-0) (the float (time-to-apex f24-0 (the-as float -245760.0))))))
+               (s5-0 (-> self skel root-channel 0)))
+          (set! (-> s5-0 param 0) (the float (+ (-> s5-0 frame-group data 0 length) -1)))
+          (let ((v1-26 (cond
+                         ((and (< 0.0 f24-0) (< 0.0 f26-0))
+                          (if (= arg2 'launch) (set! f28-0 (lerp f28-0 (* 4.0 f22-1) (the-as float 0.25))))
+                          f22-1)
+                         (else f28-0))))
+            (set! (-> s5-0 param 1) v1-26))
+          (joint-control-channel-group-eval! s5-0 (the-as art-joint-anim #f) num-func-seek!))
+        (suspend))
+      (cond
+        ((= arg2 'launch)
+         (ja-no-eval :group! eichar-launch-jump-loop-ja :num! (loop! f28-0) :frame-num 0.0)
+         (loop
+           (suspend)
+           (ja :group! eichar-launch-jump-loop-ja :num! (loop! f28-0))))
+        (else
+         (ja-no-eval :group! eichar-jump-loop-ja :num! (loop!) :frame-num 0.0)
+         (loop
+           (suspend)
+           (ja :group! eichar-jump-loop-ja :num! (loop!))))))
+    (the-as none 0))
+  :post target-hl-movement-post)
+
+(defstate target-hl-duck-high-jump (target)
+  :event target-standard-event-handler
+  :enter
+    (behavior ((arg0 float) (arg1 float) (arg2 symbol))
+      (set-time! (-> self state-time))
+      (logclear! (-> self control status) (cshape-moving-flags onsurf onground tsurf))
+      (set! (-> self control cur-surf) *turn-around-mods*))
+  :exit target-exit
+  :code
+    (behavior ((arg0 float) (arg1 float) (arg2 symbol))
+      (if (not (and (ja-group? eichar-duck-stance-ja) (= (-> self skel root-channel 0) (-> self skel channel))))
+        (ja-channel-push! 1 (seconds 0.04)))
+      (case arg2
+        (('launch)
+         ;; og:preserve-this PAL patch here
+         (set! (-> self control unknown-soundid01) (sound-play "launch-fire"))
+         (ja-no-eval :group! eichar-launch-jump-ja :num! (seek! (ja-aframe (the-as float 16.0) 0)) :frame-num 0.0)
+         (until (ja-done? 0)
+           (let ((s3-2 (the-as sound-rpc-set-param (get-sound-buffer-entry))))
+             (set! (-> s3-2 command) (sound-command set-param))
+             (set! (-> s3-2 id) (-> self control unknown-soundid01))
+             (let ((a1-5 (ear-trans)))
+               (let ((s2-1 self))
+                 (when (= a1-5 #t)
+                   (if (and s2-1 (type-type? (-> s2-1 type) process-drawable) (nonzero? (-> s2-1 control)))
+                     (set! a1-5 (-> s2-1 control trans))
+                     (set! a1-5 (the-as vector #f)))))
+               (sound-trans-convert (-> s3-2 parms trans) a1-5))
+             (set! (-> s3-2 parms mask) (sound-mask trans))
+             (-> s3-2 id))
+           (suspend)
+           (ja :num! (seek! (ja-aframe (the-as float 16.0) 0)))))
+        (else
+         (ja-no-eval :group! eichar-duck-high-jump-ja :num! (seek! (ja-aframe (the-as float 16.0) 0)) :frame-num 0.0)
+         (until (ja-done? 0)
+           (suspend)
+           (ja :num! (seek! (ja-aframe (the-as float 16.0) 0))))))
+      (go target-hl-duck-high-jump-jump arg0 arg1 arg2))
+  :post target-hl-movement-post)
+
+(defstate target-hl-high-jump (target)
+  :event target-hl-jump-event-handler
+  :enter
+    (behavior ((arg0 float) (arg1 float) (arg2 basic))
+      (when (and (= (-> self control unknown-symbol40) 'launch) (!= arg2 'launch))
+        enter-state
+        (let ((a0-3 (-> self control unknown-dword60))
+              (a1-1 (-> self control unknown-dword61))
+              (a2-1 (-> self control last-transv2)))
+          (set! (-> a2-1 quad) (-> (the-as vector (-> self control unknown-dword62)) quad))
+          (go target-hl-launch (the-as float a0-3) (the-as symbol a1-1) a2-1 (-> self control unknown-dword63))))
+      (set! (-> self control unknown-uint31) (the-as uint arg2))
+      (if (or (= arg2 'duck) (= arg2 'launch)) (go target-hl-duck-high-jump arg0 arg1 (the-as symbol arg2)))
+      (set-time! (-> self state-time))
+      (logclear! (-> self control status) (cshape-moving-flags onsurf onground tsurf))
+      (sound-play "jump" :pitch 0.3)
+      (init-var-jump arg0 arg1 (the-as vector #t) (the-as vector #t) (-> self control transv))
+      (set! (-> self control cur-surf)
+            (cond
+              ((= arg2 'flip) *flip-jump-mods*)
+              ((= arg2 'flop-forward) *forward-high-jump-mods*)
+              (else *high-jump-mods*)))
+      (set! (-> self control turn-vec-len2)
+            (fmax 0.0 (fmin 0.5 (* 0.00008138021 (+ -409.6 (-> self control speed-mod)))))))
+  :exit target-exit
+  :trans
+    (behavior ()
+      (target-hl-falling-trans #f (the-as time-frame (if (ja-group? eichar-jump-loop-ja) 15 -1)))
+      ;; og:preserve-this - High FPS Fix
+      (if (and (recently-pressed? square)
+               (< (vector-dot (-> self control dynam gravity-normal) (-> self control transv)) 73728.0)
+               (and (< -61440.0 (vector-dot (-> self control dynam gravity-normal) (-> self control transv)))
+                    (time-elapsed? (-> self control stuck-time) (the-as time-frame (-> *TARGET-bank* stuck-timeout)))
+                    (not (logtest? (-> self state-flags) (state-flags prevent-attack)))
+                    (not (logtest? (-> self control new-surf flags) (surface-flags prevent-attacks-during-launch-jump surf08)))))
+        (go target-flop
+            (the-as float 33775.48)
+            (the-as float -122880.0)
+            (the-as float (if (= (-> *cpad-list* cpads (-> self control cpad number) stick0-speed) 0.0) 0.0 68812.8))))
+      (mod-var-jump #t #t (cpad-hold? (-> self control cpad number) x) (-> self control transv))
+      (seek! (-> self control turn-vec-len2)
+             (fmax 0.0 (fmin 1.0 (* 0.00012207031 (+ -2048.0 (-> self control speed-mod)))))
+             (seconds-per-frame)))
+  :code
+    (-> target-jump
+        code)
+  :post target-post)
+
+(defstate target-hl-launch (target)
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (if (and (= message 'query) (= (-> block param 0) 'mode))
+        'target-launch
+        (target-standard-event-handler proc argc message block)))
+  :code
+    (behavior ((arg0 float) (arg1 symbol) (arg2 vector) (arg3 int))
+      (set-time! (-> self state-time))
+      (set! (-> self control cur-surf) *turn-around-mods*)
+      (ja-channel-push! 1 (seconds 0.15))
+      (set-forward-vel (the-as float 0.0))
+      (ja-no-eval :group! eichar-duck-stance-ja :num! (seek! (ja-aframe (the-as float 15.0) 0) 3.0) :frame-num 0.0)
+      (until (ja-done? 0)
+        (suspend)
+        (ja :num! (seek! (ja-aframe (the-as float 15.0) 0) 3.0)))
+      (if arg1 (send-event *camera* 'change-state arg1 (seconds 0.6)))
+      (if (nonzero? arg3)
+        (process-spawn-function process
+          (lambda :behavior process ((arg0 vector) (arg1 time-frame) (arg2 float))
+            (local-vars (sv-32 time-frame) (sv-40 vector) (sv-44 symbol))
+            (set! sv-32 (current-time))
+            (let ((v1-2 (new-stack-vector0))) (set! (-> v1-2 quad) (-> arg0 quad)) (set! sv-40 v1-2))
+            (set! sv-44 #t)
+            (until (time-elapsed? sv-32 arg1)
+              (let ((s4-0 (ppointer->process (-> self parent))))
+                (cond
+                  ((and sv-44 (< (- (-> (the-as target s4-0) control trans y) (-> (the-as target s4-0) control last-air-trans y)) arg2))
+                   (vector-xz-normalize! (-> (the-as target s4-0) control transv) (the-as float 0.0))
+                   ;; og:preserve-this PAL patch here
+                   (when (< (vector-vector-xz-distance (-> (the-as target s4-0) control trans) sv-40) 20480.0)
+                     (let ((v1-16 (vector-! (new-stack-vector0) (-> (the-as target s4-0) control trans) sv-40)))
+                       (set! (-> (the-as target s4-0) control trans x) (+ (-> sv-40 x) (fmax -2867.2 (fmin 2867.2 (-> v1-16 x)))))
+                       (set! (-> (the-as target s4-0) control trans z) (+ (-> sv-40 z) (fmax -2867.2 (fmin 2867.2 (-> v1-16 z))))))))
+                  (else
+                   (if sv-44 (set! sv-32 (current-time)))
+                   (set! sv-44 (the-as symbol #f))
+                   (when (or (= (-> (the-as target s4-0) next-state name) 'target-hl-duck-high-jump-jump)
+                             (= (-> (the-as target s4-0) next-state name) 'target-falling))
+                     (let ((v1-30 (-> (the-as target s4-0) control trans))
+                           (s3-0 (-> (the-as target s4-0) control transv)))
+                       (set! (-> s3-0 x) (- (-> sv-40 x) (-> v1-30 x)))
+                       (set! (-> s3-0 z) (- (-> sv-40 z) (-> v1-30 z)))
+                       (let ((f30-0 (vector-xz-length s3-0)))
+                         (if (< 122880.0 f30-0) (vector-xz-normalize! s3-0 (the-as float 122880.0)))
+                         (if (< 4096.0 f30-0)
+                           (forward-up-nopitch->quaternion (-> (the-as target s4-0) control dir-targ)
+                                                           (vector-normalize-copy! (new 'stack-no-clear 'vector) s3-0 (the-as float 1.0))
+                                                           (vector-y-quaternion! (new 'stack-no-clear 'vector) (-> (the-as target s4-0) control quat))))))))))
+              (suspend)
+              0)
+            #f)
+          arg2
+          arg3
+          143360.0
+          :to
+          self))
+      ;; og:preserve-this PAL patch (sound plays elsewhere)
+      ;(sound-play "launch-fire")
+      (go target-hl-high-jump arg0 arg0 'launch))
+  :post target-no-stick-post)
+
+(defstate target-hl-movement-air-duck (target)
+  :event target-hl-standard-event-handler
+  :enter
+    (behavior ()
+      (set! (-> self control bend-target) 1.0)
+      (target-collide-set! 'duck (the-as float 1.0)))
+  :exit
+  (behavior ()
+    (target-collide-set! 'normal (the-as float 0.0)))
+  :trans 
+  (behavior ()
+    (when (not (should-duck?))
+      (go target-hl-movement-air))
+    (when (on-ground?)
+      (go target-hl-movement-ground)))
+  :code
+    (behavior ()
+      (loop (suspend)))
+
+  :post 
+  (behavior ()
+    (apply-air-duck-offset)
+    ;;(update-fall-status)
+    (target-hl-movement-post)
+    (set! *was-ducking* (should-duck?))))
+
+(defstate target-hl-movement-air (target)
+  :event target-hl-jump-event-handler
+  :trans 
+  (behavior ()
+    (when (should-duck?)
+      (go target-hl-movement-air-duck))
+    (when (on-ground?)
+      (go target-hl-movement-ground)))
+  :code
+    (behavior ()
+      (loop (suspend)))
+
+  :post 
+  (behavior ()
+    ;;(update-fall-status)
+    (target-hl-movement-post)))
+
+(defstate target-hl-movement-ground (target)
+  :event target-hl-walk-event-handler
+  :trans
+  (behavior ()
+    (when (should-jump?)
+      ;; So we can use launchers
+      (when (= (-> self control unknown-symbol40) 'launch)
+        (level-hint-spawn (text-id sidekick-launcher1) "sksp009d" (the-as entity #f) *entity-pool* (game-task none))
+        (level-hint-spawn (text-id sidekick-launcher2) "sksp009e" (the-as entity #f) *entity-pool* (game-task none))
+        (case (-> (level-get-target-inside *level*) name)
+          (('citadel)
+            (level-hint-spawn (text-id citadel-launcher2) "sksp0393" (the-as entity #f) *entity-pool* (game-task none))
+            (level-hint-spawn (text-id citadel-launcher) "sksp0388" (the-as entity #f) *entity-pool* (game-task none))))
+        enter-state
+        (let ((a0-9 (-> self control unknown-dword60))
+              (a1-5 (-> self control unknown-dword61))
+              (a2-5 (-> self control last-transv2)))
+          (set! (-> a2-5 quad) (-> (the-as vector (-> self control unknown-dword62)) quad))
+          (go target-hl-launch (the-as float a0-9) (the-as symbol a1-5) a2-5 (-> self control unknown-dword63))))
+      (set! (-> (-> self control transv) y) jump-speed))
+      (when (not (on-ground?))
+        (go target-hl-movement-air))
+      (when (should-duck?)
+        (go target-hl-movement-ground-duck)))
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post 
+  (behavior ()
+    ;;(update-fall-status)
+    (target-hl-movement-post)))
+
+(defbehavior target-apply-longjump target ()
+  (let* ((curvel   (-> self control transv))
+         (cam-fwd  (-> *math-camera* inv-camera-rot vector 2))
+         (speed    100000.0)
+         (jump-up  60070.0))  ;; upward boost for long jump
+
+    ;; horizontal look direction
+    (set! (-> cam-fwd y) 0.0)
+    (vector-normalize! cam-fwd 1.0)
+
+    ;; apply horizontal speed along look
+    (vector-float*! cam-fwd cam-fwd speed)
+    (set! (-> curvel x) (-> cam-fwd x))
+    (set! (-> curvel z) (-> cam-fwd z))
+    ;; add upward velocity
+    (set! (-> curvel y) jump-up)))
+
+(defstate target-hl-movement-ground-duck (target)
+  :event target-hl-standard-event-handler
+  :enter
+  (behavior ()
+    (set-time! *target-duck-enter-time*)
+    (set! (-> self control bend-target) 1.0)
+    (target-collide-set! 'duck (the-as float 1.0)))
+  :exit
+  (behavior ()
+    (target-collide-set! 'normal (the-as float 0.0)))
+  :trans
+  (behavior ()
+    (when (not (should-duck?))
+      (go target-hl-movement-ground))
+    (when (should-jump?)
+      ;; So we can use launchers
+      (when (= (-> self control unknown-symbol40) 'launch)
+        (level-hint-spawn (text-id sidekick-launcher1) "sksp009d" (the-as entity #f) *entity-pool* (game-task none))
+        (level-hint-spawn (text-id sidekick-launcher2) "sksp009e" (the-as entity #f) *entity-pool* (game-task none))
+        (case (-> (level-get-target-inside *level*) name)
+          (('citadel)
+            (level-hint-spawn (text-id citadel-launcher2) "sksp0393" (the-as entity #f) *entity-pool* (game-task none))
+            (level-hint-spawn (text-id citadel-launcher) "sksp0388" (the-as entity #f) *entity-pool* (game-task none))))
+        enter-state
+        (let ((a0-9 (-> self control unknown-dword60))
+              (a1-5 (-> self control unknown-dword61))
+              (a2-5 (-> self control last-transv2)))
+          (set! (-> a2-5 quad) (-> (the-as vector (-> self control unknown-dword62)) quad))
+          (go target-hl-launch (the-as float a0-9) (the-as symbol a1-5) a2-5 (-> self control unknown-dword63))))
+      (let* ((vel         (-> self control ltransv))
+            (horiz-speed (vector-xz-length vel))
+            (can-lj      (and (not (time-elapsed? *target-duck-enter-time*
+                                                  (seconds 2.0)))
+                              (> horiz-speed 20000.0))))
+        (format 0 "Jump: horiz-speed=~f  can-lj=~a~%" horiz-speed can-lj)
+
+        (if can-lj
+          (target-apply-longjump)
+          (set! (-> (-> self control transv) y) jump-speed))))
+      (when (not (on-ground?))
+        (go target-hl-movement-air)))
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post 
+  (behavior ()
+      ;;(apply-ground-duck-hop)
+      ;;(update-fall-status)
+      (target-hl-movement-post)
+      ))
+
+(defstate target-hl-jump (target)
+  :event target-hl-jump-event-handler
+  :enter
+    (behavior ((arg0 float) (arg1 float) (arg2 surface))
+      (when (= (-> self control unknown-symbol40) 'launch)
+        (level-hint-spawn (text-id sidekick-launcher1) "sksp009d" (the-as entity #f) *entity-pool* (game-task none))
+        (level-hint-spawn (text-id sidekick-launcher2) "sksp009e" (the-as entity #f) *entity-pool* (game-task none))
+        (case (-> (level-get-target-inside *level*) name)
+          (('citadel)
+           (level-hint-spawn (text-id citadel-launcher2) "sksp0393" (the-as entity #f) *entity-pool* (game-task none))
+           (level-hint-spawn (text-id citadel-launcher) "sksp0388" (the-as entity #f) *entity-pool* (game-task none))))
+        enter-state
+        (let ((a0-9 (-> self control unknown-dword60))
+              (a1-5 (-> self control unknown-dword61))
+              (a2-5 (-> self control last-transv2)))
+          (set! (-> a2-5 quad) (-> (the-as vector (-> self control unknown-dword62)) quad))
+          (go target-hl-launch (the-as float a0-9) (the-as symbol a1-5) a2-5 (-> self control unknown-dword63))))
+      (set-time! (-> self state-time))
+      (init-var-jump arg0 arg1 (the-as vector #t) (the-as vector #t) (-> self control transv))
+      (logclear! (-> self control status) (cshape-moving-flags onsurf onground tsurf))
+      (set! arg2
+            (cond
+              (arg2 (empty) arg2)
+              (else *jump-mods*)))
+      (set! (-> self control cur-surf) arg2)
+      (set! (-> self control turn-vec-len3)
+            (fmax 0.0 (fmin 1.0 (* 0.00004359654 (+ -11468.8 (-> self control speed-mod))))))
+      (set! (-> self control turn-vec-len2)
+            (fmax 0.0 (fmin 1.0 (* 0.000048828126 (+ -10240.0 (-> self control speed-mod)))))))
+  :exit target-exit
+  :trans
+    (behavior ()
+      (set! (-> self control turn-vec-len3)
+            (fmax (-> self control turn-vec-len3)
+                  (* 0.003921569 (the float (-> *cpad-list* cpads (-> self control cpad number) abutton (abutton-idx x)))))) ;; og:preserve-this abutton indexing
+      (target-hl-falling-trans #f (the-as time-frame (if (ja-group? eichar-jump-loop-ja) 15 -1)))
+      (mod-var-jump #t #t (cpad-hold? (-> self control cpad number) x) (-> self control transv))
+      (slide-down-test)
+      (seek! (-> self control turn-vec-len2)
+             (fmax 0.0 (fmin 1.0 (* 0.000048828126 (+ -10240.0 (-> self control speed-mod)))))
+             (seconds-per-frame)))
+  :code
+    (behavior ((arg0 float) (arg1 float) (arg2 surface))
+      (ja-channel-push! 2 (seconds 0.05))
+      (ja :group! eichar-jump-ja :num! min)
+      (ja :chan 1 :group! eichar-jump-forward-ja :num! (chan 0) :frame-interp (-> self control turn-vec-len2))
+      (suspend)
+      (ja :group! eichar-jump-ja :num! (+!))
+      (ja :chan 1 :group! eichar-jump-forward-ja :num! (chan 0) :frame-interp (-> self control turn-vec-len2))
+      (suspend)
+      (until (ja-done? 0)
+        (let ((f30-0 (vector-dot (-> self control dynam gravity-normal) (-> self control transv)))
+              (f0-8 (- 20.0 (ja-aframe-num 0)))
+              (gp-1 (-> self skel root-channel 0)))
+          (set! (-> gp-1 param 0) (the float (+ (-> gp-1 frame-group data 0 length) -1)))
+          (let ((v1-45 (and (< 0.0 f30-0) (< 0.0 f0-8))))
+            (set! (-> gp-1 param 1)
+                  (the-as float
+                          (if v1-45 (fmin (fmin 3.0 f0-8) (/ (* 5.0 f0-8) (the float (time-to-apex f30-0 (the-as float -245760.0))))) 1.0))))
+          (joint-control-channel-group-eval! gp-1 (the-as art-joint-anim #f) num-func-seek!))
+        (ja :chan 1 :num! (chan 0) :frame-interp (-> self control turn-vec-len2))
+        (suspend))
+      (target-falling-anim -1 (seconds 0.2)))
+  :post target-hl-movement-post)
+
+(defstate target-hl-periscope (target)
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (case message
+        (('change-mode) #f)
+        (('end-mode) (when (-> self control temp-spool) (set! (-> self control temp-flop-end-checks) (the-as uint #f)) #t))
+        (else (target-hl-generic-event-handler proc argc message block))))
+  :exit
+    (behavior ()
+      (target-exit)
+      (logclear! (-> *target* draw status) (draw-status hidden))
+      (set! (-> self cam-user-mode) 'normal)
+      ;; og:preserve-this PAL patch here
+      (logclear! (-> self state-flags) (state-flags invulnerable grabbed)))
+  :code
+    (behavior ((arg0 handle))
+      (set! (-> self neck flex-blend) 0.0)
+      (target-exit)
+      (logior! (-> self state-flags) (state-flags invulnerable do-not-notice))
+      (let ((v1-4 (handle->process arg0)))
+        (if v1-4
+          (quaterion<-rotate-y-vector (-> self control dir-targ)
+                                      (vector-! (new 'stack-no-clear 'vector) (-> (the-as process-drawable v1-4) root trans) (-> self control trans)))))
+      (set! (-> self control temp-flop-end-checks) (the-as uint #t))
+      (ja-channel-push! 1 (seconds 0.1))
+      (set! (-> *target* draw status) (draw-status hidden))
+      (ja-no-eval :group! eichar-periscope-grab-ja :num! (seek!) :frame-num 0.0)
+      (until (ja-done? 0)
+        (suspend)
+        (ja :num! (seek!)))
+      (send-event (handle->process arg0) 'change-mode)
+      (while (-> self control temp-spool)
+        (suspend))
+      (ja-no-eval :group! eichar-periscope-grab-ja :num! (seek! 0.0 2.0) :frame-num max)
+      (logclear! (-> *target* draw status) (draw-status hidden))
+      (until (ja-done? 0)
+        (suspend)
+        (ja :num! (seek! 0.0 2.0)))
+      (go target-hl-movement-ground))
+  :post target-hl-no-stick-post)
+
+(defstate target-hl-billy-game (target)
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (cond
+        ((and (= message 'query) (= (-> block param 0) 'mode)) (-> self state name))
+        ((let ((v1-4 message)) (= v1-4 'end-mode)) (go target-hl-movement-ground))
+        (else (target-standard-event-handler proc argc message block))))
+  :enter
+    (behavior ()
+      (set! (-> self neck flex-blend) 0.0)
+      (set! (-> self control cur-surf) *duck-mods*)
+      (logior! (-> self state-flags) (state-flags first-person-mode))
+      (send-event *camera* 'blend-from-as-fixed)
+      (send-event *camera* 'clear-entity)
+      (send-event *camera* 'no-intro)
+      (camera-change-to (the-as string 'cam-billy) 0 #f)
+      (let ((a0-6 (handle->process (-> self fp-hud)))) (if a0-6 (deactivate a0-6)))
+      (set! (-> self fp-hud)
+            (ppointer->handle (process-spawn first-person-hud :to *dproc* :stack (&+ *fp-hud-stack* #x3800)))))
+  :exit
+    (behavior ()
+      (let ((a0-1 (handle->process (-> self fp-hud)))) (if a0-1 (send-event a0-1 'go-away)))
+      (when (send-event *camera* 'query-state cam-billy)
+        (send-event *camera* 'no-intro)
+        (send-event *camera* 'force-blend 0)
+        (camera-change-to (the-as string 'base) 0 #f))
+      (target-exit))
+  :trans
+    (behavior ()
+      (local-vars (sv-48 vector))
+      (rlet ((vf0 :class vf)
+             (vf4 :class vf)
+             (vf5 :class vf)
+             (vf6 :class vf))
+        (init-vf0-vector)
+        ;; og:preserve-this - High FPS Fix
+        (when (and (recently-pressed? r2 circle square)
+                   (time-elapsed? (-> self control unknown-dword82) (seconds 0.45))
+                   (and (= (-> self fact eco-type) (pickup-type eco-yellow)) (>= (-> self fact eco-level) 1.0))
+                   (not *pause-lock*))
+          (let ((gp-1 (vector-float*! (new-stack-vector0)
+                                      (-> *math-camera* inv-camera-rot vector 2)
+                                      (the-as float (-> *TARGET-bank* yellow-projectile-speed))))
+                (s5-1 (vector-float*! (new-stack-vector0) (-> *math-camera* inv-camera-rot vector 2) 8192.0)))
+            (vector+float*! s5-1 s5-1 (-> *math-camera* inv-camera-rot vector 1) (the-as float -2048.0))
+            (let ((s4-0 (get-process *default-dead-pool* projectile-yellow #x4000)))
+              (when s4-0
+                (let ((t9-2 (method-of-type projectile-yellow activate)))
+                  (t9-2 (the-as projectile-yellow s4-0) self 'projectile-yellow (the-as pointer #x70004000)))
+                (let ((s3-0 run-function-in-process)
+                      (s2-0 s4-0)
+                      (s1-0 projectile-init-by-other)
+                      (s0-0 (-> self entity)))
+                  (set! sv-48 s5-1)
+                  (let ((v0-4 (camera-pos))) (.mov.vf.w vf6 vf0) (.lvf vf4 (&-> v0-4 quad)))
+                  (.lvf vf5 (&-> s5-1 quad))
+                  (.add.vf.xyz vf6 vf4 vf5)
+                  (.svf (&-> sv-48 quad) vf6)
+                  (let ((t1-0 (if (>= (-> self fact eco-level) (-> *FACT-bank* eco-level-max)) 120 104))
+                        (t2-0 #f))
+                    ((the-as (function object object object object object object object none) s3-0) s2-0 s1-0 s0-0 sv-48 gp-1 t1-0 t2-0)))
+                (-> s4-0 ppointer))))
+          (set-time! (-> self control unknown-dword82)))))
+  :code
+    (behavior ()
+      (ja-channel-set! 0)
+      (set! (-> self control transv quad) (the-as uint128 0))
+      (anim-loop))
+  :post target-no-move-post)

@@ -876,7 +876,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack)
+        (('attack 'attack-hl)
          (when ((method-of-type touching-shapes-entry prims-touching?)
                 (the-as touching-shapes-entry (-> block param 0))
                 (the-as collide-shape-moving (-> self root))
@@ -1187,7 +1187,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('bonk)
+        (('bonk 'attack-hl)
          (go plant-boss-dead-bounce
              (lerp-scale (the-as float 0.1)
                          (the-as float 1.0)
@@ -1210,7 +1210,7 @@
   :code
     (behavior ((arg0 float))
       (let ((v1-2 (-> self entity extra perm)))
-        (if (and (< 0.3 arg0) (and (not (handle->process (-> self money))) (< (-> v1-2 user-int8 1) 5)))
+        (if (and (and (not (handle->process (-> self money))) (< (-> v1-2 user-int8 1) 5)))
           (set! (-> self money)
                 (ppointer->handle (birth-pickup-at-point (-> self node-list data 42 bone transform vector 3)
                                                          (pickup-type money)

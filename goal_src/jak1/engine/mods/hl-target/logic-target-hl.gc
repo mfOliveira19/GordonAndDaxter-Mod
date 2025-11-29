@@ -1,0 +1,671 @@
+(in-package goal)
+
+;; Lots of global stuff, it could be improved by putting it in the target structure but i did not want to mess too much with it
+
+;; movement constants
+(defconstant jump-speed 50000.0)
+(defconstant gravity-factor 0.65)
+(defconstant hl-max-speed   60650.0) ;; was 50650.0
+(defconstant hl-accel       15.0) ;; was 8.0
+(defconstant hl-air-accel   200.0) ;; was 200 230
+(defconstant hl-friction    4.5) ;; was 6.0
+(defconstant hl-stopspeed   20080.0)
+(defconstant fall-damage-threshold 30000.0)
+(define *foot-left* #f)
+(define *last-step-frame* 0)
+(define *last-step-time* 0)
+(define *fall-start-height* 0.0)
+(define *falling* #f)
+(define *should-take-fall-damage* #f) 
+
+;; global camera duck offset
+(define *duck-camera-offset* 0.0)
+(define *was-ducking* #f)
+
+(define *viewmodel-bob-phase* 0.0)
+(define *viewmodel-bob-current-z* 0.0)
+(define *viewmodel-rot-x* 0.0)
+(defconstant viewmodel-bob-speed 1300.0)
+(defconstant viewmodel-bob-amp-base 1.0)
+(defconstant viewmodel-bob-return-rate 0.12)
+
+;; --- Camera view bob control ---
+(define *view-bob-x* 0.0)
+(define *view-bob-y* 0.0)
+(define *view-bob-phase* 0.0)
+(define *view-bob-current-x* 0.0)
+(define *view-bob-current-y* 0.0)
+(defconstant view-bob-speed 0.02)
+(defconstant view-bob-vert-amp-base 250.0)
+(defconstant view-bob-horiz-amp-base 200.0)
+(defconstant view-bob-return-rate 0.1)
+
+(define *target-duck-enter-time* 0)
+
+(defbehavior target-hl-compute-slopes target ((arg0 vector))
+  (let ((gp-0 (new-stack-vector0)))
+    (let ((a1-0 (new-stack-vector0))
+          (s5-0 (new 'stack-no-clear 'matrix)))
+      
+      ;; get upward axis without pitch
+      (set! (-> a1-0 quad) (-> self control unknown-matrix01 vector 2 quad))
+      (forward-up-nopitch->inv-matrix s5-0 a1-0 arg0)
+
+      ;; -------------------------------
+      ;; COMPUTE FORWARD SLOPE (X)
+      ;; -------------------------------
+      (set-vector! gp-0 0.0 0.0 1.0 1.0)
+      (vector-matrix*! gp-0 gp-0 s5-0)
+      (let ((slope-x (- (vector-dot (-> self control surface-normal) gp-0))))
+
+        ;; ----------------------------------------
+        ;; HL-style "step forgiveness" / slope easing
+        ;; ----------------------------------------
+        (let* ((vz (-> self control ltransv y))     ;; vertical velocity
+               (on-ground (logtest? (-> self control status)
+                                    (cshape-moving-flags onground)))
+               (ease
+                 ;; Bigger ease when airborne or moving upward
+                 (cond
+                   ((not on-ground) 10.45)         ;; jumping / edge = lots of forgiveness
+                   ((> vz 0.0)      0.25)         ;; moving upward
+                   (else               0.0))))
+
+          ;; reduce steepness = slope * (1 - ease)
+          (set! slope-x (* slope-x (- 1.0 ease))))
+
+        (set! (-> self control surface-slope-x) 0.0)
+        (set! (-> self control tween-input)
+              (- (vector-dot (-> self control local-normal) gp-0))))
+
+
+      ;; -------------------------------
+      ;; COMPUTE SIDE SLOPE (Z)
+      ;; -------------------------------
+      (set-vector! gp-0 1.0 0.0 0.0 1.0)
+      (vector-matrix*! gp-0 gp-0 s5-0)
+      (let ((slope-z (- (vector-dot (-> self control surface-normal) gp-0))))
+
+        ;; same slope easing rules for sideways stepping
+        (let* ((vz (-> self control ltransv y))
+               (on-ground (logtest? (-> self control status)
+                                    (cshape-moving-flags onground)))
+               (ease
+                (cond
+                  ((not on-ground) 10.45)
+                  ((> vz 0.0)      0.25)
+                  (else               0.0))))
+
+          (set! slope-z (* slope-z (- 1.0 ease))))
+
+        (set! (-> self control surface-slope-z) 0.0)
+        (set! (-> self control tween-output)
+              (- (vector-dot (-> self control local-normal) gp-0))))))
+
+  0)
+
+
+(defbehavior do-rotations2-hl target ()
+  (let ((gp-0 (vector-z-quaternion! (new-stack-vector0) (-> self control dir-targ)))
+        (s5-0 (if (and (or (not (logtest? (logior (-> self control status) (-> self control old-status)) (cshape-moving-flags onsurf tsurf)))
+                           (not (time-elapsed? (-> self control moving-surf-touch-time) (seconds 0.5)))
+                           (!= (-> self next-state name) 'target-walk)
+                           (not (time-elapsed? (-> self state-time) (seconds 0.5)))
+                           (not (time-elapsed? (-> self control low-coverage-touch-time) (seconds 0.5)))
+                           (logtest? (-> self control new-surf flags) (surface-flags no-rotate-toward-transv))
+                           (!= (-> self control force-push-speed-mod) 0.0))
+                       (not (logtest? (-> self control new-surf flags) (surface-flags always-rotate-toward-transv))))
+                (-> self control unknown-vector20)
+                (-> self control transv))))
+    (let* ((s3-0 (-> self control normal-targ))
+           (s4-0 (forward-up-nopitch->quaternion (new-stack-quaternion0) gp-0 s3-0))
+           (s3-1 (forward-up-nopitch->quaternion (new-stack-quaternion0) s5-0 s3-0))
+           (f0-2 (acos (vector-dot gp-0 s5-0)))
+           (f1-2 (* (-> self control new-surf turnvv) (seconds-per-frame))))
+      (quaternion-slerp! (-> self control dir-targ)
+                         s4-0
+                         s3-1
+                         (cond
+                           ((>= 0.0 (-> self control turn-vec-len)) 0.0)
+                           ((< f0-2 f1-2) 1.0)
+                           (else (/ f1-2 f0-2)))))
+    (add-debug-vector *display-target-marks*
+                      (bucket-id debug-no-zbuf)
+                      (-> self control trans)
+                      gp-0
+                      (meters 2)
+                      (new 'static 'rgba :r #xff :g #xff :b #xff :a #x80))
+    (add-debug-vector *display-target-marks*
+                      (bucket-id debug-no-zbuf)
+                      (-> self control trans)
+                      s5-0
+                      (meters 2)
+                      (new 'static 'rgba :r #xff :a #x80)))
+  (add-debug-vector *display-target-marks*
+                    (bucket-id debug-no-zbuf)
+                    (-> self control trans)
+                    (-> self control unknown-matrix01 vector 2)
+                    (meters 2)
+                    (new 'static 'rgba :r #xff :b #xff :a #x80))
+  (rotate-toward-orientation! (-> self control) (-> self control dir-targ) (-> self control new-surf turnv) 0.0)
+  (quaternion-slerp! (-> self control quat)
+                     (-> self control quat-targ)
+                     (-> self control quat-base)
+                     (-> self control quat-mod))
+  (target-hl-compute-slopes (-> self control dynam gravity-normal)))
+
+(defun on-ground? ()
+  (logtest? (-> *target* control status) (cshape-moving-flags onground)))
+
+(defbehavior update-viewmodel-bob target ()
+  (let ((hvel (new 'stack-no-clear 'vector)))
+    (vector-copy! hvel (-> self control ltransv))
+    (set! (-> hvel y) 0.0)
+    (let ((speed (vector-length hvel)))
+
+      ;; Advance or decay bob phase
+      (if (> speed 0.1)
+          (set! *viewmodel-bob-phase* (+ *viewmodel-bob-phase* (* viewmodel-bob-speed (-> *display* time-adjust-ratio))))
+          (set! *viewmodel-bob-phase* (* *viewmodel-bob-phase* 0.9)))
+
+      ;; Compute speed-scaled amplitude
+      (let ((amp (min 1.0 (* speed viewmodel-bob-amp-base 0.00002))))
+
+        ;; Base bob offset
+        (let ((target-offset-z
+               (if (> speed 0.1)
+                   (* (sin *viewmodel-bob-phase*) amp)
+                   0.0)))
+
+          ;; Get current camera pitch influence
+          (let ((pitch-offset (get-camera-pitch)))
+            ;; Move forward/back depending on pitch
+            (set! target-offset-z (+ target-offset-z (* pitch-offset -1.0)))
+
+            ;; Apply small viewmodel tilt
+            (let ((target-rot-x (* pitch-offset 0.01)))
+              (set! *viewmodel-rot-x*
+                    (+ *viewmodel-rot-x*
+                      (* (- target-rot-x *viewmodel-rot-x*)
+                          (* viewmodel-bob-return-rate (-> *display* time-adjust-ratio)))))
+              (pc-set-viewmodel-rotation-x *viewmodel-rot-x*))
+
+          ;; Smooth Z movement
+          (set! *viewmodel-bob-current-z*
+                (+ *viewmodel-bob-current-z*
+                  (* (- target-offset-z *viewmodel-bob-current-z*)
+                      (* viewmodel-bob-return-rate (-> *display* time-adjust-ratio)))))
+
+          ;; Send to C++ side
+          (pc-set-viewmodel-offset-z *viewmodel-bob-current-z*)))))))
+
+(defbehavior update-view-bob target ()
+  (let ((hvel (new 'stack-no-clear 'vector)))
+    ;; get horizontal velocity (XZ plane)
+    (vector-copy! hvel (-> self control ltransv))
+    (set! (-> hvel y) 0.0)
+    (let ((speed (vector-length hvel)))
+      
+      ;; Advance or decay phase
+      (if (> speed 0.1)
+          (set! *view-bob-phase* (+ *view-bob-phase* 
+                                    (* view-bob-speed speed (-> *display* time-adjust-ratio))))
+          (set! *view-bob-phase* (* 0.9 (* *view-bob-phase* (-> *display* time-adjust-ratio)))))
+
+      ;; Compute clamped amplitude scaling based on speed
+      (let ((amp-scale (min 1.0 (* speed 0.001))))
+        (let ((target-x
+               (if (> speed 0.1)
+                   (* (sin (* 0.5 *view-bob-phase*))
+                      view-bob-horiz-amp-base amp-scale)
+                   0.0))
+              (target-y
+               (if (> speed 0.1)
+                   (* (sin *view-bob-phase*)
+                      view-bob-vert-amp-base amp-scale)
+                   0.0)))
+          
+          ;; Smooth interpolation toward target (returns to center when stopping)
+          (set! *view-bob-current-x*
+                (+ *view-bob-current-x*
+                   (* (- target-x *view-bob-current-x*)
+                      (* view-bob-return-rate (-> *display* time-adjust-ratio)))))
+          (set! *view-bob-current-y*
+                (+ *view-bob-current-y*
+                   (* (- target-y *view-bob-current-y*)
+                      (* view-bob-return-rate (-> *display* time-adjust-ratio)))))
+
+          ;; Apply to globals (used in camera transform)
+          (set! *view-bob-x* *view-bob-current-x*)
+          (set! *view-bob-y* *view-bob-current-y*))))))
+
+(defun update-duck-camera-offset ()
+  (let* ((duck-depth -4500.0)
+         (target (if (should-duck?) duck-depth 0.0))
+         ;; different speeds for down vs up
+         (speed (if (and (should-duck?) (not (on-ground?))) 0.05 0.5))) ; slower down, faster up
+    (set! *duck-camera-offset*
+          (+ *duck-camera-offset* (* speed (- target *duck-camera-offset*))))))
+
+(defbehavior target-calc-camera-pos-hl target ()
+  (let ((cam-pos (new 'stack-no-clear 'vector)))
+    (vector-copy! cam-pos (-> self control trans))
+    ;; apply crouch offset
+    (update-duck-camera-offset)
+    (+! (-> cam-pos y) *duck-camera-offset*)
+    ;; apply view bob offsets
+    (update-view-bob)
+    (update-viewmodel-bob)
+    (+! (-> cam-pos x) *view-bob-x*)
+    (+! (-> cam-pos y) *view-bob-y*)
+    ;; set final camera pos
+    (set! (-> (&-> (-> self control) unknown-qword00) 0) (-> cam-pos quad)))
+  0
+  (none))
+
+(defbehavior apply-fall-status target ()
+  (format 0 "FALL DAMAGE~%")
+  (sound-play "pl_jumpland2")
+  (sound-play "pl_pain2")
+  (set! *should-take-fall-damage* #f))
+
+(defbehavior update-fall-status target ()
+  (let ((cur-y (-> self control trans y)))
+    (if (on-ground?)
+        ;; Player has landed
+        (begin
+          (when *falling*
+            (let ((fall-dist (- *fall-start-height* cur-y)))
+              (set! *should-take-fall-damage* (> fall-dist fall-damage-threshold))))
+          (set! *falling* #f)
+          (set! *fall-start-height* cur-y)
+            (if *should-take-fall-damage*
+              (apply-fall-status))
+          )) ;; reset start height
+        ;; Player is in air
+        (begin
+          (unless *falling*
+            (set! *falling* #t)
+            (set! *fall-start-height* cur-y))
+          (set! *should-take-fall-damage* #f))))
+
+(defbehavior hl-play-step-sound target ()
+  ;; flip foot each step
+  (set! *foot-left* (not *foot-left*))
+  ;; get horizontal speed
+  (let ((hvel (new-stack-vector0)))
+    (vector-copy! hvel (-> self control ltransv))
+    (set! (-> hvel y) 0.0)
+
+    ;; don't play if too slow
+    (when (> (vector-length hvel) 220.0)
+      ;; check if in water
+      (if (logtest? (-> self water flags) (water-flags wt09))
+          ;; IN WATER: play water footsteps
+          (let ((rand-index (+ (rand-vu-int-range 0 1) (if *foot-left* 2 0))))
+            (case rand-index
+              ((0) (sound-play "pl_slosh1"))
+              ((1) (sound-play "pl_slosh3"))
+              ((2) (sound-play "pl_slosh2"))
+              ((3) (sound-play "pl_slosh4"))))
+        ;; NOT IN WATER: normal ground footsteps
+        (let ((mat (-> self control ground-pat material))
+              (sound-category 'concrete)) ;; default category
+          (case mat
+            (((pat-material sand) (pat-material dirt) (pat-material gravel))
+             (set! sound-category 'dirt))
+            (((pat-material metal) (pat-material pcmetal))
+             (set! sound-category 'metal))
+            (((pat-material swamp))
+             (set! sound-category 'slosh))
+            (else
+             (set! sound-category 'concrete)))
+          
+          ;; pick random variant for left/right foot
+          (let ((rand-index (+ (rand-vu-int-range 0 1) (if *foot-left* 2 0))))
+            (case sound-category
+              (('concrete)
+               (case rand-index
+                 ((0) (sound-play "pl_step1"))
+                 ((1) (sound-play "pl_step3"))
+                 ((2) (sound-play "pl_step2"))
+                 ((3) (sound-play "pl_step4"))))
+              (('dirt)
+               (case rand-index
+                 ((0) (sound-play "pl_dirt1"))
+                 ((1) (sound-play "pl_dirt3"))
+                 ((2) (sound-play "pl_dirt2"))
+                 ((3) (sound-play "pl_dirt4"))))
+              (('slosh)
+               (case rand-index
+                 ((0) (sound-play "pl_slosh1"))
+                 ((1) (sound-play "pl_slosh3"))
+                 ((2) (sound-play "pl_slosh2"))
+                 ((3) (sound-play "pl_slosh4"))))
+              (('metal)
+               (case rand-index
+                 ((0) (sound-play "pl_metal1"))
+                 ((1) (sound-play "pl_metal3"))
+                 ((2) (sound-play "pl_metal2"))
+                 ((3) (sound-play "pl_metal4")))))))))))
+
+(defbehavior hl-update-step-sound target ()
+  "HL-style footstep sounds using time tracking from weapon system."
+  (let ((hvel (new-stack-vector0)))
+    (vector-copy! hvel (-> self control ltransv))
+    (set! (-> hvel y) 0.0)
+    (let ((speed (vector-length hvel)))
+      
+      (when (and (on-ground?) (> speed 0.0))
+        ;; HL constants
+        (let ((velrun 30010.0))
+          
+          ;; check if enough time has passed since last footstep
+          (when (time-elapsed? *last-step-time* (fsec 0.3))
+            (when (> speed velrun)
+              ;; play step sound
+              (hl-play-step-sound))
+            
+            ;; record the time we played this step
+            (set-time! *last-step-time*))))))
+  (none))
+
+(defbehavior hl-add-gravity target ()
+  (let ((s5-0 (new-stack-vector0))
+        (gp-0 (new-stack-vector0)))
+    (compute-acc-due-to-gravity (-> self control) s5-0 (-> self control new-surf slip-factor))
+    
+    ;; SCALE GRAVITY
+    (vector-float*! s5-0 s5-0 gravity-factor)
+    (vector-matrix*! gp-0 s5-0 (-> self control unknown-matrix00))
+    (vector-v++! (-> self control ltransv) gp-0))
+  (let* ((s5-1 (vector-matrix*! (new-stack-vector0) (-> self control dynam gravity-normal) (-> self control unknown-matrix00)))
+         (gp-1 (new-stack-vector0))
+         (f30-0 (vector-dot s5-1 (-> self control ltransv))))
+    0.0
+    (vector-! gp-1 (-> self control ltransv) (vector-float*! gp-1 s5-1 f30-0))
+    (let* ((f0-4 (vector-length gp-1))
+           (f1-0 f0-4))
+      (if (< f0-4 0.00004096) (set! f0-4 0.0))
+      (if (< f30-0 (- (-> self control dynam gravity-max))) (set! f30-0 (- (-> self control dynam gravity-max))))
+      (vector+! (-> self control ltransv)
+                (vector-float*! (-> self control ltransv) s5-1 f30-0)
+                (vector-float*! gp-1 gp-1 (/ f0-4 f1-0))))))
+
+(defbehavior hl-add-thrust target ()
+  (let* ((wishvel   (-> self control trans-targ))
+         (curvel    (-> self control ltransv))
+         (frametime (seconds-per-frame)))
+
+    ;; preserve vertical velocity
+    (let ((saved-y (-> curvel y)))
+      (set! (-> wishvel y) 0.0)
+      (set! (-> curvel  y) 0.0)
+
+      ;; ----------------------
+      ;; APPLY FRICTION FIRST
+      ;; ----------------------
+      (let ((speed (vector-xz-length curvel)))
+        (when (> speed 0.0)
+          (let* ((control (if (< speed hl-stopspeed) hl-stopspeed speed))
+                 (drop (* control hl-friction frametime))
+                 (new-speed (max 0.0 (- speed drop))))
+            (if (> new-speed 0.0)
+                (vector-xz-normalize! curvel new-speed)
+                (begin
+                  (set! (-> curvel x) 0.0)
+                  (set! (-> curvel z) 0.0))))))
+
+      ;; ----------------------
+      ;; APPLY ACCELERATION
+      ;; ----------------------
+      (let ((wishspeed (vector-xz-length wishvel)))
+        (when (> wishspeed 0.0)
+          ;; normalize wish direction
+          (vector-normalize! wishvel 1.0)
+          ;; cap to max speed
+          (when (> wishspeed hl-max-speed)
+            (set! wishspeed hl-max-speed))
+          ;; how much velocity is already in wish direction
+          (let ((curr-speed (vector-dot curvel wishvel)))
+            (let ((addspeed (- wishspeed curr-speed)))
+              (when (> addspeed 0.0)
+                (let ((accelspeed (* hl-accel frametime wishspeed)))
+                  (when (> accelspeed addspeed)
+                    (set! accelspeed addspeed))
+                  (vector+! curvel curvel
+                            (vector-float*! (new-stack-vector0) wishvel accelspeed))))))))
+
+      ;; clamp final horizontal velocity
+      (let ((speed (vector-xz-length curvel)))
+        (when (> speed hl-max-speed)
+          (vector-xz-normalize! curvel hl-max-speed)))
+
+      ;; restore vertical
+      (set! (-> curvel y) saved-y))))
+
+(defbehavior hl-add-air-thrust target ()
+  (let* ((curvel   (-> self control ltransv))     ;; current local velocity
+         (wishvel  (-> self control trans-targ))  ;; desired direction
+         (frametime (seconds-per-frame)))
+
+    ;; preserve vertical component
+    (let ((saved-y (-> curvel y)))
+      (set! (-> curvel y) 0.0)
+      (set! (-> wishvel y) 0.0)
+
+      ;; normalize wishdir
+      (let ((wishspeed (vector-xz-length wishvel)))
+        (when (> wishspeed 0.0)
+          (vector-normalize! wishvel 1.0)
+
+          ;; clamp wishspeed like HL
+          (when (> wishspeed 3040.0)
+            (set! wishspeed 3040.0))
+
+          ;; project current velocity onto wishdir
+          (let* ((currspeed (vector-dot curvel wishvel))
+                 (addspeed (- wishspeed currspeed)))
+            (when (> addspeed 0.0)
+              ;; HL: accelspeed = accel * wishspeed * frametime * friction
+              (let ((accelspeed (* hl-air-accel
+                                   wishspeed
+                                   frametime
+                                   1.2)))
+                ;; don’t exceed what’s needed
+                (when (> accelspeed addspeed)
+                  (set! accelspeed addspeed))
+                ;; apply extra velocity
+                (vector+! curvel curvel
+                          (vector-float*! (new-stack-vector0) wishvel accelspeed)))))))
+
+      ;; restore vertical velocity
+      (set! (-> curvel y) saved-y))))
+
+(defbehavior hl-add-air-thrust-launcher target ()
+  (let* ((curvel    (-> self control ltransv))
+         (wishvel   (-> self control trans-targ))
+         (frametime (seconds-per-frame))
+
+         (air-accel     30000.0)
+         (wishspeed-max 30000.0)
+         (turn-boost    2.5))
+
+    (let ((saved-y (-> curvel y)))
+      (set! (-> curvel y) 0.0)
+      (set! (-> wishvel y) 0.0)
+
+      (let ((wishspeed (vector-xz-length wishvel)))
+        (when (> wishspeed 0.0)
+          (vector-normalize! wishvel 1.0)
+
+          (when (> wishspeed wishspeed-max)
+            (set! wishspeed wishspeed-max))
+          (let* ((currspeed (vector-dot curvel wishvel))
+                 (addspeed (- wishspeed currspeed)))
+            (when (> addspeed 0.0)
+
+              (let ((accelspeed (* air-accel
+                                   wishspeed
+                                   frametime
+                                   (+ 1.0 turn-boost))))
+                (when (> accelspeed addspeed)
+                  (set! accelspeed addspeed))
+
+                (vector+! curvel curvel
+                          (vector-float*! (new-stack-vector0)
+                                          wishvel
+                                          accelspeed)))))))
+      (set! (-> curvel y) saved-y))))
+
+(defun target-hl-timed-invulnerable-off ((arg0 target))
+  (logclear! (-> arg0 state-flags) (state-flags timed-invulnerable))
+  (set-collide-kinds (-> arg0 control) 2 (collide-kind) (collide-kind target-attack))
+  0
+  (none))
+
+(defbehavior hl-post-flag-setup target ()
+  (if (logtest? (-> self control status) (cshape-moving-flags twall t-act)) (set-time! (-> self control moving-surf-touch-time)))
+  (when (logtest? (-> self state-flags) (state-flags timed-invulnerable))
+    (if (time-elapsed? (-> self control unknown-dword80) (-> self control unknown-dword81))
+      (target-hl-timed-invulnerable-off self)))
+  (set! (-> self control unknown-symbol40) #f)
+  0
+  (none))
+
+(defbehavior target-hl-no-stick-post target ()
+  (let ((gp-0 (the int (-> *display* time-ratio))))
+    (set-time-ratios *display* 1.0)
+    (countdown (s5-0 gp-0)
+      (set! (-> self control unknown-int40) s5-0)
+      (flag-setup)
+      (build-conversions (-> self control transv))
+      (do-rotations1)
+      (let ((s4-0 (new-stack-vector0))) (read-pad s4-0) (turn-to-vector s4-0 0.0))
+      (add-thrust)
+      (add-gravity)
+      (do-rotations2-hl)
+      (reverse-conversions (-> self control transv))
+      (if *debug-segment*
+        (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
+                   'draw
+                   (new 'static 'rgba :r #x40 :b #x40 :a #x80)))
+      (fill-cache-integrate-and-collide! (-> self control) (-> self control transv) (-> self control root-prim collide-with))
+      (if (logtest? (-> self control root-prim prim-core action) (collide-action edgegrab-possible))
+        (find-edge-grabs! *target* *collide-cache*))
+      (if *debug-segment*
+        (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
+                   'draw
+                   (new 'static 'rgba :r #x80 :g #x60 :b #x40 :a #x80)))
+      (bend-gravity)
+      (hl-post-flag-setup))
+    (set-time-ratios *display* (the float gp-0)))
+  (if *debug-segment*
+    (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
+               'draw
+               (new 'static 'rgba :r #x40 :b #x40 :a #x80)))
+  ;;(ja-post)
+  (if *debug-segment*
+    (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0) 'draw (new 'static 'rgba :r #x80 :a #x80)))
+  ;;(joint-points)
+  (do-target-shadow)
+  (target-powerup-process)
+  (none))
+
+(defbehavior target-hl-movement-post target ()
+  (let* ((gp-0 (the int (-> *display* time-ratio))))
+    (set-time-ratios *display* 1.0)
+    (countdown (s5-0 gp-0)
+    (set! (-> self control unknown-int40) s5-0)
+      (flag-setup)
+      (if (< (-> self control force-push-speed-mod) 0.0)
+        (set! (-> self control force-push-speed-mod) (- 1.0 (-> self control cpad stick0-speed))))
+      (build-conversions (-> self control transv))
+      (do-rotations1)
+      (let ((s4-0 (new-stack-vector0)))
+        (read-pad s4-0)
+        (let ((f30-0 (-> self control pad-stick-speed)))
+          (if (and (< 0.0 f30-0)
+                   (< 0.3 (-> self control pad-stick-speed))
+                   (< (vector-dot (-> self control stick-vec) (-> self control last-stick-vec)) 0.2)
+                   (< f30-0 0.7))
+            (set! f30-0 0.0))
+          (when (!= (-> self control force-push-speed-mod) 0.0)
+            (let ((f0-12 (fmin 1.0 (-> self control force-push-speed-mod))))
+              (set! (-> self control force-push-speed-mod) f0-12)
+              (let ((a1-2 (vector-float*! (new 'stack-no-clear 'vector) (if (= f30-0 0.0) *zero-vector* s4-0) f30-0))
+                    (a2-1 (vector-float*! (new 'stack-no-clear 'vector) (-> self control force-push-transv) (-> self control tongue-pull-force))))
+                (vector-lerp! s4-0 a1-2 a2-1 f0-12)))
+            (set! f30-0 (vector-length s4-0))
+            (vector-normalize! s4-0 1.0))
+          (turn-to-vector s4-0 f30-0)))
+      (when (on-ground?)
+        (hl-update-step-sound))
+
+      (let ((s4-0 (new-stack-vector0)))
+        (read-input s4-0)
+        (let ((f30-0 (-> self control pad-stick-speed)))
+          (turn-to-vector s4-0 f30-0)))
+
+      (if (on-ground?)
+          (unless (should-jump?)
+            (hl-add-thrust))
+          (if (= (-> *target* state name) 'target-hl-duck-high-jump-jump) (hl-add-air-thrust-launcher) (hl-add-air-thrust)))
+
+      (if (= (-> *target* state name) 'target-hl-duck-high-jump-jump) (add-gravity) (hl-add-gravity))
+      ;;(hl-add-gravity)
+      (do-rotations2-hl)
+      (reverse-conversions (-> self control transv))
+
+      (if *debug-segment*
+        (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
+                   'draw
+                   (new 'static 'rgba :r #x40 :b #x40 :a #x80)))
+
+      (set! (-> self control reaction) target-collision-reaction)
+
+      (fill-cache-integrate-and-collide! (-> self control)
+                                         (-> self control transv)
+                                         (-> self control root-prim collide-with))
+      (if (logtest? (-> self control root-prim prim-core action) (collide-action edgegrab-possible))
+        (find-edge-grabs! *target* *collide-cache*))
+      ;; debug
+      (if *debug-segment*
+        (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
+                   'draw
+                   (new 'static 'rgba :r #x80 :g #x60 :b #x40 :a #x80)))
+      (bend-gravity)
+      (hl-post-flag-setup))
+    (set-time-ratios *display* (the float gp-0)))
+
+  (if *debug-segment*
+    (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
+               'draw
+               (new 'static 'rgba :r #x40 :b #x40 :a #x80)))
+
+  (ja-post)
+  (if *debug-segment*
+    (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
+               'draw
+               (new 'static 'rgba :r #x80 :a #x80)))
+
+  (joint-points)
+  (do-target-shadow)
+  (target-calc-camera-pos-hl)
+  (target-powerup-process)
+
+  ;; only ground updates ducking state
+  (when (on-ground?)
+    (set! *was-ducking* (should-duck?)))
+
+  (none))
+
+(defbehavior apply-ground-duck-hop target ()
+  (when (and (should-duck?) (on-ground?) (not *was-ducking*))
+    (+! (-> self control trans y) 500.0)))
+
+(defbehavior apply-air-duck-offset target ()
+  ;; only add when in air and ducking
+  (when (and (should-duck?) (not (on-ground?)))
+    ;; push origin upward a bit to simulate HL duck jump
+    (+! (-> self control trans y) 70.0)))

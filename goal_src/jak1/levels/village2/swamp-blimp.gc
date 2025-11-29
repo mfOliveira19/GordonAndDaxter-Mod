@@ -600,7 +600,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack)
+        (('attack 'attack-hl)
          (when (and (>= argc 2) (= (-> block param 1) 'eco-yellow))
            (+! (-> self hits) 1)
            (cond

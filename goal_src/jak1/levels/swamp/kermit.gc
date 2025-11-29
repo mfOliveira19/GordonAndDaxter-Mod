@@ -449,7 +449,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('touch 'attack) (send-event proc 'attack (-> block param 0) (new 'static 'attack-info)) (go kermit-pulse-impact))))
+        (('touch 'attack 'attack-hl) (send-event proc 'attack (-> block param 0) (new 'static 'attack-info)) (go kermit-pulse-impact))))
   :enter
     (behavior ()
       (set-time! (-> self state-time)))

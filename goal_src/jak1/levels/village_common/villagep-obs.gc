@@ -25,7 +25,7 @@
       (set! (-> self control transv x) (- (-> self control last-transv3 x) (-> self control last-transv2 x)))
       (set! (-> self control transv z) (- (-> self control last-transv3 z) (-> self control last-transv2 z)))
       (vector-xz-normalize! (-> self control transv) 49152.0)
-      (if (logtest? (-> self control status) (cshape-moving-flags onsurf)) (go target-hit-ground #f)))
+      (if (logtest? (-> self control status) (cshape-moving-flags onsurf)) (go target-hl-movement-ground)))
   :code
     (behavior ((arg0 vector) (arg1 vector))
       (clear-collide-with-as (-> self control))
@@ -94,7 +94,8 @@
                         #f)
                        (else #t))
                      (time-elapsed? (-> self state-time) (seconds 0.1)))
-            (if (and (cpad-pressed? 0 circle) (process-grab? *target*)) (go-virtual active))
+            ;; added e bind for using warpgate
+            (if (and (or (cpad-pressed? 0 circle) (should-use?)) (process-grab? *target*)) (go-virtual active))
             (if (and *cheat-mode* (cpad-pressed? 0 l3)) (set! (-> self max-slot) 4))
             (let ((gp-0 (new 'stack 'font-context *font-default-matrix* 32 160 0.0 (font-color default) (font-flags shadow kerning))))
               (let ((v1-53 gp-0)) (set! (-> v1-53 width) (the float 440)))
@@ -140,7 +141,7 @@
       (set-time! (-> self state-time)))
   :trans
     (behavior ()
-      (when (or (and (cpad-pressed? 0 triangle) (time-elapsed? (-> self state-time) (seconds 0.1)) (process-release? *target*))
+      (when (or (and (or (cpad-pressed? 0 triangle) (should-exit?)) (time-elapsed? (-> self state-time) (seconds 0.1)) (process-release? *target*))
                 (not *target*))
         (logclear! (-> *cpad-list* cpads 0 button0-abs 0) (pad-buttons triangle))
         (logclear! (-> *cpad-list* cpads 0 button0-rel 0) (pad-buttons triangle))
@@ -164,12 +165,12 @@
           (loop
             (when (zero? s2-0)
               (cond
-                ((cpad-pressed? 0 right)
+                ((or (cpad-pressed? 0 right) (should-move-right?))
                  (set! s5-0 #t)
                  (set! s4-0 #f)
                  (sound-play "cursor-up-down")
                  (set! s3-0 (get-next-slot-up self s3-0)))
-                ((cpad-pressed? 0 left)
+                ((or (cpad-pressed? 0 left)(should-move-left?))
                  (set! s5-0 #t)
                  (set! s4-0 #t)
                  (sound-play "cursor-up-down")
@@ -183,7 +184,7 @@
             (hide-hud)
             (let ((s1-2 (get-continue-by-name *game-info* (-> *warp-info* gp-0))))
               (lookup-level-info (-> s1-2 level))
-              (when (and (time-elapsed? (-> self state-time) (seconds 0.05)) (cpad-pressed? 0 circle))
+              (when (and (time-elapsed? (-> self state-time) (seconds 0.05)) (or (cpad-pressed? 0 circle) (should-use?)))
                 (logclear! (-> *cpad-list* cpads 0 button0-abs 0) (pad-buttons circle))
                 (logclear! (-> *cpad-list* cpads 0 button0-rel 0) (pad-buttons circle))
                 (go-virtual use gp-0 (the-as level s1-2))))

@@ -303,7 +303,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack)
+        (('attack 'attack-hl)
          (case (-> block param 1)
            (('explode)
             (let ((a0-2 (handle->process (-> self fuel-cell)))) (if a0-2 (send-event a0-2 'trans (-> self root trans))))

@@ -39,6 +39,7 @@
   "pckernel-impl.o" ;; added
   "pc-debug-common.o" ;; added
   "pc-debug-methods.o" ;; added
+  "hl-inputs-handler.o" ;; added for hl mod
   "pad.o"
   "gs.o"
   "display-h.o"

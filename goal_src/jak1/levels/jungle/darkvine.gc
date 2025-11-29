@@ -115,7 +115,7 @@
      (when (-> self dangerous)
        (if (send-event arg0 'attack (-> arg3 param 0) (new 'static 'attack-info))
          (set-collide-offense (-> self root) 2 (collide-offense no-offense)))))
-    (('attack)
+    (('attack 'attack-hl)
      (let ((v1-10 (-> arg3 param 2)))
        (cond
          ((!= v1-10 (-> self player-attack-id))

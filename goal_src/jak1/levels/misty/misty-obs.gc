@@ -1054,7 +1054,7 @@
 
 (defbehavior mis-bone-bridge-event-handler mis-bone-bridge ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
-    (('attack)
+    (('attack 'attack-hl)
      (let ((s5-0 (-> arg3 param 2))
            (gp-0 (vector-x-quaternion! (new-stack-vector0) (-> self root quat)))
            (a0-4 (vector-z-quaternion! (new-stack-vector0) (-> self root quat)))
