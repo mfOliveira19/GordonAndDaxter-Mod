@@ -23614,11 +23614,12 @@
    (incomming-attack-id handle             :offset-assert 384)
    (jump-return-state   (state process)    :offset-assert 392)
    (rand-gen            random-generator              :offset-assert 396)
+   (health              int8               :offset-assert 400)
    )
-  :heap-base #x120
+  :heap-base #x130
   :method-count-assert 76
-  :size-assert         #x190
-  :flag-assert         #x4c01200190
+  :size-assert         #x191
+  :flag-assert         #x4c01300191
   (:methods
     (nav-enemy-attack () _type_ :state) ;; 20
     (nav-enemy-chase () _type_ :state) ;; 21
@@ -24082,9 +24083,9 @@
 (deftype babak (nav-enemy)
   ()
   :method-count-assert 76
-  :size-assert         #x190
-  :heap-base           #x120
-  :flag-assert         #x4c01200190
+  :size-assert         #x191
+  :heap-base           #x130
+  :flag-assert         #x4c01300191
   (:states
     babak-run-to-cannon)
   )
@@ -24104,26 +24105,26 @@
 ;; - Types
 
 (deftype sharkey (nav-enemy)
-  ((dir               vector :inline :offset-assert 400)
-   (spawn-point       vector :inline :offset-assert 416)
-   (scale             float          :offset-assert 432)
-   (anim-speed        float          :offset-assert 436)
-   (y-max             meters         :offset-assert 440)
-   (y-min             meters         :offset-assert 444)
-   (attack-time       float          :offset-assert 448)
-   (player-water-time time-frame         :offset-assert 456)
-   (player-in-water   basic          :offset-assert 464)
-   (last-y            float          :offset-assert 468)
-   (spawn-distance    meters         :offset-assert 472)
-   (chase-speed       meters         :offset-assert 476)
-   (y-speed           meters         :offset-assert 480)
-   (sound-id          sound-id       :offset-assert 484)
-   (enable-patrol     basic          :offset-assert 488)
+  ((dir               vector :inline :offset-assert 416)
+   (spawn-point       vector :inline :offset-assert 432)
+   (scale             float          :offset-assert 448)
+   (anim-speed        float          :offset-assert 452)
+   (y-max             meters         :offset-assert 456)
+   (y-min             meters         :offset-assert 460)
+   (attack-time       float          :offset-assert 464)
+   (player-water-time time-frame         :offset-assert 472)
+   (player-in-water   basic          :offset-assert 480)
+   (last-y            float          :offset-assert 484)
+   (spawn-distance    meters         :offset-assert 488)
+   (chase-speed       meters         :offset-assert 492)
+   (y-speed           meters         :offset-assert 496)
+   (sound-id          sound-id       :offset-assert 500)
+   (enable-patrol     basic          :offset-assert 504)
    )
   :method-count-assert 76
-  :size-assert         #x1ec
-  :heap-base           #x180
-  :flag-assert         #x4c018001ec
+  :size-assert         #x1fc
+  :heap-base           #x190
+  :flag-assert         #x4c019001fc
   ;; inherited inspect of nav-enemy
   )
 
@@ -24575,13 +24576,13 @@
 ;; - Types
 
 (deftype babak-with-cannon (babak)
-  ((cannon-ent entity  :offset-assert 400)
-   (distance   float  :offset-assert 404)
+  ((cannon-ent entity  :offset-assert 404)
+   (distance   float  :offset-assert 408)
    )
   :method-count-assert 76
-  :size-assert         #x198
+  :size-assert         #x19c
   :heap-base           #x130
-  :flag-assert         #x4c01300198
+  :flag-assert         #x4c0130019c
   (:states
     babak-with-cannon-jump-off-cannon
     babak-with-cannon-shooting
@@ -25093,12 +25094,12 @@
 ;; - Types
 
 (deftype lurkercrab (nav-enemy)
-  ((orient basic  :offset-assert 400)
+  ((orient basic  :offset-assert 404)
    )
   :method-count-assert 76
   :heap-base           #x130
-  :size-assert         #x194
-  :flag-assert         #x4c01300194
+  :size-assert         #x198
+  :flag-assert         #x4c01300198
   (:states
     lurkercrab-pushed
     )
@@ -25126,9 +25127,9 @@
 (deftype lurkerpuppy (nav-enemy)
   ()
   :method-count-assert 76
-  :heap-base           #x120
-  :size-assert         #x190
-  :flag-assert         #x4c01200190
+  :heap-base           #x130
+  :size-assert         #x191
+  :flag-assert         #x4c01300191
   )
 
 ;; - Unknowns
@@ -26047,31 +26048,31 @@
 ;; - Types
 
 (deftype snow-bunny (nav-enemy)
-  ((patrol-rand-distraction int32          :offset-assert 400)
-   (base-hop-dist           float          :offset-assert 404)
-   (halfway-dist            float          :offset-assert 408)
-   (retreat-timeout         float          :offset-assert 412)
-   (gnd-popup               float          :offset-assert 416)
-   (jump-height-min         float          :offset-assert 420)
-   (jump-height-factor      float          :offset-assert 424)
-   (jump-anim-start-frame   float          :offset-assert 428)
-   (defense                 uint64         :offset-assert 432)
-   (retreat-timeout-time    time-frame         :offset-assert 440)
-   (last-nondangerous-time  time-frame         :offset-assert 448)
-   (patrol-hop-failed?      basic          :offset-assert 456)
-   (should-retreat?         basic          :offset-assert 460)
-   (got-jump-event?         symbol         :offset-assert 464)
-   (using-jump-event?       basic          :offset-assert 468)
-   (jump-anim               int8           :offset-assert 472)
-   (notice-land-anim        int8           :offset-assert 473)
-   (attack-anim             int8           :offset-assert 474)
-   (final-dest              vector :inline :offset-assert 480)
-   (jump-event-dest         vector :inline :offset-assert 496)
+  ((patrol-rand-distraction int32          :offset-assert 404)
+   (base-hop-dist           float          :offset-assert 408)
+   (halfway-dist            float          :offset-assert 412)
+   (retreat-timeout         float          :offset-assert 416)
+   (gnd-popup               float          :offset-assert 420)
+   (jump-height-min         float          :offset-assert 424)
+   (jump-height-factor      float          :offset-assert 428)
+   (jump-anim-start-frame   float          :offset-assert 432)
+   (defense                 uint64         :offset-assert 440)
+   (retreat-timeout-time    time-frame         :offset-assert 448)
+   (last-nondangerous-time  time-frame         :offset-assert 456)
+   (patrol-hop-failed?      basic          :offset-assert 464)
+   (should-retreat?         basic          :offset-assert 468)
+   (got-jump-event?         symbol         :offset-assert 472)
+   (using-jump-event?       basic          :offset-assert 476)
+   (jump-anim               int8           :offset-assert 480)
+   (notice-land-anim        int8           :offset-assert 481)
+   (attack-anim             int8           :offset-assert 482)
+   (final-dest              vector :inline :offset-assert 496)
+   (jump-event-dest         vector :inline :offset-assert 512)
    )
   :method-count-assert 77
-  :size-assert         #x200
-  :heap-base           #x190
-  :flag-assert         #x4d01900200
+  :size-assert         #x210
+  :heap-base           #x1a0
+  :flag-assert         #x4d01a00210
   (:methods
     (nav-enemy-method-51 (_type_ vector vector) symbol :replace) ;; 51
     (nav-enemy-method-52 (_type_) symbol :replace) ;; 52
@@ -26118,9 +26119,9 @@
 (deftype citb-bunny (snow-bunny)
   ()
   :method-count-assert 77
-  :size-assert         #x200
-  :heap-base           #x190
-  :flag-assert         #x4d01900200
+  :size-assert         #x210
+  :heap-base           #x1a0
+  :flag-assert         #x4d01a00210
   (:methods
     (nav-enemy-method-48 (_type_ object) none :replace) ;; 48 ;; object passed to method 60
     )
@@ -26702,8 +26703,8 @@
 ;; - Types
 
 (deftype green-eco-lurker (nav-enemy)
-  ((played-sound? symbol             :offset-assert 400)
-   (sound-delay   int32              :offset-assert 404)
+  ((played-sound? symbol             :offset-assert 404)
+   (sound-delay   int32              :offset-assert 408)
    (appear-dest   vector     :inline :offset-assert 416)
    (traj          trajectory :inline :offset-assert 432)
    )
@@ -27057,12 +27058,12 @@
 ;; - Types
 
 (deftype aphid (nav-enemy)
-  ((try int32  :offset-assert 400)
+  ((try int32  :offset-assert 404)
    )
   :method-count-assert 76
-  :size-assert         #x194
+  :size-assert         #x198
   :heap-base           #x130
-  :flag-assert         #x4c01300194
+  :flag-assert         #x4c01300198
   )
 
 ;; - Functions
@@ -27249,13 +27250,13 @@
 ;; - Types
 
 (deftype hopper (nav-enemy)
-  ((jump-length  float  :offset-assert 400)
-   (shadow-min-y float  :offset-assert 404)
+  ((jump-length  float  :offset-assert 404)
+   (shadow-min-y float  :offset-assert 408)
    )
   :method-count-assert 76
-  :size-assert         #x198
+  :size-assert         #x19c
   :heap-base           #x130
-  :flag-assert         #x4c01300198
+  :flag-assert         #x4c0130019c
   )
 
 ;; - Functions
@@ -27693,9 +27694,9 @@
 (deftype junglefish (nav-enemy)
   ()
   :method-count-assert 76
-  :size-assert         #x190
-  :heap-base           #x120
-  :flag-assert         #x4c01200190
+  :size-assert         #x191
+  :heap-base           #x130
+  :flag-assert         #x4c01300191
   )
 
 ;; - Unknowns
@@ -28531,9 +28532,9 @@
 (deftype starfish (nav-enemy)
   ()
   :method-count-assert 76
-  :size-assert         #x190
-  :heap-base           #x120
-  :flag-assert         #x4c01200190
+  :size-assert         #x191
+  :heap-base           #x130
+  :flag-assert         #x4c01300191
   (:states
     starfish-idle
     starfish-patrol)
@@ -29268,12 +29269,12 @@
 
 (deftype muse (nav-enemy)
   ((root collide-shape-moving :override)
-   (current-path-index float              :offset-assert 400)
-   (prev-path-index    float              :offset-assert 404)
-   (dest-path-index    float              :offset-assert 408)
-   (player-path-index  float              :offset-assert 412)
-   (max-path-index     float              :offset-assert 416)
-   (sprint-distance    float              :offset-assert 420)
+   (current-path-index float              :offset-assert 404)
+   (prev-path-index    float              :offset-assert 408)
+   (dest-path-index    float              :offset-assert 412)
+   (player-path-index  float              :offset-assert 416)
+   (max-path-index     float              :offset-assert 420)
+   (sprint-distance    float              :offset-assert 424)
    (dest-point         vector     :inline :offset-assert 432)
    (anim               spool-anim              :offset-assert 448) ; TODO - guess
    (victory-anim       spool-anim              :offset-assert 452) ; TODO - guess
@@ -29324,12 +29325,12 @@
 ;; - Types
 
 (deftype bonelurker (nav-enemy)
-  ((bump-player-time time-frame  :offset-assert 400)
+  ((bump-player-time time-frame  :offset-assert 408)
    )
   :method-count-assert 76
-  :size-assert         #x198
+  :size-assert         #x1a0
   :heap-base           #x130
-  :flag-assert         #x4c01300198
+  :flag-assert         #x4c013001a0
   (:states
     bonelurker-stun)
   )
@@ -30466,23 +30467,23 @@
 
 (declare-type swamp-rat-nest process-drawable)
 (deftype swamp-rat (nav-enemy)
-  ((up-vector          vector :inline :offset-assert 400)
-   (state-float        float          :offset-assert 416)
-   (state-vector       vector :inline :offset-assert 432)
+  ((up-vector          vector :inline :offset-assert 416)
+   (state-float        float          :offset-assert 432)
+   (state-vector       vector :inline :offset-assert 448)
    ;(free-time          uint64         :offset-assert 360)
-   (_hack              uint64         :offset-assert 448)
-   (wiggle-time        time-frame         :offset-assert 456)
-   (wiggle-angle       float          :offset-assert 464)
-   (delta-wiggle-angle float          :offset-assert 468)
-   (wiggle-factor      float          :offset-assert 472)
-   (min-height         float          :offset-assert 476)
-   (chase-rest-time    time-frame         :offset-assert 480)
-   (target-nav-time    time-frame         :offset-assert 488)
+   (_hack              uint64         :offset-assert 464)
+   (wiggle-time        time-frame         :offset-assert 472)
+   (wiggle-angle       float          :offset-assert 480)
+   (delta-wiggle-angle float          :offset-assert 484)
+   (wiggle-factor      float          :offset-assert 488)
+   (min-height         float          :offset-assert 492)
+   (chase-rest-time    time-frame         :offset-assert 496)
+   (target-nav-time    time-frame         :offset-assert 504)
    )
   :method-count-assert 76
-  :size-assert         #x1f0
-  :heap-base           #x180
-  :flag-assert         #x4c018001f0
+  :size-assert         #x200
+  :heap-base           #x190
+  :flag-assert         #x4c01900200
   (:states
     swamp-rat-spawn)
   )
@@ -30646,19 +30647,19 @@
 
 (deftype kermit (nav-enemy)
   ((child-override (pointer kermit-pulse) :score 100         :offset 20)
-   (rotate-dir       vector :inline :offset-assert 400)
-   (charging-part    sparticle-launch-control         :offset-assert 416)
-   (airborne         symbol          :offset-assert 420)
-   (tongue-control   joint-mod-tracker          :offset-assert 424)
-   (tongue-pulse-pos float          :offset-assert 428)
-   (miss-count       int8           :offset-assert 432)
-   (charged-up       symbol          :offset-assert 436)
-   (sound-id         sound-id       :offset-assert 440)
+   (rotate-dir       vector :inline :offset-assert 416)
+   (charging-part    sparticle-launch-control         :offset-assert 432)
+   (airborne         symbol          :offset-assert 436)
+   (tongue-control   joint-mod-tracker          :offset-assert 440)
+   (tongue-pulse-pos float          :offset-assert 444)
+   (miss-count       int8           :offset-assert 448)
+   (charged-up       symbol          :offset-assert 452)
+   (sound-id         sound-id       :offset-assert 456)
    )
   :method-count-assert 76
-  :size-assert         #x1bc
-  :heap-base           #x150
-  :flag-assert         #x4c015001bc
+  :size-assert         #x1cc
+  :heap-base           #x160
+  :flag-assert         #x4c016001cc
   (:states
     kermit-idle
     kermit-chase
@@ -30766,15 +30767,15 @@
     billy-snack-eat)
   )
 (deftype billy-rat (swamp-rat)
-  ((dest-type   uint64         :offset-assert 496)
-   (snack       handle         :offset-assert 504)
-   (destination vector :inline :offset-assert 512)
-   (billy       (pointer billy)         :offset-assert 528)
+  ((dest-type   uint64         :offset-assert 512)
+   (snack       handle         :offset-assert 520)
+   (destination vector :inline :offset-assert 528)
+   (billy       (pointer billy)         :offset-assert 544)
    )
   :method-count-assert 76
-  :size-assert         #x214
-  :heap-base           #x1b0
-  :flag-assert         #x4c01b00214
+  :size-assert         #x224
+  :heap-base           #x1c0
+  :flag-assert         #x4c01c00224
   (:states
     billy-rat-salivate
     billy-rat-eat)
@@ -31111,13 +31112,13 @@
   )
 
 (deftype baby-spider (nav-enemy)
-  ((die-if-not-visible?               symbol         :offset-assert 400)
-   (hack-move-above-ground?           symbol         :offset-assert 404)
-   (state-float                       float          :offset-assert 408)
-   (wiggle-angle                      float          :offset-assert 412)
-   (delta-wiggle-angle                float          :offset-assert 416)
-   (wiggle-factor                     float          :offset-assert 420)
-   (event-death                       symbol         :offset-assert 424)
+  ((die-if-not-visible?               symbol         :offset-assert 404)
+   (hack-move-above-ground?           symbol         :offset-assert 408)
+   (state-float                       float          :offset-assert 412)
+   (wiggle-angle                      float          :offset-assert 416)
+   (delta-wiggle-angle                float          :offset-assert 420)
+   (wiggle-factor                     float          :offset-assert 424)
+   (event-death                       symbol         :offset-assert 428)
    (delay-before-dying-if-not-visible time-frame         :offset-assert 432)
    (chase-rest-time                   time-frame         :offset-assert 440)
    (target-nav-time                   time-frame         :offset-assert 448)
@@ -32429,11 +32430,12 @@
    (slow-down       time-frame  :offset-assert 224)
    (hit-player-time time-frame  :offset-assert 232)
    (neck            joint-mod   :offset-assert 240)
+   (health          int8       :offset-assert 244)
    )
   :method-count-assert 21
-  :size-assert         #xf4
+  :size-assert         #xf5
   :heap-base           #x90
-  :flag-assert         #x15009000f4
+  :flag-assert         #x15009000f5
   (:methods
     (bully-method-20 (_type_) float) ;; 20
     )
@@ -32470,12 +32472,12 @@
 (declare-type double-lurker nav-enemy)
 (deftype double-lurker-top (nav-enemy)
   ((parent-process      (pointer double-lurker)  :score 100 :offset 12)
-   (fall-dest vector :inline :offset-assert 400)
+   (fall-dest vector :inline :offset-assert 416)
    )
   :method-count-assert 76
-  :size-assert         #x1a0
-  :heap-base           #x130
-  :flag-assert         #x4c013001a0
+  :size-assert         #x1b0
+  :heap-base           #x140
+  :flag-assert         #x4c014001b0
   (:states
     double-lurker-top-on-shoulders
     double-lurker-top-resume
@@ -32484,20 +32486,20 @@
   )
 
 (deftype double-lurker (nav-enemy)
-  ((knocked-back-speed  float   :offset-assert 400)
-   (buddy-on-shoulders? symbol   :offset-assert 404)
-   (dead?               symbol   :offset-assert 408)
-   (buddy-dead?         symbol   :offset-assert 412)
-   (buddy-handle        handle  :offset-assert 416) ; double-lurker-top
+  ((knocked-back-speed  float   :offset-assert 404)
+   (buddy-on-shoulders? symbol   :offset-assert 408)
+   (dead?               symbol   :offset-assert 412)
+   (buddy-dead?         symbol   :offset-assert 416)
+   (buddy-handle        handle  :offset-assert 424) ; double-lurker-top
    )
   (:methods
     (initialize-collision (_type_) collide-shape-moving :replace) ;; 47
     (double-lurker-method-53 (_type_ vector) symbol :overlay-at nav-enemy-method-53) ;; 53
     )
   :method-count-assert 76
-  :size-assert         #x1a8
+  :size-assert         #x1b0
   :heap-base           #x140
-  :flag-assert         #x4c014001a8
+  :flag-assert         #x4c014001b0
   (:states
     double-lurker-waiting-to-die
     double-lurker-resume
@@ -32639,11 +32641,11 @@
    (mean-look            lod-set   :inline :offset-assert 336)
    (dest-pos             vector    :inline :offset-assert 384)
    (sync                 sync-info :inline :offset-assert 400)
-   )
+   (health       int8 :offset-assert 408))
   :method-count-assert 32
-  :size-assert         #x198
+  :size-assert         #x199
   :heap-base           #x130
-  :flag-assert         #x2001300198
+  :flag-assert         #x2001300199
   (:methods
     (puffer-method-20 (_type_ vector) none) ;; 20
     (puffer-method-21 (_type_) none) ;; 21
@@ -32987,29 +32989,29 @@
   )
 
 (deftype fleeing-nav-enemy (nav-enemy)
-  ((last-reflection-time time-frame                         :offset-assert 400)
-   (run-blend-interp     float                          :offset-assert 408)
-   (desired-travel       vector                 :inline :offset-assert 416)
-   (saved-travel         vector                 :inline :offset-assert 432)
-   (speed-adjust         float                          :offset-assert 448)
-   (flee-info            fleeing-nav-enemy-info :inline :offset-assert 452)
+  ((last-reflection-time time-frame                         :offset-assert 408)
+   (run-blend-interp     float                          :offset-assert 416)
+   (desired-travel       vector                 :inline :offset-assert 432)
+   (saved-travel         vector                 :inline :offset-assert 448)
+   (speed-adjust         float                          :offset-assert 464)
+   (flee-info            fleeing-nav-enemy-info :inline :offset-assert 468)
    )
   :method-count-assert 76
-  :size-assert         #x20c
-  :heap-base           #x1a0
-  :flag-assert         #x4c01a0020c
+  :size-assert         #x21c
+  :heap-base           #x1b0
+  :flag-assert         #x4c01b0021c
   (:states
     fleeing-nav-enemy-debug)
   )
 
 (deftype lightning-mole (fleeing-nav-enemy)
-  ((debug-vector vector :inline :offset-assert 528)
-   (alt-actor    entity-actor          :offset-assert 544)
+  ((debug-vector vector :inline :offset-assert 544)
+   (alt-actor    entity-actor          :offset-assert 560)
    )
   :method-count-assert 76
-  :size-assert         #x224
-  :heap-base           #x1c0
-  :flag-assert         #x4c01c00224
+  :size-assert         #x234
+  :heap-base           #x1d0
+  :flag-assert         #x4c01d00234
   (:states
     lightning-mole-gone
     lightning-mole-hiding
@@ -34023,27 +34025,27 @@
 ;; - Types
 
 (deftype ice-cube (nav-enemy)
-  ((part2                  sparticle-launch-control          :offset-assert 400)
-   (part3                  sparticle-launch-control          :offset-assert 404)
-   (part4                  sparticle-launch-control          :offset-assert 408)
-   (track-target?          symbol          :offset-assert 412)
-   (slow-down?             symbol          :offset-assert 416)
-   (tracking-player?       symbol          :offset-assert 420)
-   (force-spawn-pt         int32          :offset-assert 424)
-   (speed                  float          :offset-assert 428)
-   (anim-blend             float          :offset-assert 432)
-   (prev-charge-angle-diff float          :offset-assert 436)
-   (charge-angle           float          :offset-assert 440)
-   (ground-y               float          :offset-assert 444)
-   (cprims-type            uint64         :offset-assert 448)
-   (next-skid-sound-time   time-frame         :offset-assert 456)
-   (starting-pos           vector :inline :offset-assert 464)
-   (target-pt              vector :inline :offset-assert 480)
+  ((part2                  sparticle-launch-control          :offset-assert 404)
+   (part3                  sparticle-launch-control          :offset-assert 408)
+   (part4                  sparticle-launch-control          :offset-assert 412)
+   (track-target?          symbol          :offset-assert 416)
+   (slow-down?             symbol          :offset-assert 420)
+   (tracking-player?       symbol          :offset-assert 424)
+   (force-spawn-pt         int32          :offset-assert 428)
+   (speed                  float          :offset-assert 432)
+   (anim-blend             float          :offset-assert 436)
+   (prev-charge-angle-diff float          :offset-assert 440)
+   (charge-angle           float          :offset-assert 444)
+   (ground-y               float          :offset-assert 448)
+   (cprims-type            uint64         :offset-assert 456)
+   (next-skid-sound-time   time-frame         :offset-assert 464)
+   (starting-pos           vector :inline :offset-assert 480)
+   (target-pt              vector :inline :offset-assert 496)
    )
   :method-count-assert 76
-  :size-assert         #x1f0
-  :heap-base           #x180
-  :flag-assert         #x4c018001f0
+  :size-assert         #x200
+  :heap-base           #x190
+  :flag-assert         #x4c01900200
   (:methods
     (ice-cube-method-51 (_type_ vector vector) symbol :overlay-at nav-enemy-method-51) ;; 51
     (ice-cube-method-53 (_type_ vector vector) symbol :overlay-at nav-enemy-method-53) ;; 53
@@ -34513,13 +34515,13 @@
 
 (deftype ram-boss (nav-enemy)
   ((parent-override (pointer ram) :score 100         :offset 12)
-   (facing-y                 float          :offset-assert 400)
-   (player-dir-y             float          :offset-assert 404)
-   (last-turn-speed          float          :offset-assert 408)
-   (frustration              int32          :offset-assert 412)
-   (dead?                    symbol          :offset-assert 416)
-   (has-shield?              symbol          :offset-assert 420)
-   (proj-stoked              basic          :offset-assert 424)
+   (facing-y                 float          :offset-assert 404)
+   (player-dir-y             float          :offset-assert 408)
+   (last-turn-speed          float          :offset-assert 412)
+   (frustration              int32          :offset-assert 416)
+   (dead?                    symbol          :offset-assert 420)
+   (has-shield?              symbol          :offset-assert 424)
+   (proj-stoked              basic          :offset-assert 428)
    (proj-status              uint64         :offset-assert 432)
    (part2                    sparticle-launch-control          :offset-assert 440)
    (proj-last-thrown-time    time-frame         :offset-assert 448)
@@ -34607,13 +34609,13 @@
 ;; - Types
 
 (deftype yeti-slave (nav-enemy)
-  ((ground-y float  :offset-assert 400)
-   (part2    sparticle-launch-control  :offset-assert 404)
+  ((ground-y float  :offset-assert 404)
+   (part2    sparticle-launch-control  :offset-assert 408)
    )
   :method-count-assert 76
-  :size-assert         #x198
+  :size-assert         #x19c
   :heap-base           #x130
-  :flag-assert         #x4c01300198
+  :flag-assert         #x4c0130019c
   (:states
     yeti-slave-appear-jump-up
     yeti-slave-appear-land

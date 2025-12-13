@@ -7,6 +7,8 @@
 (require "engine/common-obs/process-drawable.gc")
 (require "engine/mods/hl-weapons/hl-weapons.gc")
 
+(defconstant crowbar-damage 60)
+(defconstant shot-damage 20)
 ;; note: changed for high fps
 
 ;; DECOMP BEGINS
@@ -479,7 +481,7 @@
                       (set! (-> a1-2 param 1) (the-as uint (-> self attack-mode)))
                       (let ((v1-13 (+ *global-attack-id* 1))) (set! *global-attack-id* v1-13) (set! (-> a1-2 param 2) (the-as uint v1-13)))
                       (set! (-> a1-2 param 3) (the-as int8 0))
-                      (set! (-> a1-2 param 4) (the-as int8 20)) ;; This will be the damage
+                      (set! (-> a1-2 param 4) (the-as int8 shot-damage)) ;; This will be the damage
                       (send-event-function proc a1-2))))
              (let ((v1-14 (-> self notify-handle)))
                (if (handle->process v1-14) (send-event (-> v1-14 process 0) 'notify 'attack-hl proc)))
@@ -547,7 +549,7 @@
                       (set! (-> a1-2 param 1) (the-as uint (-> self attack-mode)))
                       (let ((v1-13 (+ *global-attack-id* 1))) (set! *global-attack-id* v1-13) (set! (-> a1-2 param 2) (the-as uint v1-13)))
                       (set! (-> a1-2 param 3) (the-as int8 0))
-                      (set! (-> a1-2 param 4) (the-as int8 60)) ;; This will be the damage
+                      (set! (-> a1-2 param 4) (the-as int8 crowbar-damage)) ;; This will be the damage
                       (send-event-function proc a1-2))))
              (let ((v1-14 (-> self notify-handle)))
                (if (handle->process v1-14) (send-event (-> v1-14 process 0) 'notify 'attack-hl proc)))

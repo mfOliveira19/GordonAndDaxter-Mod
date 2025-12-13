@@ -2,6 +2,7 @@
 (require "engine/game/game-h.gc")
 (define *grenade-explosion-position* (new 'global 'vector))
 (defconstant grenade-rotate-speed 600.0)
+(defconstant grenade-damage 200)
 
 (defpartgroup group-smg-grenade-explosion
   :id 710
@@ -333,7 +334,7 @@
                       (set! (-> a1-4 param 1) (the-as uint 'explode))
                       (let ((v1-18 (+ *global-attack-id* 1))) (set! *global-attack-id* v1-18) (set! (-> a1-4 param 2) (the-as uint v1-18)))
                       (set! (-> a1-4 param 3) (the-as uint 0))
-                      (set! (-> a1-4 param 4) (the-as int8 200)) ;; This will be the damage
+                      (set! (-> a1-4 param 4) (the-as int8 grenade-damage)) ;; This will be the damage
                       (send-event-function proc a1-4))))
                       )))))))
   :code

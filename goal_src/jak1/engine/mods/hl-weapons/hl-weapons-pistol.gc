@@ -89,7 +89,7 @@
 
   :post
   (behavior ()
-    (fire-hl-shot *target* #t 0.0 0.0)
+    ;;(fire-hl-shot *target* #t 0.0 0.0)
     (update-aim-punch pistol-aim-punch-decay)
     ))
 

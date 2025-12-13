@@ -47,18 +47,22 @@
       ;; explicitly exclude these states
       (not (or (= st 'target-hl-periscope)
                (= st 'target-hl-death)
+               (= st 'target-title)
+               (= st 'target-title-play)
+               (= st 'target-title-wait)
                (= st 'target-hl-fishing)
                (= st 'target-hl-clone-anim)
                (in-zoomer?))))))
-
+#|
 (defun in-cutscene? ()
-    (or (= (-> *target* state name) 'target-hl-clone-anim) (= (-> *target* state name) 'target-hl-grab)))
+    (or (= (-> *target* state name) 'target-hl-clone-anim) (= (-> *target* state name) 'target-hl-grab)))|#
 
 (defun runs-every-frame ()
   (if *show-input-display* (input-display-on) (input-display-off))
   ;;(set! *display-collision-marks* #t)
+
   ;; hide stuff while in cutscenes
-  (if (or (in-cutscene?))
+  (if (movie?)
     (begin
       (hud-hl-display-off)
       (pc-set-viewmodel-enabled #f)
@@ -67,7 +71,7 @@
       (clear-mouse *mouse-data*)
       (logclear! (-> *target* draw status) (draw-status hidden)))
     (begin
-      (when (in-hl-state?)
+      (when (or (in-hl-state?) (= (-> *target* state name) 'target-hl-death))
         (send-event *camera* 'set-fov 16384.845)
         (send-event *camera* 'change-state cam-fps 0)
         (set! (-> *target* draw status) (draw-status hidden)))

@@ -68,7 +68,7 @@
    (track-player-tilt symbol)
    (twist-joints      junglesnake-twist-joint 24 :inline :offset 220)
    (tilt-joints       junglesnake-tilt-joint 3 :inline :offset 604)
-   (health            uint8))
+   (health            int8))
   (:methods
    (junglesnake-method-20 (_type_) symbol)
    (junglesnake-method-21 (_type_) symbol)

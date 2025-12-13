@@ -226,8 +226,9 @@
   (set! (-> this proximity?) (nonzero? (res-lump-value arg0 'proximity uint128)))
   (set! (-> this directional-proximity?) #f)
   (when (name= (-> this name) "sun-iris-door-6")
-    (set! (-> this close-dist) 16384.0)
-    (set! (-> this open-dist) 8192.0)
+    ;; changed for hl mod
+    (set! (-> this close-dist) 49152.0) ;; was 16384.0
+    (set! (-> this open-dist) 40960.0) ;; was 8192.0
     (set! (-> this directional-proximity?) #t))
   (set! (-> this locked-by-task?) (nonzero? (-> this entity extra perm task)))
   (let ((f0-11 (res-lump-float arg0 'scale-factor :default 1.0)))

@@ -29,7 +29,8 @@
    (start-spin-time time-frame)
    (slow-down       time-frame)
    (hit-player-time time-frame)
-   (neck            joint-mod))
+   (neck            joint-mod)
+   (health          int8))
   (:methods
    (bully-method-20 (_type_) float))
   (:states
@@ -223,7 +224,13 @@
 (defbehavior bully-default-event-handler bully ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (local-vars (v0-0 object))
   (case arg2
-    (('touch 'touched 'attack 'attack-hl)
+    (('attack-hl)
+      (let ((damage (the-as int8 (-> arg3 param 4))))
+          (-! (-> self health) damage)
+          (when (<= (-> self health) 0)
+            (go bully-die)))
+    )
+    (('touch 'touched 'attack)
      (cond
        ((= (-> arg0 type) bully)
         (let ((v1-3 (new 'stack-no-clear 'vector)))
@@ -620,5 +627,6 @@
   (if (not (move-to-ground (-> this root) 12288.0 40960.0 #t (collide-kind background)))
     (go process-drawable-art-error "no ground"))
   (set! (-> this facing-ry) (quaternion-y-angle (-> this root quat)))
+  (set! (-> this health) 120)
   (go bully-idle #t)
   (none))
