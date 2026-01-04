@@ -914,7 +914,7 @@ u64 pc_get_keyboard_data(u64 keyboard_info) {
   if (Display::GetMainDisplay()) {
     const auto& keyboard_key_status =
         Display::GetMainDisplay()->get_input_manager()->get_keyboard_key_status();
-
+    static_assert(sizeof(keyboard_key_status) == 24);
    *keyboard_status = keyboard_key_status;
   }
 

@@ -31,7 +31,8 @@
    (last-player-path-u-time time-frame)
    (started-chasing-time    time-frame)
    (hit-player-time         time-frame)
-   (player-attack-id        uint64))
+   (player-attack-id        uint64)
+   (health                  int8))
   (:methods
    (driller-lurker-method-20 (_type_ symbol target) symbol)
    (driller-lurker-method-21 (_type_) none)
@@ -193,6 +194,12 @@
 
 (defbehavior driller-lurker-default-event-handler driller-lurker ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (local-vars (sv-96 collide-shape-prim))
+  (cond ((= arg2 'attack-hl)
+    (let ((damage (the-as int8 (-> arg3 param 4))))
+        (-! (-> self health) damage)
+        (-> arg3 param 1)
+        (when (<= (-> self health) 0)
+          (go driller-lurker-die)))))
   (cond
     ((= arg2 'attack)
      (cond
@@ -657,6 +664,7 @@
   (set! (-> this started-chasing-time) 0)
   (set! (-> this player-attack-id) (the-as uint 0))
   (set! (-> this ambient-drilling-u) -1.0)
+  (set! (-> this health) 80)
   (logior! (-> this mask) (process-mask enemy))
   (let ((s4-0 (new 'process 'collide-shape-moving this (collide-list-enum usually-hit-by-player))))
     (set! (-> s4-0 dynam) (copy *standard-dynamics* 'process))

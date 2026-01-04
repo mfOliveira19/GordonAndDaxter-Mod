@@ -353,7 +353,8 @@
       ((-> (method-of-type logo startup) trans))
       ;; og:preserve-this
       (if (and (or *debug-segment* PC_PORT)
-               (cpad-pressed? 0 start circle x)
+               ;;(cpad-pressed? 0 start circle x)
+               (key-status? enter-pressed)
                (member (level-status *level* 'village1) '(loaded active)))
         (set-setting! 'bg-a 'abs 1.0 0))
       (when (and (= (-> *setting-control* current bg-a) 1.0)
@@ -621,7 +622,7 @@
     (behavior ()
       (hide-hud-quick)
       ;; og:preserve-this PAL patch here
-      (when (cpad-pressed? 0 start)
+      (when (key-status? enter-pressed) ;; (cpad-pressed? 0 start)
         (set-setting! 'allow-progress #t 0.0 0)
         (apply-settings *setting-control*)
         (activate-progress *dproc* (progress-screen title))

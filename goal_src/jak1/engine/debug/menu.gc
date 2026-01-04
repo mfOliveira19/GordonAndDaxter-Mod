@@ -982,15 +982,15 @@
 (defun debug-menus-default-joypad-func ((arg0 debug-menu-context))
   "Control the menu from the joystick"
   (cond
-    ((cpad-pressed? 0 square)
+    ((key-status? backspace-pressed)
      (cond
        ((< 1 (-> arg0 sel-length)) (debug-menu-context-close-submenu arg0))
        (else)))
-    ((cpad-pressed? 0 x) (debug-menu-context-activate-selection arg0))
-    ((cpad-pressed? 0 up) (debug-menu-context-select-new-item arg0 -1))
-    ((cpad-pressed? 0 down) (debug-menu-context-select-new-item arg0 1))
-    ((cpad-pressed? 0 left) (debug-menu-context-select-new-item arg0 -5))
-    ((cpad-pressed? 0 right) (debug-menu-context-select-new-item arg0 5)))
+    ((key-status? enter-pressed) (debug-menu-context-activate-selection arg0))
+    ((key-status? up-pressed) (debug-menu-context-select-new-item arg0 -1))
+    ((key-status? down-pressed) (debug-menu-context-select-new-item arg0 1))
+    ((key-status? left-pressed) (debug-menu-context-select-new-item arg0 -5))
+    ((key-status? right-pressed) (debug-menu-context-select-new-item arg0 5)))
   arg0)
 
 (defun debug-menus-active ((arg0 debug-menu-context))

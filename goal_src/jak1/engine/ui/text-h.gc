@@ -795,6 +795,8 @@
   (input-opts-controller-led-reflect-heat #x1617)
   (input-opts-controller-pressure-sensitivity #x1618)
   (input-opts-analog-sensitivity #x1619)
+  (mouse-sensitivity #x1620)
+  (auto-jump #x1621)
   ;; mod text mod-base-change
   (pad-triangle #x2000)
   (pad-circle #x2001)

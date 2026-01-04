@@ -222,7 +222,7 @@ void InputManager::process_sdl_event(const SDL_Event& event) {
 }
 
 void InputManager::poll_keyboard_data() {
-  if (is_keyboard_enabled() && m_skip_polling_for_n_frames <= 0 && !m_waiting_for_bind) {
+  if (m_skip_polling_for_n_frames <= 0 && !m_waiting_for_bind) {
     if (m_data.find(m_keyboard_and_mouse_port) != m_data.end()) {
       m_keyboard.poll_state(m_data.at(m_keyboard_and_mouse_port));
     }

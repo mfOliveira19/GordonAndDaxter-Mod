@@ -16,8 +16,7 @@
   (none))
 
 (defmethod projectile-hl-method-27 ((this hl-weapon-shot))
-  (if (and (= (-> *target* fact eco-type) (pickup-type eco-yellow))
-          (> (-> *target* fact eco-level) 0))
+  (if (target-has-eco-type? (pickup-type eco-yellow))
       (set! (-> this attack-mode) 'eco-yellow)
       (set! (-> this attack-mode) #t))
   (set! (-> this mode) 1)

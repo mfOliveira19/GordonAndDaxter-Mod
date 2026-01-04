@@ -2,7 +2,7 @@
 (require "engine/game/game-h.gc")
 (define *grenade-explosion-position* (new 'global 'vector))
 (defconstant grenade-rotate-speed 600.0)
-(defconstant grenade-damage 200)
+(defconstant grenade-damage 120)
 
 (defpartgroup group-smg-grenade-explosion
   :id 710
@@ -200,14 +200,15 @@
   (if (nonzero? (-> this part2)) (kill-and-free-particles (-> this part2)))
   ((method-of-type process-drawable deactivate) this)
   (none))
-
+#|
 (def-art-elt smg-grenade-ag smg-grenade-lod0-jg 0)
 (def-art-elt smg-grenade-ag smg-grenade-lod0-mg 1)
-(def-art-elt smg-grenade-ag smg-grenade-idle-ja 2)
-
+(def-art-elt smg-grenade-ag smg-grenade-idle-ja 2)|#
+#|
 (defskelgroup *smg-grenade-sg* smg-grenade smg-grenade-lod0-jg smg-grenade-idle-ja
               ((smg-grenade-lod0-mg (meters 9999999)))
-              :bounds (static-spherem 0 0 0 5))
+              :bounds (static-spherem 0 0 0 5))|#
+(def-actor smg-grenade :bounds (0 0 0 5))
 
 (defstate smg-grenade-idle (smg-grenade)
   :event
@@ -489,6 +490,7 @@
     (set! (-> s5-0 vel) arg2)
     (set! (-> s5-0 rotate) arg3)
     (set! (-> s5-0 blast-radius) arg6)
+    (format 0 "HERE! ~%")
     (process-spawn smg-grenade s5-0 arg7 :to arg0))
   0
   (none))

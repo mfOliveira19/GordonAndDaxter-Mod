@@ -470,9 +470,9 @@
 
 (define-extern pc-set-keyboard-enabled! (function symbol none))
 
-(define-extern pc-get-keyboard-data (function keyboard-info keyboard-info))
+(define-extern pc-get-keyboard-data (function keyboard-info none))
 
-(define-extern pc-get-mouse-data (function mouse-info mouse-info))
+(define-extern pc-get-mouse-data (function mouse-info none))
 
 (define-extern pc-set-mouse-options! (function symbol symbol symbol none))
 

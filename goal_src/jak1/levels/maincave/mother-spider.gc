@@ -202,7 +202,7 @@
 
 (defbehavior mother-spider-default-event-handler mother-spider ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
-    (('attack)
+    (('attack 'attack-hl)
      (cond
        ((= (-> arg0 type) target)
         (let ((v1-2 (-> arg3 param 2)))

@@ -344,7 +344,7 @@
 (defbehavior ogreboss-super-boulder-event-handler ogreboss-super-boulder ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
     ;; og:preserve-this PAL patch here
-    (('touch 'attack)
+    (('touch 'attack 'attack-hl)
      (when (and *target*
                 ((method-of-type touching-shapes-entry prims-touching?)
                  (the-as touching-shapes-entry (-> arg3 param 0))
@@ -1123,8 +1123,8 @@
 
 (defbehavior ogreboss-attack-event-handler ogreboss ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
-    (('attack)
-     (when (-> self vulnerable)
+    (('attack 'attack-hl)
+     (when (and (-> self vulnerable) (= (-> arg3 param 1) 'eco-yellow))
        (if ((method-of-type touching-shapes-entry prims-touching?)
             (the-as touching-shapes-entry (-> arg3 param 0))
             (the-as collide-shape-moving (-> self root))

@@ -15829,7 +15829,7 @@
   (mouse-options)
   (reassign-binds-options)
 
-  (camera-options)
+  ;;(camera-options)
   (accessibility-options)
   (game-ps2-options)
   (misc-options)

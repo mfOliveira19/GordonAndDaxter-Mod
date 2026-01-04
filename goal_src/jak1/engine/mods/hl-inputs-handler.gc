@@ -3,9 +3,74 @@
 (defun in-hl-state? ()
   (and (= (-> *target* game mode) 'play) (or (-> *target* state name) 'target-hl-movement-ground 'target-hl-movement-ground-duck 'target-hl-movement-air 'target-hl-movement-air-duck) (!= (-> *target* state name) 'target-hl-periscope) (!= (-> *target* state name) 'target-hl-death) (!= (-> *target* state name) 'target-hl-fishing)))
 
+(defun clear-keyboard-edge-pressed! ()
+  (set! (-> *keyboard-edge* enter-pressed) 0)
+  (set! (-> *keyboard-edge* space-pressed) 0)
+  (set! (-> *keyboard-edge* esc-pressed) 0)
+  (set! (-> *keyboard-edge* up-pressed) 0)
+  (set! (-> *keyboard-edge* down-pressed) 0)
+  (set! (-> *keyboard-edge* left-pressed) 0)
+  (set! (-> *keyboard-edge* right-pressed) 0)
+  (set! (-> *keyboard-edge* one-pressed) 0)
+  (set! (-> *keyboard-edge* two-pressed) 0)
+  (set! (-> *keyboard-edge* three-pressed) 0)
+  (set! (-> *keyboard-edge* four-pressed) 0)
+  (set! (-> *keyboard-edge* backspace-pressed) 0)
+  (set! (-> *keyboard-edge* e-pressed) 0)
+  (set! (-> *keyboard-edge* q-pressed) 0)
+  (set! (-> *keyboard-edge* period-pressed) 0)
+  (set! (-> *keyboard-edge* tab-pressed) 0))
+
+(defmacro update-key-edge (key held pressed)
+  `(if (!= (-> *keyboard-data* ,key) 0)
+       (when (= (-> *keyboard-edge* ,held) 0)
+         (set! (-> *keyboard-edge* ,held) 1)
+         (set! (-> *keyboard-edge* ,pressed) 1))
+       (begin
+         (set! (-> *keyboard-edge* ,held) 0))))
+
+(defmacro key-status? (key)
+  `(!= (-> *keyboard-edge* ,key) 0))
+
+((defun update-keyboard-input-stuff ()
+  (clear-keyboard-edge-pressed!)
+  (pc-get-keyboard-data *keyboard-data*)
+  ;; ENTER
+  (update-key-edge key_enter enter-held enter-pressed)
+  ;; SPACE
+  (update-key-edge key_space space-held space-pressed)
+  ;; ESC
+  (update-key-edge key_esc esc-held esc-pressed)
+  ;; UP
+  (update-key-edge key_up up-held up-pressed)
+  ;; DOWN
+  (update-key-edge key_down down-held down-pressed)
+  ;; LEFT
+  (update-key-edge key_left left-held left-pressed)
+  ;; RIGHT
+  (update-key-edge key_right right-held right-pressed)
+  ;; 1
+  (update-key-edge key_1 one-held one-pressed)
+  ;; 2
+  (update-key-edge key_2 two-held two-pressed)
+  ;; 3
+  (update-key-edge key_3 three-held three-pressed)
+  ;; 4
+  (update-key-edge key_4 four-held four-pressed)
+  ;; BACKSPACE
+  (update-key-edge key_backspace backspace-held backspace-pressed)
+  ;; E
+  (update-key-edge key_e e-held e-pressed)
+  ;; Q
+  (update-key-edge key_q q-held q-pressed)
+  ;; PERIOD
+  (update-key-edge key_period period-held period-pressed)
+  ;; TAB
+  (update-key-edge key_tab tab-held tab-pressed)
+))
+
 (defun should-jump? ()
-  ;;(or (< (-> *mouse-data* mouse-scrolly) 0.0) (when *auto-jump* (cpad-hold? 0 x)) (cpad-pressed? 0 x))
-  (or (< (-> *mouse-data* mouse-scrolly) 0.0) (when *auto-jump* (!= (-> *keyboard-data* key_space) 0)))
+  (or (< (-> *mouse-data* mouse-scrolly) 0.0) (if (-> *pc-settings* auto-jump?) (!= (-> *keyboard-data* key_space) 0) (key-status? space-pressed)))
 )
 
 (defun should-move-forward? ()
@@ -43,7 +108,7 @@
 )
 
 (defun should-reload? ()
-  (and (!= (-> *target* state name) 'target-hl-death) (!= (-> *keyboard-data* key_r) 0))
+  (and (!= (-> *target* state name) 'target-hl-death) (!= (-> *keyboard-data* key_r) 0) (not (paused?)))
 )
 
 (defun should-attack? ()
@@ -57,45 +122,48 @@
 )
 
 (defun should-switch-slot1? ()
-  (!= (-> *keyboard-data* key_1) 0)
+  (and (!= (-> *keyboard-data* key_1) 0) (not (paused?)))
 )
 
 (defun should-switch-slot2? ()
-  (!= (-> *keyboard-data* key_2) 0)
+  (and (!= (-> *keyboard-data* key_2) 0) (not (paused?)))
 )
 
 (defun should-switch-slot3? ()
-  (!= (-> *keyboard-data* key_3) 0)
+  (and (!= (-> *keyboard-data* key_3) 0) (not (paused?)))
 )
-
-(define *last-e-state* 0)
 
 (defun should-use? ()
-  (let ((pressed (-> *keyboard-data* key_e))
-        (should-switch #f))
-    ;; Detect rising edge — pressed now, not pressed before
-    (when (and (!= pressed 0) (= *last-e-state* 0))
-      (set! should-switch #t))
-    ;; Update state for next frame
-    (set! *last-e-state* (the-as int pressed))
-    should-switch)
-)
+  (key-status? e-pressed))
 
 (defun should-exit? ()
-  (!= (-> *keyboard-data* key_esc) 0)
-)
-
-(define *last-q-state* 0)
+  (key-status? backspace-pressed))
 
 (defun should-switch-last-weapon? ()
-  (let ((pressed (-> *keyboard-data* key_q))
-        (should-switch #f))
-    ;; Detect rising edge — pressed now, not pressed before
-    (when (and (!= pressed 0) (= *last-q-state* 0))
-      (set! should-switch #t))
-    ;; Update state for next frame
-    (set! *last-q-state* (the-as int pressed))
-    should-switch))
+  (and (key-status? q-pressed) (not (paused?))))
+
+(defun clear-keyboard ((kb keyboard-info))
+  (set! (-> kb key_w) 0)
+  (set! (-> kb key_a) 0)
+  (set! (-> kb key_s) 0)
+  (set! (-> kb key_d) 0)
+  (set! (-> kb key_r) 0)
+  (set! (-> kb key_q) 0)
+  (set! (-> kb key_e) 0)
+  (set! (-> kb key_space) 0)
+  (set! (-> kb key_shift) 0)
+  (set! (-> kb key_ctrl) 0)
+  (set! (-> kb key_alt) 0)
+  (set! (-> kb key_esc) 0)
+  (set! (-> kb key_enter) 0)
+  (set! (-> kb key_1) 0)
+  (set! (-> kb key_2) 0)
+  (set! (-> kb key_3) 0)
+  (set! (-> kb key_4) 0))
+
+(defun clear-mouse ((mouse mouse-info))
+  (set! (-> mouse mouse1) 0)
+  (set! (-> mouse mouse2) 0))
 
 (defbehavior read-input target ((arg0 vector))
   (when (!= (-> self control pad-read-time) (-> *display* real-frame-counter))
@@ -103,13 +171,11 @@
     (set! (-> self control last-pad-stick-speed) (-> self control pad-stick-speed))
     (set! (-> self control pad-read-time) (the-as uint (-> *display* real-frame-counter))))
 
-  ;; start clean
   (set! (-> arg0 x) 0.0)
   (set! (-> arg0 y) 0.0)
   (set! (-> arg0 z) 0.0)
   (set! (-> arg0 w) 0.0)
 
-  ;; build input vector
   (when (should-move-forward?) (set! (-> arg0 z) (+ (-> arg0 z) 1.0)))
   (when (should-move-back?)    (set! (-> arg0 z) (- (-> arg0 z) 1.0)))
   (when (should-move-left?)    (set! (-> arg0 x) (+ (-> arg0 x) 1.0)))
@@ -117,7 +183,6 @@
 
   (let ((has-input (> (vector-length arg0) 0.0)))
     (if has-input
-        ;; when input exists
         (begin
           (vector-normalize! arg0 1.0)
           (set! (-> self control stick-vec quad) (-> arg0 quad))

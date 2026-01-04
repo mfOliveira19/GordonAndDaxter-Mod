@@ -153,6 +153,7 @@
    (mouse-ysens                      float)
    (mouse-movement?                  symbol)
    (auto-hide-cursor?                symbol)
+   (auto-jump?                       symbol) ;; Added for hl mod
    ;; audio settings
    (audio-latency-ms                 int16) ;; audio latency in milliseconds
    (audio-pan-override               float) ;; audio pan modifier
@@ -369,9 +370,10 @@
     (set! (-> obj pressure-sensitivity-enabled?) #f)
     (set! (-> obj mouse-enabled?) #f)
     (set! (-> obj auto-hide-cursor?) #t))
+    (set! (-> obj auto-jump?) #t)
   (when (or (= device 'all) (= device 'mouse))
     (set! (-> obj mouse-camera?) #f)
-    (set! (-> obj mouse-xsens) -15.0)
+    (set! (-> obj mouse-xsens) 2.0)
     (set! (-> obj mouse-ysens) 10.0)
     (set! (-> obj mouse-movement?) #f))
   0)

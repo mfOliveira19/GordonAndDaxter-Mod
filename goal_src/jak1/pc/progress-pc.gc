@@ -602,6 +602,21 @@
        game-option
        (new 'static
             'game-option
+            :option-type (game-option-type slider)
+            :name (text-id mouse-sensitivity)
+            :scale #t
+            :param1 0.0
+            :param2 10.0
+            :slider-step-size 0.1
+            :slider-show-decimal? #t
+            :on-confirm
+            (lambda ()
+              (update-mouse-controls! *pc-settings*)
+              (none)))
+       (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id auto-jump) :scale #t)
+       #|
+       (new 'static
+            'game-option
             :option-type (game-option-type menu)
             :name (text-id camera-options)
             :scale #t
@@ -674,6 +689,7 @@
               (pc-set-keyboard-enabled! (-> *pc-settings* keyboard-enabled?))
               (update-mouse-controls! *pc-settings*)
               (none)))
+        |#
        (new 'static 'game-option :option-type (game-option-type button) :name (text-id back) :scale #t)))
 
 (define *misc-options*
@@ -2172,9 +2188,11 @@
   (set! (-> *mouse-options* 1 value-to-modify) (&-> *pc-settings* mouse-xsens))
   (set! (-> *mouse-options* 2 value-to-modify) (&-> *pc-settings* mouse-ysens))
   (set! (-> *mouse-options* 3 value-to-modify) (&-> *pc-settings* mouse-movement?))
-  (set! (-> *input-options* 2 value-to-modify) (&-> *pc-settings* keyboard-enabled?))
-  (set! (-> *input-options* 3 value-to-modify) (&-> *pc-settings* mouse-enabled?))
-  (set! (-> *input-options* 5 value-to-modify) (&-> *pc-settings* auto-hide-cursor?))
+  (set! (-> *input-options* 0 value-to-modify) (&-> *pc-settings* mouse-xsens)) ;; xsens will be used for both x and y
+  (set! (-> *input-options* 1 value-to-modify) (&-> *pc-settings* auto-jump?))
+  ;;(set! (-> *input-options* 1 value-to-modify) (&-> *pc-settings* keyboard-enabled?))
+  ;;(set! (-> *input-options* 2 value-to-modify) (&-> *pc-settings* mouse-enabled?))
+  ;;(set! (-> *input-options* 4 value-to-modify) (&-> *pc-settings* auto-hide-cursor?))
   (set! (-> *gfx-ps2-options* 0 value-to-modify) (&-> *progress-carousell* int-backup))
   (set! (-> *gfx-ps2-options* 1 value-to-modify) (&-> *progress-carousell* int-backup))
   (set! (-> *gfx-ps2-options* 2 value-to-modify) (&-> *pc-settings* ps2-parts?))
@@ -2220,7 +2238,7 @@
     (when (and options (not (or (progress-scrolling?) (-> obj in-transition))))
       ;; only respond to inputs when transition is done (and also there's options at all)
       (cond
-        ((cpad-pressed? 0 up)
+        ((key-status? up-pressed) ;; Previously: (cpad-pressed? 0 up)
          ;; pressed up
          ;; original code checked hold and then press, because hold can be used during center screen option. which we don't use.
          (when (not (-> obj selected-option))
@@ -2234,7 +2252,7 @@
              (else
               (set! (-> obj option-index) (1- (length options)))
               (set! (-> *progress-scroll* start-index) (max 0 (- (length options) PROGRESS_PC_PAGE_HEIGHT -1)))))))
-        ((cpad-pressed? 0 down)
+        ((key-status? down-pressed) ;; Previously: (cpad-pressed? 0 down)
          ;; pressed down.
          (when (not (-> obj selected-option))
            (if (!= (length options) 1) (sound-play "cursor-up-down"))
@@ -2245,10 +2263,10 @@
               (when (and (> (length options) PROGRESS_PC_PAGE_HEIGHT) (>= (-> obj option-index) *progress-scroll-end*))
                 (progress-scroll-down!)))
              (else (set! (-> obj option-index) 0) (set! (-> *progress-scroll* start-index) 0)))))
-        ((cpad-hold? 0 left)
+        ((key-status? left-held) ;; Previously: (cpad-hold? 0 left)
          ;; holding left. sliders use hold.
          (cond
-           ((cpad-pressed? 0 left)
+           ((key-status? left-pressed) ;; Previously: (cpad-pressed? 0 left)
             ;; navigate left.
             (when (or (-> obj selected-option) (= (-> options (-> obj option-index) option-type) (game-option-type yes-no)))
               (let ((sound? #f))
@@ -2337,10 +2355,10 @@
                     (when (< (seconds 0.3) (- (-> *display* real-frame-counter) (-> *progress-state* last-slider-sound)))
                       (set! (-> *progress-state* last-slider-sound) (-> *display* real-frame-counter))
                       (sound-play "slider2001" :vol vol)))))))))
-        ((cpad-hold? 0 right)
+        ((key-status? right-held) ;; Previously: (cpad-hold? 0 right)
          ;; holding right
          (cond
-           ((cpad-pressed? 0 right)
+           ((key-status? right-pressed) ;; Previously: (cpad-pressed? 0 right)
             ;; pressed right
             (when (or (-> obj selected-option) (= (-> options (-> obj option-index) option-type) (game-option-type yes-no)))
               (let ((sound? #f))
@@ -2419,7 +2437,7 @@
                     (when (< (seconds 0.3) (- (-> *display* real-frame-counter) (-> *progress-state* last-slider-sound)))
                       (set! (-> *progress-state* last-slider-sound) (-> *display* real-frame-counter))
                       (sound-play "slider2001" :vol vol)))))))))
-        ((or (cpad-pressed? 0 square) (cpad-pressed? 0 triangle))
+        ((should-exit?) ;; Previously: (or (cpad-pressed? 0 square) (cpad-pressed? 0 triangle))
          ;; pressed square or triangle, cancel out!
          (cond
            ((-> obj selected-option)
@@ -2451,7 +2469,7 @@
               (progress-reset-music-parms))
             (load-level-text-files (-> *level-task-data* (-> obj display-level-index) text-group-index))
             (set! (-> obj next-display-state) (progress-screen invalid)))))
-        ((or (cpad-pressed? 0 x) (cpad-pressed? 0 circle))
+        ((key-status? enter-pressed) ;; Previously (or (cpad-pressed? 0 x) (cpad-pressed? 0 circle))
          ;; pressed x or circle. advance!
          ;; first check if the option is disabled, if so leave early and do nothing
          (when (and (nonzero? (-> options (-> obj option-index) option-disabled-func))
@@ -2465,6 +2483,7 @@
             (cond
               ((= (-> options (-> obj option-index) option-type) (game-option-type menu))
                ;; go to a menu
+               (clear-keyboard *keyboard-data*)
                (cpad-clear! 0 x)
                (cpad-clear! 0 circle)
                (cond
@@ -2578,6 +2597,7 @@
               ((= (-> options (-> obj option-index) option-type) (game-option-type button-music))
                ;; go to the music+flava player
                (when (find-music-log (progress-get-music-by-index (-> obj option-index)))
+                 (clear-keyboard *keyboard-data*)
                  (cpad-clear! 0 x)
                  (cpad-clear! 0 circle)
                  (set! *progress-music* (-> obj option-index))
@@ -2587,6 +2607,7 @@
               ((= (-> options (-> obj option-index) option-type) (game-option-type button-flava))
                ;; set flava
                (when (find-flava-log (progress-get-music-by-index *progress-music*) (the int (-> options (-> obj option-index) param1)))
+                 (clear-keyboard *keyboard-data*)
                  (cpad-clear! 0 x)
                  (cpad-clear! 0 circle)
                  (set-setting *setting-control* obj 'music (progress-get-music-by-index *progress-music*) 0.0 0)
@@ -2598,6 +2619,7 @@
                (let ((newx (the int (-> options (-> obj option-index) param1)))
                      (newy (the int (-> options (-> obj option-index) param2))))
                  (set-window-size! *pc-settings* newx newy))
+               (clear-keyboard *keyboard-data*)
                (cpad-clear! 0 x)
                (cpad-clear! 0 circle)
                (sound-play "cursor-options")
@@ -2608,6 +2630,7 @@
                (let ((controller-id (the int (-> options (-> obj option-index) param1))))
                  ;; NOTE - for now, we only manage port 0 in the progress menu
                  (pc-set-controller! controller-id 0))
+               (clear-keyboard *keyboard-data*)
                (cpad-clear! 0 x)
                (cpad-clear! 0 circle)
                (sound-play "cursor-options")
@@ -2616,6 +2639,7 @@
               ((= (-> options (-> obj option-index) option-type) (game-option-type monitor))
                ;; monitor button
                (let ((monitor (the int (-> options (-> obj option-index) param1)))) (pc-set-display-id! monitor))
+               (clear-keyboard *keyboard-data*)
                (cpad-clear! 0 x)
                (cpad-clear! 0 circle)
                (sound-play "cursor-options")
@@ -2642,6 +2666,7 @@
                     (set! (-> *setting-control* default aspect-ratio) 'aspect16x9)
                     (set-aspect-ratio 'aspect16x9))
                    (else (set-aspect! *pc-settings* newx newy))))
+               (clear-keyboard *keyboard-data*)
                (cpad-clear! 0 x)
                (cpad-clear! 0 circle)
                (sound-play "cursor-options")
@@ -2719,6 +2744,7 @@
                     (dotimes (i (-> *text-languages* length))
                       (if (= (-> *text-languages* i) cur-lang) (set! (-> *progress-carousell* int-backup) i))))))
                (sound-play "select-option")
+               (clear-keyboard *keyboard-data*)
                (cpad-clear! 0 x)
                (cpad-clear! 0 circle)
                (set! (-> obj selected-option) #t)
@@ -2818,7 +2844,8 @@
   "logic for handling input in memcard screens."
   (let ((s5-0 (-> obj card-info)))
     (when (and s5-0 (not (-> obj in-transition)))
-      (when (or (cpad-pressed? 0 x) (cpad-pressed? 0 circle))
+      (when (or (key-status? enter-pressed) (key-status? space-pressed)) ;; Previously: (or (cpad-pressed? 0 x) (cpad-pressed? 0 circle))
+        (clear-keyboard *keyboard-data*)
         (cpad-clear! 0 x)
         (cpad-clear! 0 circle)
         (case (-> obj display-state)
@@ -3503,7 +3530,8 @@
             (((progress-screen music-player)) (hide-progress-icons) (draw-options self 128 21 0.82))
             (((progress-screen flava-player)) (hide-progress-icons) (draw-options self 128 21 0.82))
             (((progress-screen speedrun-options)) (hide-progress-icons) (draw-notice-screen self) (draw-options self 155 25 0.65))
-            (((progress-screen camera-options)
+            ((
+              (progress-screen camera-options)
               (progress-screen checkpoint-select)
               (progress-screen speedrun-il-options)
               (progress-screen speedrun-cat-ext-options))

@@ -320,6 +320,7 @@
   "tpage-1532.go"
   "fuel-cell-ag.go"
   "money-ag.go"
+  "smg-grenade-ag.go" ;; added for hl mod
   "buzzer-ag.go"
   "ecovalve-ag.go"
   "crate-ag.go"

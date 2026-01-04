@@ -519,6 +519,7 @@
     (("mouse-camera?") (set! (-> obj mouse-camera?) (file-stream-read-symbol file)))
     (("mouse-xsens") (set! (-> obj mouse-xsens) (file-stream-read-float file)))
     (("mouse-ysens") (set! (-> obj mouse-ysens) (file-stream-read-float file)))
+    (("auto-jump?") (set! (-> obj auto-jump?) (file-stream-read-symbol file))) ;; added for hl mod
     (("mouse-movement?") (set! (-> obj mouse-movement?) (file-stream-read-symbol file)))
     (("auto-hide-cursor?") (set! (-> obj auto-hide-cursor?) (file-stream-read-symbol file)))
     (("ps2-read-speed?") (set! (-> obj ps2-read-speed?) (file-stream-read-symbol file)))
@@ -596,6 +597,7 @@
   (format file "  (mouse-enabled? ~A)~%" (-> obj mouse-enabled?))
   (format file "  (mouse-camera? ~A)~%" (-> obj mouse-camera?))
   (format file "  (mouse-xsens ~f)~%" (-> obj mouse-xsens))
+  (format file "  (auto-jump? ~A)~%" (-> obj auto-jump?)) ;; added for hl mod
   (format file "  (mouse-ysens ~f)~%" (-> obj mouse-ysens))
   (format file "  (mouse-movement? ~A)~%" (-> obj mouse-movement?))
   (format file "  (auto-hide-cursor? ~A)~%" (-> obj auto-hide-cursor?))

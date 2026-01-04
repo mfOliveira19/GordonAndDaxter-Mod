@@ -879,7 +879,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack)
+        (('attack 'attack-hl)
          (if (-> self mushroom)
            (increment-success-for-hint (text-id citadel-generator))
            (increment-success-for-hint (text-id citadel-generator-no-mushroom)))

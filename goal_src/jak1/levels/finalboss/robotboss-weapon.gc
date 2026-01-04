@@ -200,7 +200,7 @@
          (until (time-elapsed? (-> self state-time) (seconds 2))
            (suspend))
          (send-event *camera* 'force-blend 0)
-         (send-event *camera* 'change-state *camera-base-mode*)
+         (send-event *camera* 'change-state cam-fps)
          (send-event *camera* 'clear-entity)
          (if *target* (logclear! (-> *target* mask) (process-mask sleep)))
          (send-event *target* 'attack-invinc #f (static-attack-info ((mode 'instant-death)))))

@@ -1075,6 +1075,9 @@
   (none))
 
 (defstate fishermans-boat-ride-to-misty (fishermans-boat)
+  :enter (behavior ()
+    (send-event *camera* 'change-state cam-string 0)
+  )
   :code
     (behavior ()
       (set! (-> self propeller enable) #f)

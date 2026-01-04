@@ -98,6 +98,12 @@
 
 (defbehavior snow-bunny-default-event-handler snow-bunny ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
+    (('attack-hl)
+      (let ((damage (the-as int8 (-> arg3 param 4))))
+          (-! (-> self health) damage)
+          (-> arg3 param 1)
+          (when (<= (-> self health) 0)
+            (go-virtual nav-enemy-die))))
     (('attack) (nav-enemy-set-hit-from-direction arg0) (go-virtual nav-enemy-die))
     (('touch)
      (when (send-event arg0 'attack (-> arg3 param 0) (new 'static 'attack-info))
@@ -189,6 +195,7 @@
   (initialize-collision this)
   (process-drawable-from-entity! this arg0)
   (nav-enemy-method-48 this)
+  (set! (-> this health) 20)
   (if (<= (-> this path curve num-cverts) 0) (go process-drawable-art-error "no path"))
   (set! *snow-bunny* (the-as (pointer snow-bunny) (process->ppointer this)))
   (nav-enemy-method-59 this)

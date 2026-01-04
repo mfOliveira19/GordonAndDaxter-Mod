@@ -603,7 +603,7 @@
          (if (= (-> proc type) target)
            (send-event proc 'shove (-> block param 0) (static-attack-info ((shove-up (meters 1.5)) (shove-back (meters 2.5))))))
          (go gnawer-retreat-into-post))
-        (('attack) (sound-play "gnawer-dies" :pitch -0.25) (go gnawer-retreat-into-post))))
+        (('attack 'attack-hl) (sound-play "gnawer-dies" :pitch -0.25) (go gnawer-retreat-into-post))))
   :exit
     (behavior ()
       (stop! (-> self sound2)))
@@ -708,7 +708,7 @@
         (('touch)
          (if (= (-> proc type) target)
            (send-event proc 'shove (-> block param 0) (static-attack-info ((shove-up (meters 1.5)) (shove-back (meters 2.5)))))))
-        (('attack)
+        (('attack 'attack-hl)
          (cond
            ((= (-> proc type) target)
             (send-event proc 'attack (-> block param 0) (static-attack-info ((shove-up (meters 1.5)) (shove-back (meters 2.5))))))

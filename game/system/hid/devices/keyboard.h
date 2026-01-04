@@ -21,28 +21,30 @@ struct ActiveKeyboardAction {
 class KeyboardDevice : public InputDevice {
  public:
   struct KeyboardKeyStatus {
-    bool w = false;
-    bool a = false;
-    bool s = false;
-    bool d = false;
-    bool r = false;
-    bool q = false;
-    bool e = false;
-    bool space = false;
-    bool shift = false;
-    bool ctrl = false;
-    bool alt = false;
-    bool esc = false;
-    bool k_0 = false;
-    bool k_1 = false;
-    bool k_2 = false;
-    bool k_3 = false;
-    bool k_4 = false;
-    bool k_5 = false;
-    bool k_6 = false;
-    bool k_7 = false;
-    bool k_8 = false;
-    bool k_9 = false;
+    uint8_t w = false;
+    uint8_t a = false;
+    uint8_t s = false;
+    uint8_t d = false;
+    uint8_t r = false;
+    uint8_t q = false;
+    uint8_t e = false;
+    uint8_t space = false;
+    uint8_t shift = false;
+    uint8_t ctrl = false;
+    uint8_t alt = false;
+    uint8_t esc = false;
+    uint8_t k_1 = false;
+    uint8_t k_2 = false;
+    uint8_t k_3 = false;
+    uint8_t k_4 = false;
+    uint8_t enter = false;
+    uint8_t backspace = false;
+    uint8_t arrow_left = false;
+    uint8_t arrow_right = false;
+    uint8_t arrow_down = false;
+    uint8_t arrow_up = false;
+    uint8_t period = false;
+    uint8_t tab = false;
   };
 
   KeyboardDevice() {};

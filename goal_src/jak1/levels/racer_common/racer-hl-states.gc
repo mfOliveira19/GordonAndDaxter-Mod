@@ -475,7 +475,7 @@
   :trans
     (behavior ()
       ;; og:preserve-this - High FPS Fix
-      (if (and (or (recently-pressed? l1 r1) (should-jump?))
+      (if (and (or (recently-pressed? l1 r1) (key-status? space-pressed))
                (or (not (time-elapsed? (-> self control last-ground-time) (seconds 0.1)))
                    (< (vector-dot (-> self control dynam gravity-normal)
                                   (vector-! (new 'stack-no-clear 'vector) (-> self control trans) (-> self control shadow-pos)))
@@ -584,7 +584,7 @@
             (fmax 0.0 (fmin 1.0 (* 0.00004359654 (+ -11468.8 (-> self control speed-mod))))))
       (if (< (-> self racer slide-mode) 0)
         (set! (-> self racer slide-down-time 0)
-              (the-as time-frame (if (cpad-hold? (-> self control cpad number) l1 r1) (the-as int (current-time)) 0)))))
+              (the-as time-frame (if (should-jump?) (the-as int (current-time)) 0)))))
   :exit
     (behavior ()
       (logclear! (-> self control root-prim prim-core action) (collide-action racer-grounded))
@@ -596,8 +596,8 @@
             (fmax (-> self control turn-vec-len3)
                   (* 0.003921569 (the float (-> *cpad-list* cpads (-> self control cpad number) abutton (abutton-idx x)))))) ;; og:preserve-this abutton indexing
       (cond
-        ((cpad-pressed? (-> self control cpad number) l1 r1) (set-time! (-> self racer slide-down-time 0)))
-        ((not (cpad-hold? (-> self control cpad number) l1 r1)) (set! (-> self racer slide-down-time 0) 0) 0)
+        ((key-status? space-pressed) (set-time! (-> self racer slide-down-time 0)))
+        ((not (should-jump?)) (set! (-> self racer slide-down-time 0) 0) 0)
         ((and (time-elapsed? (-> self racer slide-down-time 0) (the-as time-frame (-> *RACER-bank* slide-hold-time)))
               (< (-> self racer slide-mode) 0)
               (or (< (-> *cpad-list* cpads (-> self control cpad number) leftx) (the-as uint 64))
@@ -625,7 +625,7 @@
       (target-hl-racing-smack-check)
       (if (time-elapsed? (-> self state-time) (seconds 1))
         (logior! (-> self control root-prim prim-core action) (collide-action racer-grounded)))
-      (mod-var-jump #t #t (cpad-hold? (-> self control cpad number) l1 r1) (-> self control transv))
+      (mod-var-jump #t #t (should-jump?) (-> self control transv))
       (set! (-> self racer shock-offset) (* 0.8 (-> self racer shock-offset)))
       (racer-buzz 0.4))
   :code
@@ -668,7 +668,7 @@
       (if (and (logtest? (-> self control status) (cshape-moving-flags onsurf))
                (time-elapsed? (-> self state-time) (seconds 0.1)))
         (go target-hl-racing))
-      (mod-var-jump #t #t (cpad-hold? (-> self control cpad number) l1 r1) (-> self control transv))
+      (mod-var-jump #t #t (should-jump?) (-> self control transv))
       (target-hl-racing-smack-check)
       (racer-buzz 0.4))
   :code

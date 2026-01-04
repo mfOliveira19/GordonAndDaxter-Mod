@@ -211,6 +211,10 @@
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (local-vars (v0-2 object))
       (case message
+      (('attack-hl)
+        (case (-> block param 1)
+          (('uppercut) ;; a crowbar attack
+          (go snow-button-activate))))
         (('touch 'attack 'bonk)
          (when (and (= (-> proc type) target)
                     (logtest? (-> *target* control root-prim prim-core action) (collide-action flut))

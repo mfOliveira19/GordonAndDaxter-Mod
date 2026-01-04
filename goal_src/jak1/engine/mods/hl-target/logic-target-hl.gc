@@ -669,3 +669,6 @@
   (when (and (should-duck?) (not (on-ground?)))
     ;; push origin upward a bit to simulate HL duck jump
     (+! (-> self control trans y) 70.0)))
+
+(defun target-has-eco-type? ((type pickup-type))
+  (and (= (-> *target* fact eco-type) type) (> (-> *target* fact eco-level) 0.0)))

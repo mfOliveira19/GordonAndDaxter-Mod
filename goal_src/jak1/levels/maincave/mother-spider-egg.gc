@@ -177,7 +177,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('touch 'attack) (go mother-spider-egg-die-while-falling))))
+        (('touch 'attack 'attack-hl) (go mother-spider-egg-die-while-falling))))
   :enter
     (behavior ()
       (set-time! (-> self falling-start-time)))
@@ -206,7 +206,7 @@
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
         (('touch) (send-shove-back (-> self root) proc (the-as touching-shapes-entry (-> block param 0)) 0.7 6144.0 16384.0))
-        (('attack) (go mother-spider-egg-die))))
+        (('attack 'attack-hl) (go mother-spider-egg-die))))
   :enter
     (behavior ()
       (set-time! (-> self state-time))

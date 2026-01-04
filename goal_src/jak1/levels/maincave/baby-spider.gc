@@ -545,5 +545,6 @@ baby-spider-default-event-handler
                       -1
                       4096.0)
   (nav-enemy-method-48 this)
+  (set! (-> this health) 20)
   (go (method-of-object this nav-enemy-idle))
   (none))

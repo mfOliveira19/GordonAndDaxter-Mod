@@ -100,6 +100,7 @@
    (time-of-day  (pointer float))))
 
 ;; new type for mouse data
+#|
 (deftype mouse-info (basic)
   ((mouse1 uint8 :offset-assert 4)
    (mouse2 uint8 :offset-assert 5)
@@ -125,21 +126,108 @@
    (key_ctrl     uint8 :offset-assert 13)
    (key_alt      uint8 :offset-assert 14)
    (key_esc      uint8 :offset-assert 15)
-   (key_0        uint8 :offset-assert 16)
-   (key_1        uint8 :offset-assert 17)
-   (key_2        uint8 :offset-assert 18)
-   (key_3        uint8 :offset-assert 19)
-   (key_4        uint8 :offset-assert 20)
-   (key_5        uint8 :offset-assert 21)
-   (key_6        uint8 :offset-assert 22)
-   (key_7        uint8 :offset-assert 23)
-   (key_8        uint8 :offset-assert 24)
-   (key_9        uint8 :offset-assert 25))
+   (key_1        uint8 :offset-assert 16)
+   (key_2        uint8 :offset-assert 17)
+   (key_3        uint8 :offset-assert 18)
+   (key_4        uint8 :offset-assert 19)
+   (key_enter    uint8 :offset-assert 20)
+   (key_backspace uint8 :offset-assert 21)
+   (key_left     uint8 :offset-assert 22)
+   (key_right    uint8 :offset-assert 23)
+   (key_down     uint8 :offset-assert 24)
+   (key_up       uint8 :offset-assert 25)
+   (key_backslash uint8 :offset-assert 26))
   (:methods
     (new (symbol type int) _type_))
   :method-count-assert 9
-  :size-assert 26
+  :size-assert 27
 )
+|#
+
+(deftype mouse-info (structure)
+  ((mouse1 uint8)
+   (mouse2 uint8)
+   (mouse-relx float)
+   (mouse-rely float)
+   (mouse-scrolly float)))
+
+(deftype keyboard-info (structure)
+  ((key_w         uint8)
+   (key_a         uint8)
+   (key_s         uint8)
+   (key_d         uint8)
+   (key_r         uint8)
+   (key_q         uint8)
+   (key_e         uint8)
+   (key_space     uint8)
+   (key_shift     uint8)
+   (key_ctrl      uint8)
+   (key_alt       uint8)
+   (key_esc       uint8)
+   (key_1         uint8)
+   (key_2         uint8)
+   (key_3         uint8)
+   (key_4         uint8)
+   (key_enter     uint8)
+   (key_backspace uint8)
+   (key_left      uint8)
+   (key_right     uint8)
+   (key_down      uint8)
+   (key_up        uint8)
+   (key_period    uint8)
+   (key_tab       uint8)))
+
+(deftype keyboard-edge (structure)
+  (
+   ;; ENTER
+   (enter-held         uint8)
+   (enter-pressed      uint8)
+   ;; SPACE
+   (space-held         uint8)
+   (space-pressed      uint8)
+   ;; ESC
+   (esc-held           uint8)
+   (esc-pressed        uint8)
+   ;; UP
+   (up-held            uint8)
+   (up-pressed         uint8)
+   ;; DOWN
+   (down-held          uint8)
+   (down-pressed       uint8)
+   ;; LEFT
+   (left-held          uint8)
+   (left-pressed       uint8)
+   ;; RIGHT
+   (right-held         uint8)
+   (right-pressed      uint8)
+   ;; 1
+   (one-held           uint8)
+   (one-pressed        uint8)
+   ;; 2
+   (two-held           uint8)
+   (two-pressed        uint8)
+   ;; 3
+   (three-held         uint8)
+   (three-pressed      uint8)
+   ;; 4
+   (four-held          uint8)
+   (four-pressed       uint8)
+   ;; BACKSPACE
+   (backspace-held         uint8)
+   (backspace-pressed      uint8)
+   ;; E
+   (e-held             uint8)
+   (e-pressed          uint8)
+   ;; Q
+   (q-held             uint8)
+   (q-pressed          uint8)
+   ;; PERIOD
+   (period-held             uint8)
+   (period-pressed          uint8)
+   ;; TAB
+   (tab-held             uint8)
+   (tab-pressed          uint8)
+  ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; debug settings
@@ -223,35 +311,6 @@
   (unknowncamera 13))
 
 ;; I dont know where to place this
-(define *mouse-data* (new 'global 'mouse-info 0))
-(define *mouse-sens* 5.0)
-(define *auto-jump* #t)
-(define *keyboard-data* (new 'global 'keyboard-info 0))
-
-(defun clear-keyboard ((kb keyboard-info))
-  (set! (-> kb key_w) 0)
-  (set! (-> kb key_a) 0)
-  (set! (-> kb key_s) 0)
-  (set! (-> kb key_d) 0)
-  (set! (-> kb key_r) 0)
-  (set! (-> kb key_q) 0)
-  (set! (-> kb key_e) 0)
-  (set! (-> kb key_space) 0)
-  (set! (-> kb key_shift) 0)
-  (set! (-> kb key_ctrl) 0)
-  (set! (-> kb key_alt) 0)
-  (set! (-> kb key_esc) 0)
-  (set! (-> kb key_0) 0)
-  (set! (-> kb key_1) 0)
-  (set! (-> kb key_2) 0)
-  (set! (-> kb key_3) 0)
-  (set! (-> kb key_4) 0)
-  (set! (-> kb key_5) 0)
-  (set! (-> kb key_6) 0)
-  (set! (-> kb key_7) 0)
-  (set! (-> kb key_8) 0)
-  (set! (-> kb key_9) 0))
-
-(defun clear-mouse ((mouse mouse-info))
-  (set! (-> mouse mouse1) 0)
-  (set! (-> mouse mouse2) 0))
+(define *mouse-data* (new 'global 'mouse-info))
+(define *keyboard-data* (new 'global 'keyboard-info))
+(define *keyboard-edge* (new 'global 'keyboard-edge))

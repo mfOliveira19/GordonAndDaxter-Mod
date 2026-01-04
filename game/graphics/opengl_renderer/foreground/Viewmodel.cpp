@@ -415,7 +415,8 @@ void Viewmodel::draw_muzzle_flash(SharedRenderState* render_state,
   // --- Enable transparency blending ---
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glEnable(GL_DEPTH_TEST);  // draw on top of gun model
+  glDisable(GL_DEPTH_TEST);
+  glDepthMask(GL_FALSE);
 
   // --- Draw ---
   glBindVertexArray(vao);
@@ -423,6 +424,8 @@ void Viewmodel::draw_muzzle_flash(SharedRenderState* render_state,
 
   // --- Cleanup ---
   glDisable(GL_BLEND);
+  glDepthMask(GL_TRUE);
+  glEnable(GL_DEPTH_TEST);
   glBindVertexArray(0);
   glDeleteBuffers(1, &vbo);
   glDeleteBuffers(1, &ebo);

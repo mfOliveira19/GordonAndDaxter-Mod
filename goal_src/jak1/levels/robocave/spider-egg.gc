@@ -40,7 +40,7 @@
         (('touch) (send-shove-back (-> self root) proc (the-as touching-shapes-entry (-> block param 0)) 0.7 6144.0 16384.0))
         (('can-spawn?) (return #t) v0-0)
         (('notify-spawned) (go spider-egg-hatch))
-        (('attack) (go spider-egg-die))))
+        (('attack 'attack-hl) (go spider-egg-die))))
   :enter
     (behavior ((arg0 symbol))
       (set-time! (-> self state-time)))

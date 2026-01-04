@@ -361,8 +361,6 @@
             (can-lj      (and (not (time-elapsed? *target-duck-enter-time*
                                                   (seconds 2.0)))
                               (> horiz-speed 20000.0))))
-        (format 0 "Jump: horiz-speed=~f  can-lj=~a~%" horiz-speed can-lj)
-
         (if can-lj
           (target-apply-longjump)
           (set! (-> (-> self control transv) y) jump-speed))))

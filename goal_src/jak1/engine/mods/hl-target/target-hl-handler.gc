@@ -111,8 +111,10 @@
         (else
          (let ((f0-1 (vector-dot (-> self control dynam gravity-normal)
                                  (vector-! (new 'stack-no-clear 'vector) (-> self control last-air-trans) (-> self control trans)))))
+           #|                      
            (if (and (< (-> *TARGET-bank* fall-far) f0-1) (not (logtest? (-> self control status) (cshape-moving-flags on-water))))
-             (go target-hit-ground-hard f0-1)))))
+             (go target-hit-ground-hard f0-1))|#
+             )))
       #|(cond
         ((= arg0 'stuck))
         (else (target-land-effect)))|#
@@ -578,6 +580,7 @@
          (logior! (-> self attack-info-rec mask) (attack-mask attacker)))
        (go target-hl-hit 'shove (-> self attack-info-rec))))
     (('launch) (mem-copy! (&-> (-> self control) unknown-pointer00) (the-as pointer arg3) 72) #t)
+    #|
     (('loading)
      (if (not (or (and (logtest? (-> self control cur-surf flags) (surface-flags jump))
                        (not (logtest? (-> self control status) (cshape-moving-flags onsurf))))
@@ -586,16 +589,16 @@
                       (logtest? (-> self control root-prim prim-core action)
                                 (collide-action edgegrab-cam swingpole-active racer snowball tube flut))
                       (>= (-> self no-load-wait) (current-time)))))
-       (go target-load-wait)))
+       (go target-load-wait)))|#
     (('change-mode)
      (case (-> arg3 param 0)
        (('grab) (go target-hl-grab))
-       (('look-around) (go target-look-around))
+       ;;(('look-around) (go target-look-around))
        (('billy) (go target-hl-billy-game))
-       (('falling) (go target-falling #f))
+       ;;(('falling) (go target-falling #f))
        (('racing) (go target-hl-racing-start (process->handle (the-as process (-> arg3 param 1)))))
        (('flut) (go target-flut-start (process->handle (the-as process (-> arg3 param 1)))))
-       (('snowball) (go target-snowball-start (process->handle (the-as process (-> arg3 param 1)))))
+       ;;(('snowball) (go target-snowball-start (process->handle (the-as process (-> arg3 param 1)))))
        (('tube)
        #|
         (if (and (logtest? (-> self control status) (cshape-moving-flags onsurf))

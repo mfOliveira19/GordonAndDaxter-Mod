@@ -1,5 +1,4 @@
 #include "keyboard.h"
-
 #include "game/system/hid/sdl_util.h"
 
 KeyboardDevice::KeyboardDevice(std::shared_ptr<game_settings::InputSettings> settings) {
@@ -20,7 +19,7 @@ void KeyboardDevice::poll_state(std::shared_ptr<PadData> data) {
   auto& binds = m_settings->keyboard_binds;
   const auto keyboard_state = SDL_GetKeyboardState(NULL);
   auto keyboard_modifier_state = SDL_GetModState();
-
+  /*
   // Iterate binds, see if there are any new actions we need to track
   // - Normal Buttons
   for (const auto& [sdl_keycode, bind_list] : binds.buttons) {
@@ -102,6 +101,7 @@ void KeyboardDevice::poll_state(std::shared_ptr<PadData> data) {
       it++;
     }
   }
+  */
 
   // To check the keyboard status without mapping to a controller
   m_key_status.w = keyboard_state[SDL_SCANCODE_W];
@@ -117,17 +117,18 @@ void KeyboardDevice::poll_state(std::shared_ptr<PadData> data) {
   m_key_status.alt = (keyboard_state[SDL_SCANCODE_LALT] || keyboard_state[SDL_SCANCODE_RALT]);
   m_key_status.esc = keyboard_state[SDL_SCANCODE_ESCAPE];
 
-  m_key_status.k_0 = keyboard_state[SDL_SCANCODE_0];
   m_key_status.k_1 = keyboard_state[SDL_SCANCODE_1];
   m_key_status.k_2 = keyboard_state[SDL_SCANCODE_2];
   m_key_status.k_3 = keyboard_state[SDL_SCANCODE_3];
   m_key_status.k_4 = keyboard_state[SDL_SCANCODE_4];
-  m_key_status.k_5 = keyboard_state[SDL_SCANCODE_5];
-  m_key_status.k_6 = keyboard_state[SDL_SCANCODE_6];
-  m_key_status.k_7 = keyboard_state[SDL_SCANCODE_7];
-  m_key_status.k_8 = keyboard_state[SDL_SCANCODE_8];
-  m_key_status.k_9 = keyboard_state[SDL_SCANCODE_9];
-
+  m_key_status.enter = keyboard_state[SDL_SCANCODE_RETURN];
+  m_key_status.backspace = keyboard_state[SDL_SCANCODE_BACKSPACE];
+  m_key_status.arrow_left = keyboard_state[SDL_SCANCODE_LEFT];
+  m_key_status.arrow_right = keyboard_state[SDL_SCANCODE_RIGHT];
+  m_key_status.arrow_down = keyboard_state[SDL_SCANCODE_DOWN];
+  m_key_status.arrow_up = keyboard_state[SDL_SCANCODE_UP];
+  m_key_status.period = keyboard_state[SDL_SCANCODE_PERIOD];
+  m_key_status.tab = keyboard_state[SDL_SCANCODE_TAB];
 }
 
 void KeyboardDevice::clear_actions(std::shared_ptr<PadData> data) {

@@ -38,7 +38,6 @@
   (= (-> *target* state name) 'target-hl-racing-get-off-hit-ground)
   (= (-> *target* state name) 'target-hl-racing-death)
   ))
-
 (defun in-hl-state? ()
   (let ((st (-> *target* state name)))
     (and
@@ -53,33 +52,28 @@
                (= st 'target-hl-fishing)
                (= st 'target-hl-clone-anim)
                (in-zoomer?))))))
-#|
-(defun in-cutscene? ()
-    (or (= (-> *target* state name) 'target-hl-clone-anim) (= (-> *target* state name) 'target-hl-grab)))|#
 
-(defun runs-every-frame ()
-  (if *show-input-display* (input-display-on) (input-display-off))
-  ;;(set! *display-collision-marks* #t)
-
+((defun run-hl-mod-stuff ()
   ;; hide stuff while in cutscenes
   (if (movie?)
     (begin
       (hud-hl-display-off)
       (pc-set-viewmodel-enabled #f)
       (pc-set-crosshair-enabled #f)
-      (pc-get-keyboard-data *keyboard-data*)
       (clear-mouse *mouse-data*)
       (logclear! (-> *target* draw status) (draw-status hidden)))
     (begin
       (when (or (in-hl-state?) (= (-> *target* state name) 'target-hl-death))
         (send-event *camera* 'set-fov 16384.845)
         (send-event *camera* 'change-state cam-fps 0)
+        (pc-set-viewmodel-enabled #t)
         (set! (-> *target* draw status) (draw-status hidden)))
-      (hud-hl-display-on)
-      (pc-get-mouse-data *mouse-data*)
-      (pc-get-keyboard-data *keyboard-data*)
-      (pc-set-viewmodel-enabled #t)
-      (pc-set-crosshair-enabled #t)))
+      (pc-set-crosshair-enabled #f)
+      (when (not (paused?))
+        (hud-hl-display-on)
+        (pc-get-mouse-data *mouse-data*)
+        (pc-set-crosshair-enabled #t))
+      ))
   ;; hide stuff too on other states
   (when (not (in-hl-state?))
       (hud-hl-display-off)
@@ -90,7 +84,6 @@
   (when (= (-> *target* state name) 'target-hl-fishing)
     (logclear! (-> *target* draw status) (draw-status hidden)))
 
-
   (when (in-zoomer?)
     (send-event *camera* 'change-state cam-string 0)
     ;;(logclear! (-> *target* draw status) (draw-status hidden))
@@ -98,6 +91,18 @@
   ;;(send-event *camera* 'change-state cam-bike 0))
 
   ;;(send-event *camera* 'set-slave-option (cam-slave-options ALLOW_Z_ROT))
+))
+
+
+#|
+(defun in-cutscene? ()
+    (or (= (-> *target* state name) 'target-hl-clone-anim) (= (-> *target* state name) 'target-hl-grab)))|#
+
+(defun runs-every-frame ()
+  (if *show-input-display* (input-display-on) (input-display-off))
+  ;;(set! *display-collision-marks* #t)
+  (update-keyboard-input-stuff)
+  (run-hl-mod-stuff)
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
   (when *debug-segment*
     (orb-placer-maintenance))

@@ -49,8 +49,9 @@
        (set! (-> self skip-cut) #t))
       (else
        (logior! (-> self skel status) (janim-status inited))
-       (process-grab? *target*)
-       (set! (-> *camera-other-root* quad) (-> self root trans quad))
+       ;;(process-grab? *target*)
+       ;;(set! (-> *camera-other-root* quad) (-> self root trans quad))
+       #|
        (let ((s5-1 (-> self node-list data 88 bone transform))
              (gp-1 (-> self node-list data 88 bone scale)))
          (let ((s4-1 (new 'stack-no-clear 'vector)))
@@ -66,11 +67,14 @@
          (set! (-> *camera-other-matrix* vector 2 w) 0.0)
          (vector-reset! (-> *camera-other-matrix* vector 3))
          (othercam-calc (-> gp-1 x)))
-       (hide-hud-quick)
-       (set! *camera-look-through-other* 2)
+       ;;(hide-hud-quick)
+       ;;(set! *camera-look-through-other* 2)
        (when (< (-> self valid-frames) 2)
          (set-blackout-frames (seconds 0.035))
-         (+! (-> self valid-frames) 1)))))
+         (+! (-> self valid-frames) 1))|#
+         )
+         
+         ))
   (none))
 
 (defbehavior robotboss-always-trans robotboss ((arg0 (state robotboss)))
@@ -134,19 +138,19 @@
                (and *target* (>= 290816.0 (vector-vector-xz-distance (-> self root trans) (-> *target* control trans))))))
       cfg-49
       :delay (empty-form))
-  (when (not (send-event *camera* 'query-state cam-robotboss))
-    (send-event *camera* 'change-state cam-robotboss (seconds 1))
+  (when (not (send-event *camera* 'query-state cam-fps))
+    (send-event *camera* 'change-state cam-fps (seconds 1))
     (send-event *camera* 'clear-entity))
   (b! #t cfg-66 :delay (nop!))
   (label cfg-49)
   (when (and (< 196608.0 (vector-vector-xz-distance (-> self entity extra trans) (target-pos 0)))
              (< (vector-vector-xz-distance (-> self entity extra trans) (target-pos 0)) 614400.0)
              (not (and *target* (>= 299008.0 (vector-vector-xz-distance (-> self root trans) (-> *target* control trans))))))
-    (when (not (send-event *camera* 'query-state cam-string))
+    (when (not (send-event *camera* 'query-state cam-fps))
       (send-event *camera* 'point-of-interest #f)
       (send-event *camera* 'force-blend (seconds 1))
       (send-event *camera* 'clear-entity)
-      (send-event *camera* 'change-state cam-string (seconds 1))))
+      (send-event *camera* 'change-state cam-fps (seconds 1))))
   (label cfg-66)
   (cond
     ((send-event *camera* 'query-state cam-string))
@@ -272,7 +276,7 @@
 (defbehavior robotboss-handler robotboss ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
     (('flash) (set! (-> self palette-val) (* 0.0078125 (the-as float (-> arg3 param 0)))))
-    (('attack)
+    (( 'attack-hl)
      (when (>= arg1 2)
        (case (-> arg3 param 1)
          (('eco-yellow)

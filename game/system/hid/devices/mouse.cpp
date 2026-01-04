@@ -1,10 +1,10 @@
 #include "mouse.h"
+#include "game/graphics/gfx.h"
 
 MouseDevice::MouseDevice(SDL_Window* window, std::shared_ptr<game_settings::InputSettings> settings)
     : m_window(window) {
   m_settings = settings;
-  // By default mouse is enabled
-  enable_relative_mode(true);
+  enable_relative_mode(!Gfx::g_debug_settings.show_imgui); // Added this to only use relative mode when imgui menu is closed
 }
 
 // I don't trust SDL's key repeat stuff, do it myself to avoid bug reports...(or cause more)
@@ -22,11 +22,30 @@ bool MouseDevice::is_action_already_active(const u32 sdl_code, const bool player
 void MouseDevice::poll_state() {
   float curr_mouse_x;
   float curr_mouse_y;
-  const auto mouse_state = SDL_GetMouseState(&curr_mouse_x, &curr_mouse_y);
 
-  const auto mouse_state_rel = SDL_GetRelativeMouseState(&m_xrel_pos, &m_yrel_pos);
+  enable_relative_mode(!Gfx::g_debug_settings.show_imgui);
+  if (Gfx::g_debug_settings.show_imgui) {
+    float dx, dy;
+    SDL_GetRelativeMouseState(&dx, &dy);
+
+    SDL_Event e;
+    while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, SDL_EVENT_MOUSE_WHEEL, SDL_EVENT_MOUSE_WHEEL) > 0) {
+    }
+
+    curr_mouse_x = 0;
+    curr_mouse_y = 0;
+    m_xrel_pos = 0;
+    m_yrel_pos = 0;
+    scroll_y = 0.0f;
+    m_button_status.left = false;
+    m_button_status.right = false;
+    return;
+  }
+  const auto mouse_state = SDL_GetMouseState(&curr_mouse_x, &curr_mouse_y);
+  SDL_GetRelativeMouseState(&m_xrel_pos, &m_yrel_pos);
   m_button_status.left = mouse_state & SDL_BUTTON_MASK(SDL_BUTTON_LEFT);
-  m_button_status.right  = mouse_state & SDL_BUTTON_MASK(SDL_BUTTON_RIGHT);
+  m_button_status.right = mouse_state & SDL_BUTTON_MASK(SDL_BUTTON_RIGHT);
+
   SDL_Event e;
   scroll_y = 0.0;
   while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, SDL_EVENT_MOUSE_WHEEL, SDL_EVENT_MOUSE_WHEEL) > 0) {
@@ -70,22 +89,24 @@ void MouseDevice::process_event(const SDL_Event& event,
     // https://wiki.libsdl.org/SDL3/SDL_MouseButtonEvent
     const auto button_event = event.button;
     // Update the internal mouse tracking, this is for GOAL reasons.
-    switch (button_event.button) {
-      case SDL_BUTTON_LEFT:
-        m_button_status.left = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
-        break;
-      case SDL_BUTTON_RIGHT:
-        m_button_status.right = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
-        break;
-      case SDL_BUTTON_MIDDLE:
-        m_button_status.middle = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
-        break;
-      case SDL_BUTTON_X1:
-        m_button_status.mouse4 = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
-        break;
-      case SDL_BUTTON_X2:
-        m_button_status.mouse5 = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
-        break;
+    if (!Gfx::g_debug_settings.show_imgui) {
+      switch (button_event.button) {
+        case SDL_BUTTON_LEFT:
+          m_button_status.left = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+          break;
+        case SDL_BUTTON_RIGHT:
+          m_button_status.right = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+          break;
+        case SDL_BUTTON_MIDDLE:
+          m_button_status.middle = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+          break;
+        case SDL_BUTTON_X1:
+          m_button_status.mouse4 = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+          break;
+        case SDL_BUTTON_X2:
+          m_button_status.mouse5 = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+          break;
+      }
     }
 
     auto& binds = m_settings->mouse_binds;
