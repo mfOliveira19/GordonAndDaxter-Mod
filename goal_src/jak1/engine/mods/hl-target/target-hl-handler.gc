@@ -647,7 +647,7 @@
                     (vector-float*! (-> self control transv) (-> self control dynam gravity-normal) f30-0)
                     (vector-float*! gp-0 gp-0 (/ f1-0 f0-3)))))
       (if (!= (-> self next-state name) 'target-hl-death) (logclear! (-> self state-flags) (state-flags being-attacked dying)))
-      (target-exit))
+      (target-hl-exit))
   :trans
     (behavior ()
       (when (= *cheat-mode* 'debug)
@@ -727,7 +727,7 @@
       )
   :post 
   (behavior ()
-    ;;(target-post)
+    (target-post)
     (set! (-> self draw status) (draw-status hidden))
     (set! (-> *sidekick* draw status) (draw-status hidden))
   ))

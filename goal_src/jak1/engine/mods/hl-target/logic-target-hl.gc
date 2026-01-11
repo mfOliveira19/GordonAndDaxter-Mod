@@ -6,6 +6,7 @@
 (defconstant jump-speed 35000.0)
 (defconstant gravity-factor 0.55) ;; was 0.65
 (defconstant hl-max-speed   50650.0)
+(defconstant hl-max-speed-blue-eco 90000.0)
 (defconstant hl-accel       12.0) ;; was 8.0
 (defconstant hl-air-accel   190.0) ;; was 200 230
 (defconstant hl-friction    4.0) ;; was 6.0
@@ -355,7 +356,6 @@
                  ((3) (sound-play "pl_metal4")))))))))))
 
 (defbehavior hl-update-step-sound target ()
-  "HL-style footstep sounds using time tracking from weapon system."
   (let ((hvel (new-stack-vector0)))
     (vector-copy! hvel (-> self control ltransv))
     (set! (-> hvel y) 0.0)
@@ -430,13 +430,13 @@
       ;; ----------------------
       ;; APPLY ACCELERATION
       ;; ----------------------
-      (let ((wishspeed (vector-xz-length wishvel)))
+      (let ((wishspeed (vector-xz-length wishvel)) (maxspeed (if (target-has-eco-type? (pickup-type eco-blue)) hl-max-speed-blue-eco hl-max-speed)))
         (when (> wishspeed 0.0)
           ;; normalize wish direction
           (vector-normalize! wishvel 1.0)
           ;; cap to max speed
-          (when (> wishspeed hl-max-speed)
-            (set! wishspeed hl-max-speed))
+          (when (> wishspeed maxspeed)
+            (set! wishspeed maxspeed))
           ;; how much velocity is already in wish direction
           (let ((curr-speed (vector-dot curvel wishvel)))
             (let ((addspeed (- wishspeed curr-speed)))
@@ -445,12 +445,12 @@
                   (when (> accelspeed addspeed)
                     (set! accelspeed addspeed))
                   (vector+! curvel curvel
-                            (vector-float*! (new-stack-vector0) wishvel accelspeed))))))))
+                            (vector-float*! (new-stack-vector0) wishvel accelspeed)))))))
 
       ;; clamp final horizontal velocity
       (let ((speed (vector-xz-length curvel)))
-        (when (> speed hl-max-speed)
-          (vector-xz-normalize! curvel hl-max-speed)))
+        (when (> speed maxspeed)
+          (vector-xz-normalize! curvel maxspeed))))
 
       ;; restore vertical
       (set! (-> curvel y) saved-y))))
@@ -637,8 +637,7 @@
       (fill-cache-integrate-and-collide! (-> self control)
                                          (-> self control transv)
                                          (-> self control root-prim collide-with))
-      #|
-      (if (logtest? (-> self control root-prim prim-core action) (collide-action edgegrab-possible))
+      #|(if (logtest? (-> self control root-prim prim-core action) (collide-action edgegrab-possible))
         (find-edge-grabs! *target* *collide-cache*))|#
       ;; debug
       (if *debug-segment*
