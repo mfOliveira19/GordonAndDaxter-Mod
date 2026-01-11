@@ -619,7 +619,7 @@
     (init-vf0-vector)
 
     (let* ((spawn-forward-offset (the-as float (meters -0.0)))
-           (grenade-speed (the-as float (meters 25.0)))
+           (grenade-speed (the-as float (meters 28.0)))
            (rotate (the-as float 0.0))
            (blast-radius (the-as float (meters 6.0)))
 

@@ -286,7 +286,7 @@ class Viewmodel {
    float offset_z = 0.0f;
    float scale = 1.0f;
 
-   float cam_x = -0.8f;
+   float cam_x = 0.0f;
    float cam_y = 1.00f;
    float cam_z = 1.685f;
 

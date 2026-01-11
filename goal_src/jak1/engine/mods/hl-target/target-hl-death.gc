@@ -70,7 +70,7 @@
          (ja-post)
          (suspend-for (seconds 1)))
         (('drown 'drown-death)
-         (sound-play "death-drown")
+         (sound-play "hev-flatline")
          (logclear! (-> self water flags) (water-flags wt04))
          (clear-collide-with-as (-> self control))
          (set! (-> self control cur-surf) *dive-mods*)
@@ -99,6 +99,7 @@
              (set! (-> self alt-cam-pos y) (+ 4096.0 (-> self water height)))))
          (cond
            ((= arg0 'dark-eco-pool)
+            (sound-play "hev_flatline")
             (sound-play "death-darkeco")
             (process-spawn part-tracker
                            :init
@@ -228,7 +229,8 @@
          (target-death-anim (the-as spool-anim #f)))
         (else
          (case arg0
-           (('tar) (sound-play "death-drown")))
+           (('tar) (sound-play "hev_flatline");;(sound-play "death-drown")
+           ))
           (sound-play "hev_flatline")
          (+! (-> *game-info* death-movie-tick) 1)
          (if (= (death-movie-remap (+ (-> *game-info* death-movie-tick) -1) (-> *death-spool-array* length))

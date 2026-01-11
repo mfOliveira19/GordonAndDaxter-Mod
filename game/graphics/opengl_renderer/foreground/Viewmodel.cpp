@@ -16,9 +16,9 @@ static float s_chrome_intensity = 0.9f;
 static float s_chrome_diffuse_strength = 0.4f;
 static math::Vector2f s_chrome_uv_scale(0.9f, 0.38f);
 static math::Vector2f s_chrome_uv_offset(-0.72f, -0.76f);
-static float muzzle_flash_pistol_offset_x = 0.380f;
+static float muzzle_flash_pistol_offset_x = -0.405f;
 static float muzzle_flash_pistol_offset_y = 0.430f;
-static float muzzle_flash_smg_offset_x = 0.53f;
+static float muzzle_flash_smg_offset_x = -0.205f;
 static float muzzle_flash_smg_offset_y = 0.55f;
 
 static const std::array<std::string, (size_t)ViewmodelModels::MAX_MODEL> kViewmodelPaths = {
@@ -100,7 +100,7 @@ void Viewmodel::render(DmaFollower& dma,
   math::Matrix4f view = math::translate(-cam_x, -cam_y, -cam_z);
 
   float aspect = static_cast<float>(render_state->render_fb_w) / render_state->render_fb_h;
-  math::Matrix4f projection = math::perspective(70.0f, aspect, 0.1f, 50.0f);
+  math::Matrix4f projection = math::perspective(72.0f, aspect, 0.1f, 50.0f);
   math::Vector3f muzzle_local;
   math::Matrix4f muzzle_model = math::rotateZ(rot_z) * math::rotateY(rot_y) *
                          math::rotateX(rot_x + viewmodelRotationX()) *

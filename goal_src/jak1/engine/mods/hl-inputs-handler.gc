@@ -1,5 +1,8 @@
 (in-package goal)
 
+(define *hl-target-jump-buffer* 0)
+(defconstant hl-target-jump-buffer-time (seconds 0.2))
+
 (defun in-hl-state? ()
   (and (= (-> *target* game mode) 'play) (or (-> *target* state name) 'target-hl-movement-ground 'target-hl-movement-ground-duck 'target-hl-movement-air 'target-hl-movement-air-duck) (!= (-> *target* state name) 'target-hl-periscope) (!= (-> *target* state name) 'target-hl-death) (!= (-> *target* state name) 'target-hl-fishing)))
 
@@ -31,6 +34,10 @@
 
 (defmacro key-status? (key)
   `(!= (-> *keyboard-edge* ,key) 0))
+
+(defun should-update-jump-buffer? ()
+ (when (or (< (-> *mouse-data* mouse-scrolly) 0.0) (key-status? space-pressed))
+  (set-time! *hl-target-jump-buffer*)))
 
 ((defun update-keyboard-input-stuff ()
   (clear-keyboard-edge-pressed!)
@@ -70,8 +77,13 @@
 ))
 
 (defun should-jump? ()
-  (or (< (-> *mouse-data* mouse-scrolly) 0.0) (if (-> *pc-settings* auto-jump?) (!= (-> *keyboard-data* key_space) 0) (key-status? space-pressed)))
-)
+  ;;(or (< (-> *mouse-data* mouse-scrolly) 0.0) (if (-> *pc-settings* auto-jump?) (!= (-> *keyboard-data* key_space) 0) (key-status? space-pressed)))
+  (if (-> *pc-settings* auto-jump?)
+    (begin 
+      (when (or (not (time-elapsed? *hl-target-jump-buffer* hl-target-jump-buffer-time)) (!= (-> *keyboard-data* key_space) 0)) #t)
+    )
+    (begin
+      (when (not (time-elapsed? *hl-target-jump-buffer* hl-target-jump-buffer-time)) #t))))
 
 (defun should-move-forward? ()
   ;;(< (-> *cpad-list* cpads 0 lefty) 127)
@@ -163,7 +175,14 @@
 
 (defun clear-mouse ((mouse mouse-info))
   (set! (-> mouse mouse1) 0)
-  (set! (-> mouse mouse2) 0))
+  (set! (-> mouse mouse2) 0)
+  (set! (-> mouse mouse-relx) 0.0)
+  (set! (-> mouse mouse-rely) 0.0)
+  (set! (-> mouse mouse-scrolly) 0.0))
+
+
+(defbehavior target-hl-is-in-duck? target ()
+  (or (= (-> self state name) 'target-hl-movement-ground-duck) (= (-> self state name) 'target-hl-movement-air-duck)))
 
 (defbehavior read-input target ((arg0 vector))
   (when (!= (-> self control pad-read-time) (-> *display* real-frame-counter))
@@ -186,8 +205,8 @@
         (begin
           (vector-normalize! arg0 1.0)
           (set! (-> self control stick-vec quad) (-> arg0 quad))
-          (let ((base-speed (if (should-walk?) 0.5 1.5)) ;; was 1.5
-                (duck-mult (if (should-duck?) 0.333 1.0)))
+          (let ((base-speed (if (should-walk?) 0.48 1.5))
+                (duck-mult (if (target-hl-is-in-duck?) 0.3 1.0)))
             (set! (-> self control pad-stick-speed) (* base-speed duck-mult)))
           (vector-matrix*! arg0 arg0 (matrix-local->world #t #f))
 ))))

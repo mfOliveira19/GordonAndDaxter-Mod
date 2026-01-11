@@ -473,7 +473,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack)
+        (('attack 'attack-hl)
          (let* ((s3-0 (-> block param 2))
                 (s4-0 (get-task-control (game-task training-gimmie)))
                 (v1-2 (get-reminder s4-0 0)))

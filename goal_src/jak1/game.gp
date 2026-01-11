@@ -1656,9 +1656,9 @@
 ;; Set up the build system to build the level geometry
 ;; this path is relative to the custom_assets/jak1/levels/ folder
 ;; it should point to the .jsonc file that specifies the level.
-(build-custom-level "test-zone")
+;;(build-custom-level "test-zone")
 ;; the DGO file
-(custom-level-cgo "TSZ.DGO" "test-zone/testzone.gd")
+;;(custom-level-cgo "TSZ.DGO" "test-zone/testzone.gd")
 
 ;; generate the art group for a custom actor.
 ;; requires a .glb model file in custom_assets/jak1/models/custom_levels
@@ -1666,7 +1666,10 @@
 (build-actor "test-actor" :gen-mesh #t)
 (build-actor "smg-grenade")
 
-;;;;;;;;;;;;;;;;;;;;;
+(build-custom-level "crossfire")
+;; the DGO file
+(custom-level-cgo "CFT.DGO" "crossfire/crossfire.gd")
+;;;;8u;;;;;;;;;;;;;;;;;
 ;; Game Engine Code
 ;;;;;;;;;;;;;;;;;;;;;
 
@@ -2119,7 +2122,7 @@
  "mods/mod-debug.gc"
 )
 
-(goal-src "levels/test-zone/test-zone-obs.gc" "process-drawable")
+;;(goal-src "levels/test-zone/test-zone-obs.gc" "process-drawable")
 (goal-src "engine/mods/hl-target/logic-target-hl.gc")
 (goal-src "engine/mods/hl-target/target-hl-death.gc")
 (goal-src "engine/mods/hl-target/target-hl-handler.gc")

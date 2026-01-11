@@ -3,14 +3,15 @@
 ;; Lots of global stuff, it could be improved by putting it in the target structure but i did not want to mess too much with it
 
 ;; movement constants
-(defconstant jump-speed 50000.0)
-(defconstant gravity-factor 0.65)
-(defconstant hl-max-speed   60650.0) ;; was 50650.0
-(defconstant hl-accel       15.0) ;; was 8.0
-(defconstant hl-air-accel   200.0) ;; was 200 230
-(defconstant hl-friction    4.5) ;; was 6.0
+(defconstant jump-speed 35000.0)
+(defconstant gravity-factor 0.55) ;; was 0.65
+(defconstant hl-max-speed   50650.0)
+(defconstant hl-accel       12.0) ;; was 8.0
+(defconstant hl-air-accel   190.0) ;; was 200 230
+(defconstant hl-friction    4.0) ;; was 6.0
 (defconstant hl-stopspeed   20080.0)
 (defconstant fall-damage-threshold 30000.0)
+(defconstant hl-air-wishspeed 5500.0)
 (define *foot-left* #f)
 (define *last-step-frame* 0)
 (define *last-step-time* 0)
@@ -21,7 +22,7 @@
 ;; global camera duck offset
 (define *duck-camera-offset* 0.0)
 (define *was-ducking* #f)
-
+(define *can-apply-air-duck-offset* #t)
 (define *viewmodel-bob-phase* 0.0)
 (define *viewmodel-bob-current-z* 0.0)
 (define *viewmodel-rot-x* 0.0)
@@ -41,6 +42,7 @@
 (defconstant view-bob-return-rate 0.1)
 
 (define *target-duck-enter-time* 0)
+(define *target-enable-long-jump* #f)
 
 (defbehavior target-hl-compute-slopes target ((arg0 vector))
   (let ((gp-0 (new-stack-vector0)))
@@ -68,7 +70,7 @@
                  ;; Bigger ease when airborne or moving upward
                  (cond
                    ((not on-ground) 10.45)         ;; jumping / edge = lots of forgiveness
-                   ((> vz 0.0)      0.25)         ;; moving upward
+                   ((< vz -100.0) 0.25)         ;; moving upward
                    (else               0.0))))
 
           ;; reduce steepness = slope * (1 - ease)
@@ -101,9 +103,7 @@
         (set! (-> self control surface-slope-z) 0.0)
         (set! (-> self control tween-output)
               (- (vector-dot (-> self control local-normal) gp-0))))))
-
   0)
-
 
 (defbehavior do-rotations2-hl target ()
   (let ((gp-0 (vector-z-quaternion! (new-stack-vector0) (-> self control dir-targ)))
@@ -152,10 +152,15 @@
                      (-> self control quat-targ)
                      (-> self control quat-base)
                      (-> self control quat-mod))
-  (target-hl-compute-slopes (-> self control dynam gravity-normal)))
+  ;;(target-hl-compute-slopes (-> self control dynam gravity-normal))
+  0
+  )
 
 (defun on-ground? ()
-  (logtest? (-> *target* control status) (cshape-moving-flags onground)))
+  ;;(logtest? (-> *target* control status) (cshape-moving-flags onground))
+  (not (and (not (logtest? (-> *target* control status) (cshape-moving-flags onsurf))) 
+    (time-elapsed? (-> *target* control last-ground-time) (seconds 0.06))))
+)
 
 (defbehavior update-viewmodel-bob target ()
   (let ((hvel (new 'stack-no-clear 'vector)))
@@ -241,9 +246,9 @@
 
 (defun update-duck-camera-offset ()
   (let* ((duck-depth -4500.0)
-         (target (if (should-duck?) duck-depth 0.0))
+         (target (if (target-hl-is-in-duck?) duck-depth 0.0))
          ;; different speeds for down vs up
-         (speed (if (and (should-duck?) (not (on-ground?))) 0.05 0.5))) ; slower down, faster up
+         (speed (if (and (target-hl-is-in-duck?) (not (on-ground?))) 0.05 0.5))) ; slower down, faster up
     (set! *duck-camera-offset*
           (+ *duck-camera-offset* (* speed (- target *duck-camera-offset*))))))
 
@@ -378,19 +383,23 @@
     ;; SCALE GRAVITY
     (vector-float*! s5-0 s5-0 gravity-factor)
     (vector-matrix*! gp-0 s5-0 (-> self control unknown-matrix00))
-    (vector-v++! (-> self control ltransv) gp-0))
-  (let* ((s5-1 (vector-matrix*! (new-stack-vector0) (-> self control dynam gravity-normal) (-> self control unknown-matrix00)))
-         (gp-1 (new-stack-vector0))
-         (f30-0 (vector-dot s5-1 (-> self control ltransv))))
-    0.0
-    (vector-! gp-1 (-> self control ltransv) (vector-float*! gp-1 s5-1 f30-0))
-    (let* ((f0-4 (vector-length gp-1))
-           (f1-0 f0-4))
-      (if (< f0-4 0.00004096) (set! f0-4 0.0))
-      (if (< f30-0 (- (-> self control dynam gravity-max))) (set! f30-0 (- (-> self control dynam gravity-max))))
-      (vector+! (-> self control ltransv)
-                (vector-float*! (-> self control ltransv) s5-1 f30-0)
-                (vector-float*! gp-1 gp-1 (/ f0-4 f1-0))))))
+    (vector-v++! (-> self control ltransv) gp-0)
+    )
+    (when (not (on-ground?))
+      (let* ((s5-1 (vector-matrix*! (new-stack-vector0) (-> self control dynam gravity-normal) (-> self control unknown-matrix00)))
+            (gp-1 (new-stack-vector0))
+            (f30-0 (vector-dot s5-1 (-> self control ltransv))))
+        0.0
+        (vector-! gp-1 (-> self control ltransv) (vector-float*! gp-1 s5-1 f30-0))
+        (let* ((f0-4 (vector-length gp-1))
+              (f1-0 f0-4))
+          (if (< f0-4 0.00004096) (set! f0-4 0.0))
+          (if (< f30-0 (- (-> self control dynam gravity-max))) (set! f30-0 (- (-> self control dynam gravity-max))))
+          (vector+! (-> self control ltransv)
+                    (vector-float*! (-> self control ltransv) s5-1 f30-0)
+                    (vector-float*! gp-1 gp-1 (/ f0-4 f1-0))))))
+                
+                )
 
 (defbehavior hl-add-thrust target ()
   (let* ((wishvel   (-> self control trans-targ))
@@ -405,16 +414,18 @@
       ;; ----------------------
       ;; APPLY FRICTION FIRST
       ;; ----------------------
-      (let ((speed (vector-xz-length curvel)))
-        (when (> speed 0.0)
-          (let* ((control (if (< speed hl-stopspeed) hl-stopspeed speed))
-                 (drop (* control hl-friction frametime))
-                 (new-speed (max 0.0 (- speed drop))))
-            (if (> new-speed 0.0)
-                (vector-xz-normalize! curvel new-speed)
-                (begin
-                  (set! (-> curvel x) 0.0)
-                  (set! (-> curvel z) 0.0))))))
+      
+      (when (not (should-jump?))
+        (let ((speed (vector-xz-length curvel)))
+          (when (> speed 0.0)
+            (let* ((control (if (< speed hl-stopspeed) hl-stopspeed speed))
+                  (drop (* control hl-friction frametime))
+                  (new-speed (max 0.0 (- speed drop))))
+              (if (> new-speed 0.0)
+                  (vector-xz-normalize! curvel new-speed)
+                  (begin
+                    (set! (-> curvel x) 0.0)
+                    (set! (-> curvel z) 0.0)))))))
 
       ;; ----------------------
       ;; APPLY ACCELERATION
@@ -460,18 +471,17 @@
           (vector-normalize! wishvel 1.0)
 
           ;; clamp wishspeed like HL
-          (when (> wishspeed 3040.0)
-            (set! wishspeed 3040.0))
+          (when (> wishspeed hl-air-wishspeed)
+            (set! wishspeed hl-air-wishspeed))
 
           ;; project current velocity onto wishdir
           (let* ((currspeed (vector-dot curvel wishvel))
                  (addspeed (- wishspeed currspeed)))
             (when (> addspeed 0.0)
-              ;; HL: accelspeed = accel * wishspeed * frametime * friction
+              ;; HL: accelspeed = accel * wishspeed * frametime
               (let ((accelspeed (* hl-air-accel
                                    wishspeed
-                                   frametime
-                                   1.2)))
+                                   frametime)))
                 ;; don’t exceed what’s needed
                 (when (> accelspeed addspeed)
                   (set! accelspeed addspeed))
@@ -627,14 +637,15 @@
       (fill-cache-integrate-and-collide! (-> self control)
                                          (-> self control transv)
                                          (-> self control root-prim collide-with))
+      #|
       (if (logtest? (-> self control root-prim prim-core action) (collide-action edgegrab-possible))
-        (find-edge-grabs! *target* *collide-cache*))
+        (find-edge-grabs! *target* *collide-cache*))|#
       ;; debug
       (if *debug-segment*
         (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
                    'draw
                    (new 'static 'rgba :r #x80 :g #x60 :b #x40 :a #x80)))
-      (bend-gravity)
+      ;;(bend-gravity)
       (hl-post-flag-setup))
     (set-time-ratios *display* (the float gp-0)))
 
@@ -653,22 +664,164 @@
   (do-target-shadow)
   (target-calc-camera-pos-hl)
   (target-powerup-process)
-
-  ;; only ground updates ducking state
+  #|
   (when (on-ground?)
-    (set! *was-ducking* (should-duck?)))
+    (set! *was-ducking* (should-duck?)))|#
 
   (none))
 
 (defbehavior apply-ground-duck-hop target ()
   (when (and (should-duck?) (on-ground?) (not *was-ducking*))
-    (+! (-> self control trans y) 500.0)))
+    (+! (-> self control trans y) 70.0)))
 
 (defbehavior apply-air-duck-offset target ()
   ;; only add when in air and ducking
-  (when (and (should-duck?) (not (on-ground?)))
+  (when (and (target-hl-is-in-duck?) (not (on-ground?)) (can-exit-duck?) *can-apply-air-duck-offset*)
     ;; push origin upward a bit to simulate HL duck jump
-    (+! (-> self control trans y) 70.0)))
+    (set! *can-apply-air-duck-offset* #f)
+    (+! (-> self control trans y) 4000.0)))
 
 (defun target-has-eco-type? ((type pickup-type))
   (and (= (-> *target* fact eco-type) type) (> (-> *target* fact eco-level) 0.0)))
+
+(defbehavior target-hl-apply-jump target ()
+  (set! (-> (-> self control transv) y) jump-speed)
+  ;;(if (should-duck?) (go target-hl-movement-air-duck) (go target-hl-movement-air))
+)
+
+(defbehavior target-hl-apply-longjump target ()
+  (let* ((curvel   (-> self control transv))
+         (cam-fwd  (-> *math-camera* inv-camera-rot vector 2))
+         (speed    100000.0)
+         (jump-up  60070.0))  ;; upward boost for long jump
+
+    ;; horizontal look direction
+    (set! (-> cam-fwd y) 0.0)
+    (vector-normalize! cam-fwd 1.0)
+
+    ;; apply horizontal speed along look
+    (vector-float*! cam-fwd cam-fwd speed)
+    (set! (-> curvel x) (-> cam-fwd x))
+    (set! (-> curvel z) (-> cam-fwd z))
+    ;; add upward velocity
+    (set! (-> curvel y) jump-up)))
+
+(defbehavior target-should-use-launcher? target ()
+  (when (= (-> self control unknown-symbol40) 'launch)
+    (level-hint-spawn (text-id sidekick-launcher1) "sksp009d" (the-as entity #f) *entity-pool* (game-task none))
+    (level-hint-spawn (text-id sidekick-launcher2) "sksp009e" (the-as entity #f) *entity-pool* (game-task none))
+    (case (-> (level-get-target-inside *level*) name)
+      (('citadel)
+        (level-hint-spawn (text-id citadel-launcher2) "sksp0393" (the-as entity #f) *entity-pool* (game-task none))
+        (level-hint-spawn (text-id citadel-launcher) "sksp0388" (the-as entity #f) *entity-pool* (game-task none))))
+    enter-state
+    (let ((a0-9 (-> self control unknown-dword60))
+          (a1-5 (-> self control unknown-dword61))
+          (a2-5 (-> self control last-transv2)))
+      (set! (-> a2-5 quad) (-> (the-as vector (-> self control unknown-dword62)) quad))
+      (go target-hl-launch (the-as float a0-9) (the-as symbol a1-5) a2-5 (-> self control unknown-dword63)))#t) #f)
+
+(defbehavior target-hl-collide-set! target ((arg0 symbol) (arg1 float))
+  (let ((gp-0 (-> self control)))
+    (set! (-> self control unknown-symbol00) arg0)
+    (set! (-> self control unknown-float90) arg1)
+    (dotimes (v1-2 3)
+      (set! (-> gp-0 body-spheres v1-2 prim-core offense) (collide-offense touch))
+      (set! (-> gp-0 body-spheres v1-2 transform-index) -2))
+    (case arg0
+      (('duck)
+       (set! (-> self control unknown-float91) arg1)
+       (let ((f30-0 (- 1.0 arg1)))
+         (set! (-> gp-0 racer-cushion-targ y) 0.0)
+         (sphere<-vector+r! (the-as sphere (-> gp-0 root-prim local-sphere))
+                            (-> *TARGET-bank* root-offset)
+                            (-> *TARGET-bank* root-radius))
+         (set-vector! (-> gp-0 body-spheres 0 local-sphere)
+                      0.0
+                      (-> *TARGET-bank* body-radius)
+                      (* 0.0 f30-0)
+                      (-> *TARGET-bank* body-radius))
+         (set-vector! (-> gp-0 body-spheres 1 local-sphere)
+                      0.0
+                      (+ (-> *TARGET-bank* body-radius) (* 2867.2 f30-0))
+                      0.0
+                      (-> *TARGET-bank* body-radius))
+         (set-vector! (-> gp-0 body-spheres 2 local-sphere)
+                      0.0
+                      (+ (-> *TARGET-bank* body-radius) (* 5734.4 f30-0))
+                      0.0
+                      (-> *TARGET-bank* body-radius))))
+      (('duck-hl-air)
+       (set! (-> self control unknown-float91) arg1)
+       (let ((f30-0 (- 1.0 arg1)))
+         (sphere<-vector+r! (the-as sphere (-> gp-0 root-prim local-sphere))
+                            (-> *TARGET-bank* root-offset)
+                            (-> *TARGET-bank* root-radius))
+         (set-vector! (-> gp-0 body-spheres 0 local-sphere)
+                      0.0
+                      (+ 2867.2 (-> *TARGET-bank* body-radius))
+                      (* 0.0 f30-0)
+                      (-> *TARGET-bank* body-radius))
+         (set-vector! (-> gp-0 body-spheres 1 local-sphere)
+                      0.0
+                      (+ 2867.2 (-> *TARGET-bank* body-radius))
+                      0.0
+                      (-> *TARGET-bank* body-radius))
+         (set-vector! (-> gp-0 body-spheres 2 local-sphere)
+                      0.0
+                      (+ 2867.2 (-> *TARGET-bank* body-radius))
+                      0.0
+                      (-> *TARGET-bank* body-radius))))
+      (else
+       (set! (-> self control unknown-float91) 0.0)
+       (set! (-> gp-0 racer-cushion-targ y) 0.0)
+       (sphere<-vector+r! (the-as sphere (-> gp-0 root-prim local-sphere))
+                          (-> *TARGET-bank* root-offset)
+                          (-> *TARGET-bank* root-radius))
+       (set-vector! (-> gp-0 body-spheres 0 local-sphere)
+                    0.0
+                    (-> *TARGET-bank* body-radius)
+                    0.0
+                    (-> *TARGET-bank* body-radius))
+       (set-vector! (-> gp-0 body-spheres 1 local-sphere)
+                    0.0
+                    (+ 2867.2 (-> *TARGET-bank* body-radius))
+                    0.0
+                    (-> *TARGET-bank* body-radius))
+       (set-vector! (-> gp-0 body-spheres 2 local-sphere)
+                    0.0
+                    (+ 5734.4 (-> *TARGET-bank* body-radius))
+                    0.0
+                    (-> *TARGET-bank* body-radius)))
+                    
+                    ))
+  0)
+
+(defbehavior target-hl-exit target ()
+  (set! (-> self control cur-surf) *walk-mods*)
+  (set! (-> self control collide-offset quad) (the-as uint128 0))
+  (set! (-> self control unknown-vector14 quad) (the-as uint128 0))
+  (set! (-> self control unknown-vector15 quad) (the-as uint128 0))
+  (set! (-> self control racer-cushion-targ quad) (the-as uint128 0))
+  (set! (-> self control force-push-speed-mod) 0.0)
+  (set! (-> self control bend-target) 0.0)
+  (logclear! (-> self state-flags)
+             (state-flags sf02
+                          being-attacked
+                          do-not-notice
+                          grabbed
+                          first-person-mode
+                          looking-at-enemy
+                          falling-into-pool-of-bad
+                          flop-hit-ground))
+  (target-danger-set! 'harmless #f)
+  (logior! (-> self water flags) (water-flags wt04))
+  (logclear! (-> self water flags) (water-flags wt16))
+  (set! (-> self water drip-mult) 1.0)
+  (set! (-> self neck flex-blend) 1.0)
+  (set! (-> self control unknown-float91) 0.0)
+  ;;(logclear! (-> self draw status) (draw-status hidden))
+  (logclear! (-> self skel status) (janim-status spool))
+  (logclear! (-> self control status) (cshape-moving-flags csmf14))
+  0
+  (none))

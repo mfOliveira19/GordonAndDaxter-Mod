@@ -66,7 +66,7 @@
       (when (or (in-hl-state?) (= (-> *target* state name) 'target-hl-death))
         (send-event *camera* 'set-fov 16384.845)
         (send-event *camera* 'change-state cam-fps 0)
-        (pc-set-viewmodel-enabled #t)
+        (when (not (= (-> *target* state name) 'target-hl-death)) (pc-set-viewmodel-enabled #t))
         (set! (-> *target* draw status) (draw-status hidden)))
       (pc-set-crosshair-enabled #f)
       (when (not (paused?))
@@ -102,6 +102,7 @@
   (if *show-input-display* (input-display-on) (input-display-off))
   ;;(set! *display-collision-marks* #t)
   (update-keyboard-input-stuff)
+  (should-update-jump-buffer?)
   (run-hl-mod-stuff)
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
   (when *debug-segment*

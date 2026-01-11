@@ -89,10 +89,13 @@
               (set-vector! dir 0.0 0.0 0.0 0.0))
 
           ;; vertical component
-        (set! (-> dir y)
-              (+ (-> dir y) (* vertical-strength 0.5)))  ;; lift amount
+          (set! (-> dir y)
+                (+ (-> dir y) (* vertical-strength 0.5)))  ;; lift amount
 
           (vector-normalize! dir 1.0)
+
+          (when (> (-> dir y) 0)
+            (if (should-duck?) (go target-hl-movement-air-duck) (go target-hl-movement-air)))
 
           (let* ((base-force 100000.0)
                 (force (* base-force t)))
@@ -724,7 +727,7 @@
       )
   :post 
   (behavior ()
-    (target-post)
+    ;;(target-post)
     (set! (-> self draw status) (draw-status hidden))
     (set! (-> *sidekick* draw status) (draw-status hidden))
   ))

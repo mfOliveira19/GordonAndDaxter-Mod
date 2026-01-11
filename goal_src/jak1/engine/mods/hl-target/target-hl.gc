@@ -1,7 +1,118 @@
 (in-package goal)
 
-;; Lots of global variables (i know, its not the best approach, but i did not want to mess with the target struct)
+(defstate target-hl-movement-air-duck (target)
+  :event target-hl-standard-event-handler
+  :enter
+    (behavior ()
+      (when (not *was-ducking*) (apply-air-duck-offset))
+      ;;(set! *was-ducking* #t)
+      (target-hl-collide-set! 'duck (the-as float 1.0)))
+  :exit
+  (behavior ()
+    (target-hl-collide-set! 'normal (the-as float 0.0)))
+  :trans 
+  (behavior ()
+    (when (and (not (should-duck?)) (can-exit-duck?))
+      (go target-hl-movement-air))
+    (when (on-ground?)
+      (if (and (not (should-duck?)) (can-exit-duck?)) (go target-hl-movement-ground) (go target-hl-movement-ground-duck))))
+  :code
+    (behavior ()
+      (loop (suspend)))
 
+  :post 
+  (behavior ()
+    ;;(update-fall-status)
+    (target-hl-movement-post)))
+
+(defstate target-hl-movement-air (target)
+  :event target-hl-jump-event-handler
+  :enter
+  (behavior ()
+    (set! *was-ducking* #f))
+  :trans 
+  (behavior ()
+    (when (should-duck?)
+      (go target-hl-movement-air-duck))
+    (when (on-ground?)
+      (go target-hl-movement-ground)))
+  :code
+    (behavior ()
+      (loop (suspend)))
+
+  :post 
+  (behavior ()
+    ;;(update-fall-status)
+    (target-hl-movement-post)))
+
+(defstate target-hl-movement-ground (target)
+  :event target-hl-walk-event-handler
+  :enter
+  (behavior ()
+    (set! *can-apply-air-duck-offset* #t)
+    (set! *was-ducking* #f))
+  :trans
+  (behavior ()
+    (when (should-jump?)
+      (when (not (target-should-use-launcher?))
+            (target-hl-apply-jump)))
+      (when (not (on-ground?))
+        (go target-hl-movement-air))
+      (when (should-duck?)
+        (go target-hl-movement-ground-duck)))
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post 
+  (behavior ()
+    ;;(update-fall-status)
+    (target-hl-movement-post)))
+
+(defstate target-hl-movement-ground-duck (target)
+  :event target-hl-standard-event-handler
+  :enter
+  (behavior ()
+    (set! *can-apply-air-duck-offset* #t)
+    (set! *was-ducking* #t)
+    (set-time! *target-duck-enter-time*)
+    ;;(set! (-> self control bend-target) 1.0)
+    (target-hl-collide-set! 'duck (the-as float 1.0)))
+  :exit
+  (behavior ()
+    (target-hl-collide-set! 'normal (the-as float 0.0)))
+  :trans
+  (behavior ()
+    (when (and (not (should-duck?)) (can-exit-duck?))
+      (go target-hl-movement-ground))
+    (when (should-jump?)
+      ;; So we can use launchers
+      (when (not (target-should-use-launcher?))
+        (let* ((vel         (-> self control ltransv))
+              (horiz-speed (vector-xz-length vel))
+              (can-lj      (and (not (time-elapsed? *target-duck-enter-time*
+                                                    (seconds 2.0)))
+                                (> horiz-speed 20000.0))))
+          (if (and can-lj *target-enable-long-jump*)
+            (target-hl-apply-longjump) (target-hl-apply-jump)))))
+      (when (not (on-ground?))
+        (if (and (not (should-duck?)) (can-exit-duck?)) (go target-hl-movement-air) (go target-hl-movement-air-duck))))
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post 
+  (behavior ()
+      ;;(apply-ground-duck-hop)
+      ;;(update-fall-status)
+      (target-hl-movement-post)
+      ))
+
+
+
+;;
+;;
+;; This stuff is basically the same as default but for allowing to go to default target states and return to hl states
+;;
+;;
 (defbehavior target-hl-falling-trans target ((arg0 basic) (arg1 time-frame))
   (if (and (cpad-pressed? (-> self control cpad number) circle) (can-feet?)) (go target-attack-air #f))
   (when (= arg0 'target-eco-powerup)
@@ -34,7 +145,7 @@
       (cond
         ((= arg2 'launch) (set! (-> self neck flex-blend) 0.0) (set! (-> self control cur-surf) *launch-jump-mods*))
         (else (set! (-> self control cur-surf) *high-jump-mods*))))
-  :exit target-exit
+  :exit target-hl-exit
   ;; og:preserve-this PAL patch here
   :trans
   (behavior ()
@@ -92,7 +203,7 @@
       (set-time! (-> self state-time))
       (logclear! (-> self control status) (cshape-moving-flags onsurf onground tsurf))
       (set! (-> self control cur-surf) *turn-around-mods*))
-  :exit target-exit
+  :exit target-hl-exit
   :code
     (behavior ((arg0 float) (arg1 float) (arg2 symbol))
       (if (not (and (ja-group? eichar-duck-stance-ja) (= (-> self skel root-channel 0) (-> self skel channel))))
@@ -149,7 +260,7 @@
               (else *high-jump-mods*)))
       (set! (-> self control turn-vec-len2)
             (fmax 0.0 (fmin 0.5 (* 0.00008138021 (+ -409.6 (-> self control speed-mod)))))))
-  :exit target-exit
+  :exit target-hl-exit
   :trans
     (behavior ()
       (target-hl-falling-trans #f (the-as time-frame (if (ja-group? eichar-jump-loop-ja) 15 -1)))
@@ -171,14 +282,14 @@
   :code
     (-> target-jump
         code)
-  :post target-post)
+  :post target-hl-movement-post)
 
 (defstate target-hl-launch (target)
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (if (and (= message 'query) (= (-> block param 0) 'mode))
         'target-launch
-        (target-standard-event-handler proc argc message block)))
+        (target-hl-standard-event-handler proc argc message block)))
   :code
     (behavior ((arg0 float) (arg1 symbol) (arg2 vector) (arg3 int))
       (set-time! (-> self state-time))
@@ -233,148 +344,7 @@
       ;; og:preserve-this PAL patch (sound plays elsewhere)
       ;(sound-play "launch-fire")
       (go target-hl-high-jump arg0 arg0 'launch))
-  :post target-no-stick-post)
-
-(defstate target-hl-movement-air-duck (target)
-  :event target-hl-standard-event-handler
-  :enter
-    (behavior ()
-      (set! (-> self control bend-target) 1.0)
-      (target-collide-set! 'duck (the-as float 1.0)))
-  :exit
-  (behavior ()
-    (target-collide-set! 'normal (the-as float 0.0)))
-  :trans 
-  (behavior ()
-    (when (not (should-duck?))
-      (go target-hl-movement-air))
-    (when (on-ground?)
-      (go target-hl-movement-ground)))
-  :code
-    (behavior ()
-      (loop (suspend)))
-
-  :post 
-  (behavior ()
-    (apply-air-duck-offset)
-    ;;(update-fall-status)
-    (target-hl-movement-post)
-    (set! *was-ducking* (should-duck?))))
-
-(defstate target-hl-movement-air (target)
-  :event target-hl-jump-event-handler
-  :trans 
-  (behavior ()
-    (when (should-duck?)
-      (go target-hl-movement-air-duck))
-    (when (on-ground?)
-      (go target-hl-movement-ground)))
-  :code
-    (behavior ()
-      (loop (suspend)))
-
-  :post 
-  (behavior ()
-    ;;(update-fall-status)
-    (target-hl-movement-post)))
-
-(defstate target-hl-movement-ground (target)
-  :event target-hl-walk-event-handler
-  :trans
-  (behavior ()
-    (when (should-jump?)
-      ;; So we can use launchers
-      (when (= (-> self control unknown-symbol40) 'launch)
-        (level-hint-spawn (text-id sidekick-launcher1) "sksp009d" (the-as entity #f) *entity-pool* (game-task none))
-        (level-hint-spawn (text-id sidekick-launcher2) "sksp009e" (the-as entity #f) *entity-pool* (game-task none))
-        (case (-> (level-get-target-inside *level*) name)
-          (('citadel)
-            (level-hint-spawn (text-id citadel-launcher2) "sksp0393" (the-as entity #f) *entity-pool* (game-task none))
-            (level-hint-spawn (text-id citadel-launcher) "sksp0388" (the-as entity #f) *entity-pool* (game-task none))))
-        enter-state
-        (let ((a0-9 (-> self control unknown-dword60))
-              (a1-5 (-> self control unknown-dword61))
-              (a2-5 (-> self control last-transv2)))
-          (set! (-> a2-5 quad) (-> (the-as vector (-> self control unknown-dword62)) quad))
-          (go target-hl-launch (the-as float a0-9) (the-as symbol a1-5) a2-5 (-> self control unknown-dword63))))
-      (set! (-> (-> self control transv) y) jump-speed))
-      (when (not (on-ground?))
-        (go target-hl-movement-air))
-      (when (should-duck?)
-        (go target-hl-movement-ground-duck)))
-  :code
-  (behavior ()
-    (loop (suspend)))
-  :post 
-  (behavior ()
-    ;;(update-fall-status)
-    (target-hl-movement-post)))
-
-(defbehavior target-apply-longjump target ()
-  (let* ((curvel   (-> self control transv))
-         (cam-fwd  (-> *math-camera* inv-camera-rot vector 2))
-         (speed    100000.0)
-         (jump-up  60070.0))  ;; upward boost for long jump
-
-    ;; horizontal look direction
-    (set! (-> cam-fwd y) 0.0)
-    (vector-normalize! cam-fwd 1.0)
-
-    ;; apply horizontal speed along look
-    (vector-float*! cam-fwd cam-fwd speed)
-    (set! (-> curvel x) (-> cam-fwd x))
-    (set! (-> curvel z) (-> cam-fwd z))
-    ;; add upward velocity
-    (set! (-> curvel y) jump-up)))
-
-(defstate target-hl-movement-ground-duck (target)
-  :event target-hl-standard-event-handler
-  :enter
-  (behavior ()
-    (set-time! *target-duck-enter-time*)
-    (set! (-> self control bend-target) 1.0)
-    (target-collide-set! 'duck (the-as float 1.0)))
-  :exit
-  (behavior ()
-    (target-collide-set! 'normal (the-as float 0.0)))
-  :trans
-  (behavior ()
-    (when (not (should-duck?))
-      (go target-hl-movement-ground))
-    (when (should-jump?)
-      ;; So we can use launchers
-      (when (= (-> self control unknown-symbol40) 'launch)
-        (level-hint-spawn (text-id sidekick-launcher1) "sksp009d" (the-as entity #f) *entity-pool* (game-task none))
-        (level-hint-spawn (text-id sidekick-launcher2) "sksp009e" (the-as entity #f) *entity-pool* (game-task none))
-        (case (-> (level-get-target-inside *level*) name)
-          (('citadel)
-            (level-hint-spawn (text-id citadel-launcher2) "sksp0393" (the-as entity #f) *entity-pool* (game-task none))
-            (level-hint-spawn (text-id citadel-launcher) "sksp0388" (the-as entity #f) *entity-pool* (game-task none))))
-        enter-state
-        (let ((a0-9 (-> self control unknown-dword60))
-              (a1-5 (-> self control unknown-dword61))
-              (a2-5 (-> self control last-transv2)))
-          (set! (-> a2-5 quad) (-> (the-as vector (-> self control unknown-dword62)) quad))
-          (go target-hl-launch (the-as float a0-9) (the-as symbol a1-5) a2-5 (-> self control unknown-dword63))))
-      (let* ((vel         (-> self control ltransv))
-            (horiz-speed (vector-xz-length vel))
-            (can-lj      (and (not (time-elapsed? *target-duck-enter-time*
-                                                  (seconds 2.0)))
-                              (> horiz-speed 20000.0))))
-        (if can-lj
-          (target-apply-longjump)
-          (set! (-> (-> self control transv) y) jump-speed))))
-      (when (not (on-ground?))
-        (go target-hl-movement-air)))
-  :code
-  (behavior ()
-    (loop (suspend)))
-  :post 
-  (behavior ()
-      ;;(apply-ground-duck-hop)
-      ;;(update-fall-status)
-      (target-hl-movement-post)
-      ))
+  :post target-hl-no-stick-post)
 
 (defstate target-hl-jump (target)
   :event target-hl-jump-event-handler
@@ -405,7 +375,7 @@
             (fmax 0.0 (fmin 1.0 (* 0.00004359654 (+ -11468.8 (-> self control speed-mod))))))
       (set! (-> self control turn-vec-len2)
             (fmax 0.0 (fmin 1.0 (* 0.000048828126 (+ -10240.0 (-> self control speed-mod)))))))
-  :exit target-exit
+  :exit target-hl-exit
   :trans
     (behavior ()
       (set! (-> self control turn-vec-len3)
@@ -450,7 +420,7 @@
         (else (target-hl-generic-event-handler proc argc message block))))
   :exit
     (behavior ()
-      (target-exit)
+      (target-hl-exit)
       (logclear! (-> *target* draw status) (draw-status hidden))
       (set! (-> self cam-user-mode) 'normal)
       ;; og:preserve-this PAL patch here
@@ -458,7 +428,7 @@
   :code
     (behavior ((arg0 handle))
       (set! (-> self neck flex-blend) 0.0)
-      (target-exit)
+      (target-hl-exit)
       (logior! (-> self state-flags) (state-flags invulnerable do-not-notice))
       (let ((v1-4 (handle->process arg0)))
         (if v1-4
@@ -508,7 +478,7 @@
         (send-event *camera* 'no-intro)
         (send-event *camera* 'force-blend 0)
         (camera-change-to (the-as string 'base) 0 #f))
-      (target-exit))
+      (target-hl-exit))
   :trans
     (behavior ()
       (local-vars (sv-48 vector))
