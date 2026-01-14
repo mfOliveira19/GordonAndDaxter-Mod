@@ -227,6 +227,9 @@
    ;; TAB
    (tab-held             uint8)
    (tab-pressed          uint8)
+   ;; CTRL
+   (ctrl-held             uint8)
+   (ctrl-pressed          uint8)
   ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

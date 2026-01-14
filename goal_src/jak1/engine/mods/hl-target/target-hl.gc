@@ -4,12 +4,7 @@
   :event target-hl-standard-event-handler
   :enter
     (behavior ()
-      (when (not *was-ducking*) (apply-air-duck-offset))
-      ;;(set! *was-ducking* #t)
-      (target-hl-collide-set! 'duck (the-as float 1.0)))
-  :exit
-  (behavior ()
-    (target-hl-collide-set! 'normal (the-as float 0.0)))
+      (target-hl-collide-set! 'duck-ground (the-as float 1.0)))
   :trans 
   (behavior ()
     (when (and (not (should-duck?)) (can-exit-duck?))
@@ -22,64 +17,10 @@
 
   :post 
   (behavior ()
-    ;;(update-fall-status)
-    (target-hl-movement-post)))
-
-(defstate target-hl-movement-air (target)
-  :event target-hl-jump-event-handler
-  :enter
-  (behavior ()
-    (set! *was-ducking* #f))
-  :trans 
-  (behavior ()
-    (when (should-duck?)
-      (go target-hl-movement-air-duck))
-    (when (on-ground?)
-      (go target-hl-movement-ground)))
-  :code
-    (behavior ()
-      (loop (suspend)))
-
-  :post 
-  (behavior ()
-    ;;(update-fall-status)
-    (target-hl-movement-post)))
-
-(defstate target-hl-movement-ground (target)
-  :event target-hl-walk-event-handler
-  :enter
-  (behavior ()
-    (set! *can-apply-air-duck-offset* #t)
-    (set! *was-ducking* #f))
-  :trans
-  (behavior ()
-    (when (should-jump?)
-      (when (not (target-should-use-launcher?))
-            (target-hl-apply-jump)))
-      (when (not (on-ground?))
-        (go target-hl-movement-air))
-      (when (should-duck?)
-        (go target-hl-movement-ground-duck)))
-  :code
-  (behavior ()
-    (loop (suspend)))
-  :post 
-  (behavior ()
-    ;;(update-fall-status)
     (target-hl-movement-post)))
 
 (defstate target-hl-movement-ground-duck (target)
   :event target-hl-standard-event-handler
-  :enter
-  (behavior ()
-    (set! *can-apply-air-duck-offset* #t)
-    (set! *was-ducking* #t)
-    (set-time! *target-duck-enter-time*)
-    ;;(set! (-> self control bend-target) 1.0)
-    (target-hl-collide-set! 'duck (the-as float 1.0)))
-  :exit
-  (behavior ()
-    (target-hl-collide-set! 'normal (the-as float 0.0)))
   :trans
   (behavior ()
     (when (and (not (should-duck?)) (can-exit-duck?))
@@ -101,12 +42,50 @@
     (loop (suspend)))
   :post 
   (behavior ()
-      ;;(apply-ground-duck-hop)
-      ;;(update-fall-status)
-      (target-hl-movement-post)
-      ))
+      (target-hl-movement-post)))
 
+(defstate target-hl-movement-air (target)
+  :event target-hl-jump-event-handler
+  :enter
+  (behavior ()
+    (target-hl-collide-set! 'normal (the-as float 0.0)))
+  :trans 
+  (behavior ()
+    (when (on-ground?)
+      (go target-hl-movement-ground)))
+  :code
+    (behavior ()
+      (loop (suspend)))
 
+  :post 
+  (behavior ()
+    (apply-air-duck)
+    (target-hl-movement-post)))
+
+(defstate target-hl-movement-ground (target)
+  :event target-hl-walk-event-handler
+  :enter
+  (behavior ()
+    (set! *ducked?* #f)
+    (target-hl-collide-set! 'normal (the-as float 0.0))
+    )
+  :trans
+  (behavior ()
+    (when (should-jump?)
+      (when (not (target-should-use-launcher?))
+            (target-hl-apply-jump)))
+      (when (not (on-ground?))
+        (go target-hl-movement-air))
+  )
+  :code
+  (behavior ()
+    (loop (suspend)))
+  :post 
+  (behavior ()
+    (when (should-duck?)
+      (start-ground-duck))
+    (apply-ground-duck)
+    (target-hl-movement-post)))
 
 ;;
 ;;

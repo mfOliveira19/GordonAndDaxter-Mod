@@ -20,9 +20,16 @@
 (define *falling* #f)
 (define *should-take-fall-damage* #f) 
 
+;; Duck stuff
+(define *ducked?* #f)
+(define *ground-duck-started* #f)
+(define *ground-duck-time* 0)
+(define *ground-duck-accum* 0.0)
+(defconstant duck-camera-depth -4500.0)
+(defconstant duck-hop 2500.0)
 ;; global camera duck offset
+
 (define *duck-camera-offset* 0.0)
-(define *was-ducking* #f)
 (define *can-apply-air-duck-offset* #t)
 (define *viewmodel-bob-phase* 0.0)
 (define *viewmodel-bob-current-z* 0.0)
@@ -44,6 +51,13 @@
 
 (define *target-duck-enter-time* 0)
 (define *target-enable-long-jump* #f)
+
+(defenum collide-set
+  (normal 0)
+  (duck-ground 1)
+  (duck-air 2))
+
+(define *target-current-collide-set* (collide-set normal))
 
 (defbehavior target-hl-compute-slopes target ((arg0 vector))
   (let ((gp-0 (new-stack-vector0)))
@@ -245,19 +259,28 @@
           (set! *view-bob-x* *view-bob-current-x*)
           (set! *view-bob-y* *view-bob-current-y*))))))
 
+(defun ground-duck-fraction ()
+  (min 1.0 (/ *ground-duck-accum* 0.4)))
+
 (defun update-duck-camera-offset ()
-  (let* ((duck-depth -4500.0)
-         (target (if (target-hl-is-in-duck?) duck-depth 0.0))
-         ;; different speeds for down vs up
-         (speed (if (and (target-hl-is-in-duck?) (not (on-ground?))) 0.05 0.5))) ; slower down, faster up
-    (set! *duck-camera-offset*
-          (+ *duck-camera-offset* (* speed (- target *duck-camera-offset*))))))
+  (cond
+    ;; air duck = instant
+    ((target-hl-is-in-duck?)
+    duck-camera-depth)
+
+    ;; in-duck (ground timer)
+    (*ground-duck-started*
+    (* duck-camera-depth (ground-duck-fraction)))
+
+    ;; fully ducked
+    (*ducked?*
+    duck-camera-depth)))
 
 (defbehavior target-calc-camera-pos-hl target ()
   (let ((cam-pos (new 'stack-no-clear 'vector)))
     (vector-copy! cam-pos (-> self control trans))
     ;; apply crouch offset
-    (update-duck-camera-offset)
+    (set! *duck-camera-offset* (update-duck-camera-offset))
     (+! (-> cam-pos y) *duck-camera-offset*)
     ;; apply view bob offsets
     (update-view-bob)
@@ -400,6 +423,9 @@
                     (vector-float*! gp-1 gp-1 (/ f0-4 f1-0))))))
                 
                 )
+
+(defun target-has-eco-type? ((type pickup-type))
+  (and (= (-> *target* fact eco-type) type) (> (-> *target* fact eco-level) 0.0)))
 
 (defbehavior hl-add-thrust target ()
   (let* ((wishvel   (-> self control trans-targ))
@@ -592,6 +618,7 @@
         (set! (-> self control force-push-speed-mod) (- 1.0 (-> self control cpad stick0-speed))))
       (build-conversions (-> self control transv))
       (do-rotations1)
+      #|
       (let ((s4-0 (new-stack-vector0)))
         (read-pad s4-0)
         (let ((f30-0 (-> self control pad-stick-speed)))
@@ -609,9 +636,10 @@
             (set! f30-0 (vector-length s4-0))
             (vector-normalize! s4-0 1.0))
           (turn-to-vector s4-0 f30-0)))
+      |#
       (when (on-ground?)
         (hl-update-step-sound))
-
+      
       (let ((s4-0 (new-stack-vector0)))
         (read-input s4-0)
         (let ((f30-0 (-> self control pad-stick-speed)))
@@ -663,29 +691,10 @@
   (do-target-shadow)
   (target-calc-camera-pos-hl)
   (target-powerup-process)
-  #|
-  (when (on-ground?)
-    (set! *was-ducking* (should-duck?)))|#
-
   (none))
-
-(defbehavior apply-ground-duck-hop target ()
-  (when (and (should-duck?) (on-ground?) (not *was-ducking*))
-    (+! (-> self control trans y) 70.0)))
-
-(defbehavior apply-air-duck-offset target ()
-  ;; only add when in air and ducking
-  (when (and (target-hl-is-in-duck?) (not (on-ground?)) (can-exit-duck?) *can-apply-air-duck-offset*)
-    ;; push origin upward a bit to simulate HL duck jump
-    (set! *can-apply-air-duck-offset* #f)
-    (+! (-> self control trans y) 4000.0)))
-
-(defun target-has-eco-type? ((type pickup-type))
-  (and (= (-> *target* fact eco-type) type) (> (-> *target* fact eco-level) 0.0)))
 
 (defbehavior target-hl-apply-jump target ()
   (set! (-> (-> self control transv) y) jump-speed)
-  ;;(if (should-duck?) (go target-hl-movement-air-duck) (go target-hl-movement-air))
 )
 
 (defbehavior target-hl-apply-longjump target ()
@@ -728,7 +737,8 @@
       (set! (-> gp-0 body-spheres v1-2 prim-core offense) (collide-offense touch))
       (set! (-> gp-0 body-spheres v1-2 transform-index) -2))
     (case arg0
-      (('duck)
+      (('duck-ground)
+       (set! *target-current-collide-set* (collide-set duck-ground))
        (set! (-> self control unknown-float91) arg1)
        (let ((f30-0 (- 1.0 arg1)))
          (set! (-> gp-0 racer-cushion-targ y) 0.0)
@@ -750,7 +760,8 @@
                       (+ (-> *TARGET-bank* body-radius) (* 5734.4 f30-0))
                       0.0
                       (-> *TARGET-bank* body-radius))))
-      (('duck-hl-air)
+      (('duck-air)
+       (set! *target-current-collide-set* (collide-set duck-air))
        (set! (-> self control unknown-float91) arg1)
        (let ((f30-0 (- 1.0 arg1)))
          (sphere<-vector+r! (the-as sphere (-> gp-0 root-prim local-sphere))
@@ -772,6 +783,7 @@
                       0.0
                       (-> *TARGET-bank* body-radius))))
       (else
+       (set! *target-current-collide-set* (collide-set normal))
        (set! (-> self control unknown-float91) 0.0)
        (set! (-> gp-0 racer-cushion-targ y) 0.0)
        (sphere<-vector+r! (the-as sphere (-> gp-0 root-prim local-sphere))
@@ -824,3 +836,44 @@
   (logclear! (-> self control status) (cshape-moving-flags csmf14))
   0
   (none))
+
+
+;; Ducking stuff
+
+(defun start-ground-duck ()
+  (unless *ground-duck-started*
+    (set! *ground-duck-started* #t)
+    (set! *ground-duck-accum* 0.0)
+    (set-time! *ground-duck-time*)))
+
+(defbehavior apply-ground-duck target ()
+  (cond
+    ;; Duck key still held
+    ((should-duck?)
+     (when *ground-duck-started*
+       (set! *ground-duck-accum*
+             (+ *ground-duck-accum* (seconds-per-frame)))
+
+       (when (>= *ground-duck-accum* 0.4)
+         ;; SUCCESS: enter ducked state
+         (set! *ground-duck-started* #f)
+         (set! *ducked?* #t)
+         ;; Make target smaller
+         (target-hl-collide-set! 'duck-ground (the-as float 1.0))
+         (go target-hl-movement-ground-duck)
+         )))
+
+    ;; Duck key released early
+    (*ground-duck-started*
+     (set! *ground-duck-started* #f)
+     (set! *ground-duck-accum* 0.0)
+     ;; We apply a little height like in HL (in hl is 18 units)
+     (when (on-ground?) (+! (-> self control trans y) duck-hop))))
+  0)
+
+(defbehavior apply-air-duck target ()
+  (when (should-duck?)
+    (+! (-> self control trans y) duck-hop)
+    (target-hl-collide-set! 'duck-ground (the-as float 1.0))
+    (go target-hl-movement-air-duck)))
+
