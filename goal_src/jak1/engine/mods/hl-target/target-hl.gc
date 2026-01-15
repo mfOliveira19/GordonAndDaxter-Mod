@@ -76,6 +76,9 @@
   (behavior ()
     ;;(set! *ducked?* #f)
     (target-hl-collide-set! 'normal (the-as float 0.0)))
+  :exit
+  (behavior ()
+    (set! *ground-duck-started* #f))
   :trans
   (behavior ()
     (when (should-jump?)
