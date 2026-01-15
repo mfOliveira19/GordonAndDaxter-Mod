@@ -11,7 +11,7 @@
 (defconstant smg-reload-part1-duration (seconds 0.8))
 (defconstant smg-reload-part2-duration (seconds 1.0))
 (defconstant smg-idle1-duration (seconds 5.0))
-(defconstant smg-idle2-duration (seconds 3.0))
+(defconstant smg-idle2-duration (seconds 5.0))
 (defconstant smg-aim-punch-decay 0.1)
 (defconstant smg-aim-punch-amount 0.03)
 (defconstant smg-grenade-aim-punch 0.2)
@@ -99,7 +99,7 @@
          (viewmodel-play-animation (viewmodel-animations-enum smg-idle1) 1.8)
          (set! (-> self weapon-next-idle-wait) smg-idle1-duration))
         ((1)
-         (viewmodel-play-animation (viewmodel-animations-enum smg-longidle) 1.0)
+         (viewmodel-play-animation (viewmodel-animations-enum smg-longidle) 0.5)
          (set! (-> self weapon-next-idle-wait) smg-idle2-duration))))
     (set-time! (-> self weapon-last-idle-time)))
   :trans

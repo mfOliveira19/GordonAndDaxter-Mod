@@ -4,7 +4,12 @@
   :event target-hl-standard-event-handler
   :enter
     (behavior ()
+      (set! *ground-unduck-started* #f)
+      (set! *ducked?* #t)
       (target-hl-collide-set! 'duck-ground (the-as float 1.0)))
+  :exit
+    (behavior ()
+      (set! *ducked?* #f))
   :trans 
   (behavior ()
     (when (and (not (should-duck?)) (can-exit-duck?))
@@ -21,6 +26,9 @@
 
 (defstate target-hl-movement-ground-duck (target)
   :event target-hl-standard-event-handler
+  :enter 
+  (behavior ()
+    (set! *ducked?* #t))
   :trans
   (behavior ()
     (when (and (not (should-duck?)) (can-exit-duck?))
@@ -66,9 +74,8 @@
   :event target-hl-walk-event-handler
   :enter
   (behavior ()
-    (set! *ducked?* #f)
-    (target-hl-collide-set! 'normal (the-as float 0.0))
-    )
+    ;;(set! *ducked?* #f)
+    (target-hl-collide-set! 'normal (the-as float 0.0)))
   :trans
   (behavior ()
     (when (should-jump?)

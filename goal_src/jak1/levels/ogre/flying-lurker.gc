@@ -121,7 +121,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack) (let ((v0-0 #t)) (set! (-> self got-hit) v0-0) v0-0))))
+        (('attack 'attack-hl) (let ((v0-0 #t)) (set! (-> self got-hit) v0-0) v0-0))))
   :trans
     (behavior ()
       (when (-> self got-hit)
@@ -159,9 +159,27 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('plunge) (logclear! (-> self mask) (process-mask actor-pause)) (go plunger-lurker-plunge))))
+        (('plunge) (logclear! (-> self mask) (process-mask actor-pause)) (go plunger-lurker-plunge))
+        (('attack 'attack-hl) (let ((v0-0 #t)) (set! (-> self got-hit) v0-0) v0-0))))
   :trans
     (behavior ()
+      (when (-> self got-hit)
+        (close-specific-task! (game-task plunger-lurker-hit) (task-status need-hint))
+        (process-entity-status! self (entity-perm-status complete) #t)
+        (level-hint-spawn (text-id ogre-plunger-lurker-resolution) "sksp0321" (the-as entity #f) *entity-pool* (game-task none))
+        (process-spawn part-tracker
+                       :init
+                       part-tracker-init
+                       (-> *part-group-id-table* 474)
+                       -1
+                       #f
+                       #f
+                       #f
+                       (-> self root trans)
+                       :to
+                       *entity-pool*)
+        (cleanup-for-death self)
+        (deactivate self))
       (spool-push *art-control* "plunger-lurker-blowup" 0 self -99.0)
       (when (and *target* (< (vector-vector-distance-squared (-> self root trans) (target-pos 0)) 6710886400.0))
         (logclear! (-> self mask) (process-mask actor-pause))

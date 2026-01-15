@@ -23,8 +23,9 @@
 ;; Duck stuff
 (define *ducked?* #f)
 (define *ground-duck-started* #f)
-(define *ground-duck-time* 0)
 (define *ground-duck-accum* 0.0)
+(define *ground-unduck-started* #f)
+(define *ground-unduck-accum* 0.0)
 (defconstant duck-camera-depth -4500.0)
 (defconstant duck-hop 2500.0)
 ;; global camera duck offset
@@ -58,6 +59,9 @@
   (duck-air 2))
 
 (define *target-current-collide-set* (collide-set normal))
+
+(defun target-has-eco-type? ((type pickup-type))
+  (and (= (-> *target* fact eco-type) type) (> (-> *target* fact eco-level) 0.0)))
 
 (defbehavior target-hl-compute-slopes target ((arg0 vector))
   (let ((gp-0 (new-stack-vector0)))
@@ -260,13 +264,20 @@
           (set! *view-bob-y* *view-bob-current-y*))))))
 
 (defun ground-duck-fraction ()
-  (min 1.0 (/ *ground-duck-accum* 0.4)))
+  (min 1.0 (/ *ground-duck-accum* 0.2)))
+
+(defun ground-unduck-fraction ()
+  (- 1.0 (min 1.0 (/ *ground-unduck-accum* 0.1))))
 
 (defun update-duck-camera-offset ()
   (cond
     ;; air duck = instant
     ((target-hl-is-in-duck?)
     duck-camera-depth)
+
+    ;; in-duck (ground timer)
+    (*ground-unduck-started*
+    (* duck-camera-depth (ground-unduck-fraction)))
 
     ;; in-duck (ground timer)
     (*ground-duck-started*
@@ -389,7 +400,7 @@
         (let ((velrun 30010.0))
           
           ;; check if enough time has passed since last footstep
-          (when (time-elapsed? *last-step-time* (fsec 0.3))
+          (when (time-elapsed? *last-step-time* (if (target-has-eco-type? (pickup-type eco-blue)) (fsec 0.25) (fsec 0.3)))
             (when (> speed velrun)
               ;; play step sound
               (hl-play-step-sound))
@@ -423,9 +434,6 @@
                     (vector-float*! gp-1 gp-1 (/ f0-4 f1-0))))))
                 
                 )
-
-(defun target-has-eco-type? ((type pickup-type))
-  (and (= (-> *target* fact eco-type) type) (> (-> *target* fact eco-level) 0.0)))
 
 (defbehavior hl-add-thrust target ()
   (let* ((wishvel   (-> self control trans-targ))
@@ -843,8 +851,12 @@
 (defun start-ground-duck ()
   (unless *ground-duck-started*
     (set! *ground-duck-started* #t)
-    (set! *ground-duck-accum* 0.0)
-    (set-time! *ground-duck-time*)))
+    (set! *ground-duck-accum* 0.0)))
+
+(defun start-ground-unduck ()
+  (unless *ground-unduck-started*
+    (set! *ground-unduck-started* #t)
+    (set! *ground-unduck-accum* 0.0)))
 
 (defbehavior apply-ground-duck target ()
   (cond
@@ -854,15 +866,23 @@
        (set! *ground-duck-accum*
              (+ *ground-duck-accum* (seconds-per-frame)))
 
-       (when (>= *ground-duck-accum* 0.4)
+       (when (>= *ground-duck-accum* 0.2)
          ;; SUCCESS: enter ducked state
          (set! *ground-duck-started* #f)
          (set! *ducked?* #t)
          ;; Make target smaller
          (target-hl-collide-set! 'duck-ground (the-as float 1.0))
-         (go target-hl-movement-ground-duck)
-         )))
+         (go target-hl-movement-ground-duck))))
 
+    ;; If we entered ground and we are not ducking, we should start unducking the camera
+    ((and *ducked?* (not (should-duck?)))
+       (set! *ground-unduck-accum*
+             (+ *ground-unduck-accum* (seconds-per-frame)))    
+      (start-ground-unduck)
+       (when (>= *ground-unduck-accum* 0.1)
+       (set! *ground-unduck-started* #f)
+         (set! *ducked?* #f))
+    )
     ;; Duck key released early
     (*ground-duck-started*
      (set! *ground-duck-started* #f)
