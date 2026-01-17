@@ -134,7 +134,7 @@
 )
 
 (defun should-reload? ()
-  (and (!= (-> *target* state name) 'target-hl-death) (!= (-> *keyboard-data* key_r) 0) (not (paused?)))
+  (and (!= (-> *target* state name) 'target-hl-death) (!= (-> *keyboard-data* key_r) 0) (not (paused?)) (not (movie?)))
 )
 
 (defun should-attack? ()

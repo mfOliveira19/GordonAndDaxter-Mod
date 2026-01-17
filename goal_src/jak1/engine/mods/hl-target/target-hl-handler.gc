@@ -1,6 +1,59 @@
 (in-package goal)
+(require "engine/mods/mod-common-functions.gc")
+
 (defconstant hl-explosion-invinc-time (seconds 0.2))
 (define *hl-target-explosion-invinc-time* 0)
+(define *last-cell-val* 0)
+(define *suit-upgrade-active* #f)
+(define *suit-upgrade-val* 0)
+(define *suit-upgrade-time* 0.0)
+(define *suit-upgrade-duration* 6.0) ;; seconds on screen
+
+(defun start-suit-upgrade-message ((val int))
+  (set! *suit-upgrade-active* #t)
+  (set! *suit-upgrade-val* val)
+  (set! *suit-upgrade-time* 0.0))
+
+(defun print-suit-upgrade-info ((val int))
+  (let ((a1-3
+          (new 'stack 'font-context *font-default-matrix* 56 160 0.0 (font-color default) (font-flags shadow kerning))
+          )
+        )
+    (set-width! a1-3 400)
+    (set-height! a1-3 96)
+    (set! (-> a1-3 flags) (font-flags shadow kerning middle large))
+      (cond
+        ((= val 20) (print-game-text "YOUR SUIT CAN NOW WALK ON FIRE CANYON" a1-3 #f 128 22))
+        ((= val 72) (print-game-text "YOUR SUIT CAN NOW WALK ON LAVA TUBE" a1-3 #f 128 22)))))
+
+(defun check-cell-suit-upgrade ((val int))
+  (let ((fuel (the int (-> *game-info* fuel))))
+    (when (and (< *last-cell-val* val)
+               (>= fuel val))
+      (cond
+        ((= val 20)  (sound-play "cell-reach-20"))
+        ((= val 72)  (sound-play "cell-reach-72"))
+        ((= val 100) (sound-play "cell-reach-100")))
+      (start-suit-upgrade-message val))))
+
+(defun update-suit-upgrade-message ()
+  (when *suit-upgrade-active*
+    ;; advance timer
+    (set! *suit-upgrade-time*
+          (+ *suit-upgrade-time* (seconds-per-frame)))
+
+    ;; draw text
+    (print-suit-upgrade-info *suit-upgrade-val*)
+
+    ;; timeout
+    (when (>= *suit-upgrade-time* *suit-upgrade-duration*)
+      (set! *suit-upgrade-active* #f))))
+
+(defun update-cell-suit-upgrade-status ()
+  (check-cell-suit-upgrade 20)
+  (check-cell-suit-upgrade 72)
+  (check-cell-suit-upgrade 100)
+  (set! *last-cell-val* (the int (-> *game-info* fuel))))
 
 (defbehavior target-should-take-lava-damage? target ((arg1 attack-info))
   ;; We only check if the attack type is burnup o burn

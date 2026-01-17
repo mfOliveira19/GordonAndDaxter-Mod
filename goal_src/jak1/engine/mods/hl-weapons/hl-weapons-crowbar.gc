@@ -45,7 +45,10 @@
     (crowbar-switch-handle))
   :code
   (behavior ()
-    (loop (suspend))))
+    (loop (suspend)))
+  :post
+  (behavior ()
+    (update-aim-punch 0.1)))
 
 (defstate crowbar-idle (hl-weapons)
   :trans

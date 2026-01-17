@@ -72,7 +72,9 @@
       (when (not (paused?))
         (hud-hl-display-on)
         (pc-get-mouse-data *mouse-data*)
-        (pc-set-crosshair-enabled #t))
+        (pc-set-crosshair-enabled #t)
+        (update-cell-suit-upgrade-status)
+        (update-suit-upgrade-message))
       ))
   ;; hide stuff too on other states
   (when (not (in-hl-state?))
@@ -92,7 +94,6 @@
 
   ;;(send-event *camera* 'set-slave-option (cam-slave-options ALLOW_Z_ROT))
 ))
-
 
 #|
 (defun in-cutscene? ()
