@@ -422,6 +422,10 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
+        ;; Changed for HL mod so we can shoot it
+        (('attack-hl)
+          (+! (-> self hits) 1)
+          (when (>= (-> self hits) 2) (go darkecobarrel-mover-die)))
         (('touch 'attack)
          (cond
            ((= proc *target*)
@@ -809,7 +813,8 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack 'touch) (send-event proc 'attack (-> block param 0) (static-attack-info ((mode 'deadly)))) (go-virtual die))))
+        ;; Changed for HL mod so we can shoot it
+        (('attack 'attack-hl 'touch) (send-event proc 'attack (-> block param 0) (static-attack-info ((mode 'deadly)))) (go-virtual die))))
   :code
     (behavior ()
       (loop

@@ -2,6 +2,21 @@
 (defconstant hl-explosion-invinc-time (seconds 0.2))
 (define *hl-target-explosion-invinc-time* 0)
 
+(defbehavior target-should-take-lava-damage? target ((arg1 attack-info))
+  ;; We only check if the attack type is burnup o burn
+  (if (or (= (-> arg1 mode) 'burnup) (= (-> arg1 mode) 'burn))
+    (cond
+      ;; If we are in firecanyon and we have at least 20 cells
+      ((and (= (-> *target* current-level name) 'firecanyon) (>= (the int (-> *game-info* fuel)) 20))
+        #f)
+      ;; If we are in lavatube and we have at least 72 cells
+      ((and (= (-> *target* current-level name) 'lavatube) (>= (the int (-> *game-info* fuel)) 72))
+        #f)
+      (else
+      #t)
+    )
+#t))
+
 (defbehavior target-hl-no-stick-post target ()
   (let ((gp-0 (the int (-> *display* time-ratio))))
     (set-time-ratios *display* 1.0)
@@ -165,7 +180,7 @@
   (none))
 
 (defbehavior target-hl-attacked target ((arg0 symbol) (arg1 attack-info) (arg2 process) (arg3 touching-shapes-entry) (arg4 (state symbol attack-info target)))
-  (when (not (logtest? (-> self state-flags) (state-flags being-attacked)))
+  (when (and (not (logtest? (-> self state-flags) (state-flags being-attacked))) (target-should-take-lava-damage? arg1))
     (cond
       ((or (logtest? (-> self state-flags) (state-flags invulnerable timed-invulnerable invuln-powerup))
            (and (logtest? (-> arg1 mask) (attack-mask mode))

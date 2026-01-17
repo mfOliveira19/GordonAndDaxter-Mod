@@ -597,6 +597,24 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
+        ;; Changed for hl mod so we can shoot at it
+        (('attack-hl)
+         (when (target-has-eco-type? (pickup-type eco-yellow))
+           (increment-success-for-hint (text-id lavatube-balls))
+           (sound-play "dcrate-break")
+           (process-spawn part-tracker
+                          :init
+                          part-tracker-init
+                          (-> *part-group-id-table* 546)
+                          600
+                          #f
+                          #f
+                          #f
+                          (-> self root trans)
+                          :to
+                          *entity-pool*)
+           (cleanup-for-death self)
+           (deactivate self)))
         (('attack)
          (when (and (>= argc 2) (= (-> block param 1) 'eco-yellow))
            (increment-success-for-hint (text-id lavatube-balls))
