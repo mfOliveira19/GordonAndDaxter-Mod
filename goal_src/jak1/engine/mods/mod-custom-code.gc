@@ -53,23 +53,32 @@
                (= st 'target-hl-clone-anim)
                (in-zoomer?))))))
 
+(defun target-sleeping? ()
+  (nonzero? (logand (-> *target* mask)
+                    (process-mask sleep))))
+
 ((defun run-hl-mod-stuff ()
   ;; hide stuff while in cutscenes
+  (when (target-sleeping?)
+   (pc-set-viewmodel-enabled #f)
+  )
   (if (movie?)
     (begin
       (hud-hl-display-off)
       (pc-set-viewmodel-enabled #f)
       (pc-set-crosshair-enabled #f)
       (clear-mouse *mouse-data*)
-      (logclear! (-> *target* draw status) (draw-status hidden)))
+      (send-event *target* 'draw #t)
+      ;;(logclear! (-> *target* draw status) (draw-status hidden))
+      )
     (begin
       (when (or (in-hl-state?) (= (-> *target* state name) 'target-hl-death))
         (send-event *camera* 'set-fov 16384.845)
         (send-event *camera* 'change-state cam-fps 0)
-        (when (not (= (-> *target* state name) 'target-hl-death)) (pc-set-viewmodel-enabled #t))
-        (set! (-> *target* draw status) (draw-status hidden)))
+        (when (and (not (= (-> *target* state name) 'target-hl-death)) (not (target-sleeping?))) (pc-set-viewmodel-enabled #t))
+        (send-event *target* 'draw #f))
       (pc-set-crosshair-enabled #f)
-      (when (not (paused?))
+      (when (and (not (paused?)) (not (target-sleeping?)))
         (hud-hl-display-on)
         (pc-get-mouse-data *mouse-data*)
         (pc-set-crosshair-enabled #t)
@@ -81,23 +90,18 @@
       (hud-hl-display-off)
       (pc-set-viewmodel-enabled #f)
       (pc-set-crosshair-enabled #f))
-
   ;; show target when fishing
   (when (= (-> *target* state name) 'target-hl-fishing)
     (logclear! (-> *target* draw status) (draw-status hidden)))
 
   (when (in-zoomer?)
+    (send-event *target* 'draw #t)
     (send-event *camera* 'change-state cam-string 0)
     ;;(logclear! (-> *target* draw status) (draw-status hidden))
   )
-  ;;(send-event *camera* 'change-state cam-bike 0))
 
   ;;(send-event *camera* 'set-slave-option (cam-slave-options ALLOW_Z_ROT))
 ))
-
-#|
-(defun in-cutscene? ()
-    (or (= (-> *target* state name) 'target-hl-clone-anim) (= (-> *target* state name) 'target-hl-grab)))|#
 
 (defun runs-every-frame ()
   (if *show-input-display* (input-display-on) (input-display-off))
@@ -163,6 +167,7 @@
   ;; Code here runs every time jak spawns (loading a file new game or death)
   ;;uncomment this to use custom music for custom levels - the function is in mod-common-functions.gc
   ;;(process-spawn-function process music-manager-proc)
+  (send-event *target* 'draw #f)
     (when (not (process-by-name 'hl-weapon-proc *active-pool*))
       (start-hl-weapons))
   (none))

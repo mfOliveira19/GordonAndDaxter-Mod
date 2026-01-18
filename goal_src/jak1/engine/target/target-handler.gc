@@ -517,7 +517,7 @@
        (('periscope)
         (if (logtest? (-> self control status) (cshape-moving-flags onsurf))
           (go target-periscope (process->handle (the-as process (-> arg3 param 1))))))
-       (('fishing) (go target-fishing (process->handle (the-as process (-> arg3 param 1)))))
+       (('fishing) (go target-hl-fishing (process->handle (the-as process (-> arg3 param 1)))))
        (('final-door)
         (go target-final-door
             (the-as basic (process->handle (the-as process (-> arg3 param 1))))

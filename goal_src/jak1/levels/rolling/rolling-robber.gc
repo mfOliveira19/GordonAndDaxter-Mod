@@ -72,7 +72,8 @@
    (water-height         float)
    (timeout              time-frame)
    (last-ambient-time    time-frame)
-   (time-to-next-ambient time-frame))
+   (time-to-next-ambient time-frame)
+   (health               int8))
   (:states
    robber-dead
    robber-debug
@@ -94,6 +95,12 @@
 
 (defbehavior robber-event-handler robber ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
+  (('attack-hl) 
+    (let ((damage (the-as int8 (-> arg3 param 4))))
+        (-! (-> self health) damage)
+        (-> arg3 param 1)
+        (when (<= (-> self health) 0)
+          (go robber-die))))
     (('attack) (go robber-die))))
 
 (defbehavior robber-task-complete? robber ()
@@ -489,6 +496,7 @@
   (set! (-> this last-ambient-time) 0)
   (set! (-> this time-to-next-ambient) 0)
   (set! (-> this speed) 0.0)
+  (set! (-> this health) 100)
   (let ((v1-42 (-> this entity extra perm)))
     (logior! (-> v1-42 status) (entity-perm-status user-set-from-cstage))
     (if (nonzero? (-> v1-42 user-object 1)) (go robber-die)))

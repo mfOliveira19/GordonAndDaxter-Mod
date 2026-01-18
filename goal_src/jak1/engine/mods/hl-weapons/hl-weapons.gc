@@ -647,7 +647,6 @@
 
       (let ((forward cam-forward))
         (set! rotate (atan (-> forward x) (-> forward z))))
-      (format 0 "CALLED FIRE HL GRENADE ~%")
       (spawn-smg-grenade
         *entity-pool*
         spawn-pos

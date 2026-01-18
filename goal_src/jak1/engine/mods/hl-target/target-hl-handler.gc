@@ -2,8 +2,8 @@
 (require "engine/mods/mod-common-functions.gc")
 
 (defconstant hl-explosion-invinc-time (seconds 0.2))
-(define *hl-target-explosion-invinc-time* 0)
 (define *last-cell-val* 0)
+(define *hl-target-explosion-invinc-time* 0)
 (define *suit-upgrade-active* #f)
 (define *suit-upgrade-val* 0)
 (define *suit-upgrade-time* 0.0)
@@ -110,7 +110,7 @@
   (none))
 
 (defbehavior target-hl-explosion-handler target ((arg0 symbol) (arg1 attack-info) (arg2 process) (arg3 touching-shapes-entry) (arg4 (state symbol attack-info target)) (arg5 event-message-block))
-;; Only process if invincibility timer allows
+  ;; Only process if invincibility timer allows
   (when (time-elapsed? *hl-target-explosion-invinc-time* hl-explosion-invinc-time)
 
     ;; Update invincibility timer
@@ -135,6 +135,8 @@
           ;; horizontal difference
           (dx (- (-> player-pos x) (-> explosion-pos x)))
           (dz (- (-> player-pos z) (-> explosion-pos z)))
+          (dy (- (-> player-pos y) (-> explosion-pos y)))
+
           (dist-xz (sqrtf (+ (* dx dx) (* dz dz))))
 
           ;; falloff (0..1)
@@ -148,28 +150,49 @@
       (when (> t 0.0)
         (let ((dir (new 'stack-no-clear 'vector)))
 
-          ;; horizontal direction
+          ;; horizontal direction (unit-length)
           (if (> dist-xz 0.001)
-              (set-vector! dir (* horizontal-strength (/ dx dist-xz))
+              (set-vector! dir (/ dx dist-xz)
                               0.0
-                              (* horizontal-strength (/ dz dist-xz))
+                              (/ dz dist-xz)
                               0.0)
               (set-vector! dir 0.0 0.0 0.0 0.0))
 
-          ;; vertical component
-          (set! (-> dir y)
-                (+ (-> dir y) (* vertical-strength 0.5)))  ;; lift amount
+          ;; scale horizontal AFTER normalization
+          (set! (-> dir x) (* (-> dir x) horizontal-strength))
+          (set! (-> dir z) (* (-> dir z) horizontal-strength))
 
-          (vector-normalize! dir 1.0)
+          (if (> dy -2500.0)
+              (begin
+              (format 0 "ALLOW LIFT ~f ~%" dy)
+              ;; explosion below player -> allow lift
+              (set! (-> dir y)
+                    (* vertical-strength 0.5))
+              )
+              ;; explosion above or level  no upward push
+              (begin
+              (format 0 "NO LIFT ~f ~%" dy) 
+              (set! (-> dir y) 0.0)
+              ))
+
 
           (when (> (-> dir y) 0)
             (if (should-duck?) (go target-hl-movement-air-duck) (go target-hl-movement-air)))
 
           (let* ((base-force 100000.0)
-                (force (* base-force t)))
+                (len (vector-length dir))
+                (scaled-force
+                  (if (> len 0.001)
+                      (/ (* base-force t) len)
+                      0.0)))
             (vector+! (-> self control transv)
                       (-> self control transv)
-                      (vector-float*! (new-stack-vector0) dir force))))))))
+                      (vector-float*! (new-stack-vector0) dir scaled-force)))
+
+                      
+          ))
+          
+          )))
 
 (defstate target-hl-hit-ground (target)
   :enter
@@ -219,7 +242,8 @@
          (target-timed-invulnerable (-> arg0 invinc-time) self)
          (cpad-set-buzz! (-> *cpad-list* cpads 0) 0 255 (seconds 0.5))
          (let ((v1-13 (-> arg0 angle))) (= v1-13 'up)))
-       (sound-play "hit-up"))
+       ;;(sound-play "hit-up")
+       )
       (else
         (when (>= (-> self fact health) 1.0) (sound-play "hev_beep")))))
   (case (-> arg0 mode)
@@ -440,6 +464,7 @@
       ((-> target-hl-grab event) proc argc message block))
   :enter
     (behavior ((arg0 handle))
+      (send-event *target* 'draw #t)
       (set! (-> self control pole) arg0)
       (set! (-> self control last-transv2 quad) (-> self control trans quad))
       (set! (-> self control temp-flop-end-checks) (the-as uint #t))
@@ -450,6 +475,7 @@
       (send-event (ppointer->process (-> self sidekick)) 'shadow #t))
   :exit
     (behavior ()
+      (send-event *target* 'draw #f)
       (send-event (ppointer->process (-> self sidekick)) 'matrix 'normal)
       (send-event (ppointer->process (-> self sidekick)) 'shadow #t)
       (let ((gp-0 (joint-node eichar-lod0-jg main))
@@ -485,7 +511,7 @@
   :code
     (behavior ((arg0 handle))
       (clone-anim arg0 (the-as int (-> self draw origin-joint-index)) #t "")
-      (go target-hl-movement-ground))
+      (go target-stance))
   :post target-no-ja-move-post)
 
 (defstate target-hl-grab (target)
@@ -495,7 +521,7 @@
         ((and (= message 'query) (= (-> block param 0) 'mode)) (-> self state name))
         (else
          (case message
-           (('end-mode) (go target-hl-movement-ground))
+           (('end-mode) (go target-stance))
            (('play-anim)
             (let ((v0-0 (the-as object (-> block param 0)))) (set! (-> self control temp-flop-end-checks) (the-as uint v0-0)) v0-0))
            (('clone-anim) (go target-hl-clone-anim (process->handle (the-as process (-> block param 0)))))
@@ -508,16 +534,16 @@
            (else (target-generic-event-handler proc argc message block))))))
   :enter
     (behavior ()
+      ;;(send-event *target* 'draw #t)
       (set! (-> self control cur-surf) *grab-mods*)
       (set! (-> self neck flex-blend) 0.0)
       (logior! (-> self state-flags) (state-flags invulnerable grabbed))
       (set! (-> self control temp-flop-end-checks) (the-as uint 'stance)))
   :exit
     (behavior ()
+      (send-event *target* 'draw #f)
       (logclear! (-> self state-flags) (state-flags invulnerable))
       (target-exit)
-        (set! (-> self draw status) (draw-status hidden))
-        (set! (-> *sidekick* draw status) (draw-status hidden))
       )
   :code
     (behavior ()
@@ -796,8 +822,7 @@
   :post 
   (behavior ()
     (target-post)
-    (set! (-> self draw status) (draw-status hidden))
-    (set! (-> *sidekick* draw status) (draw-status hidden))
+    ;;(set! (-> self draw status) (draw-status hidden))
   ))
 
 (defbehavior target-hl-bonk-event-handler target ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))

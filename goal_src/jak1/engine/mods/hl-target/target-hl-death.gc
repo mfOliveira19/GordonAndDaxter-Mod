@@ -231,6 +231,7 @@
            (('tar) (sound-play "hev_flatline");;(sound-play "death-drown")
            ))
           (sound-play "hev_flatline")
+        
          (+! (-> *game-info* death-movie-tick) 1)
          (if (= (death-movie-remap (+ (-> *game-info* death-movie-tick) -1) (-> *death-spool-array* length))
                 (death-movie-remap (-> *game-info* death-movie-tick) (-> *death-spool-array* length)))
@@ -255,6 +256,8 @@
              (send-event (ppointer->process (-> self sidekick)) 'matrix 'play-anim)
              (send-event (ppointer->process (-> self sidekick)) 'shadow #f)
              (send-event self 'blend-shape #t)
+             ;; This is what plays daxter animations when we die
+             #|
              (let ((s5-8 (ppointer->handle (process-spawn pov-camera (-> self control trans) *deathcam-sg* gp-18 4 self '() :to *target-pool*))))
                (send-event (handle->process s5-8) 'music-movie-volume 0.0)
                (send-event (handle->process s5-8) 'sfx-movie-volume 50.0)
@@ -263,10 +266,12 @@
                  (spool-push *art-control* (-> gp-18 name) 0 self (the-as float -99.0))
                  (clone-anim-once s5-8 33 #f "")
                  (suspend))
-               (let ((a0-155 (handle->process s5-8))) (if a0-155 (deactivate a0-155))))
+               (let ((a0-155 (handle->process s5-8))) (if a0-155 (deactivate a0-155))))|#
+
              (send-event (ppointer->process (-> self sidekick)) 'shadow #t)
              (suspend)
-             0))))
+             0)))
+             )
       (set! (-> self control transv quad) (the-as uint128 0))
       (initialize! (-> self game) 'dead (the-as game-save #f) (the-as string #f))
       (set-time! (-> self state-time))

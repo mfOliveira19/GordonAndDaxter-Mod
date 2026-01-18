@@ -424,7 +424,8 @@
         (if (= (-> this health) 0.0)
           (adjust (-> (the-as target (-> this process)) game) 'life (- (-> *GAME-bank* life-single-inc)) source-handle))))
      ;; some sort of hack for eco vents.
-     (b! (and (logtest? (-> (the-as collide-shape (-> this process root)) root-prim prim-core action) (collide-action racer))
+     ;; Changed for hl mod so we can kill the dark plants on foot on precursor basin
+     (b! (and (= (-> *target* current-level name) 'rolling)
               (type-type? (-> (handle->process source-handle) type) vent))
          cfg-80
          :delay (nop!))

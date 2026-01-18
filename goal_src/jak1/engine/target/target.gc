@@ -369,7 +369,7 @@
           (ja :chan 1 :num! (chan 0))
           (ja :chan 2 :num! (chan 0))
           (if (can-play-stance-amibent?) (go target-stance-ambient)))))
-  :post target-post)
+  :post (behavior () (target-post) (go target-hl-movement-ground)))
 
 (defstate target-walk (target)
   :event target-walk-event-handler

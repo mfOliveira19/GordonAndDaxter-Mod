@@ -6,7 +6,7 @@
 (defconstant jump-speed 35000.0)
 (defconstant gravity-factor 0.55) ;; was 0.65
 (defconstant hl-max-speed   50650.0)
-(defconstant hl-max-speed-blue-eco 90000.0)
+(defconstant hl-max-speed-blue-eco 70650.0)
 (defconstant hl-accel       12.0) ;; was 8.0
 (defconstant hl-air-accel   190.0) ;; was 200 230
 (defconstant hl-friction    4.0) ;; was 6.0
@@ -643,8 +643,7 @@
                 (vector-lerp! s4-0 a1-2 a2-1 f0-12)))
             (set! f30-0 (vector-length s4-0))
             (vector-normalize! s4-0 1.0))
-          (turn-to-vector s4-0 f30-0)))
-      |#
+          (turn-to-vector s4-0 f30-0)))|#
       (when (on-ground?)
         (hl-update-step-sound))
       
