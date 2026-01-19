@@ -1638,7 +1638,6 @@
         (else ((-> target-hl-grab event) proc argc message block))))
   :enter
     (behavior ((arg0 handle))
-      (send-event *target* 'draw #t)
       (set! (-> self control cur-surf) *empty-mods*)
       (logior! (-> self state-flags) (state-flags invulnerable))
       (set-zero! (-> self control unknown-smush00))

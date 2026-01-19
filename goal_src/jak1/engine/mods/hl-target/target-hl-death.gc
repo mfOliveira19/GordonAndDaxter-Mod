@@ -23,7 +23,7 @@
              (('die 'abort-request) (set! (-> self control temp-flop-end-checks) (the-as uint #t)) (set-blackout-frames (seconds 0.2))))))
         (('get-pickup) #f)
         (('touched) #f)
-        (else (target-generic-event-handler proc argc message block))))
+        (else (target-hl-generic-event-handler proc argc message block))))
   :exit
     (behavior ()
       (logclear! (-> self state-flags) (state-flags being-attacked dying))

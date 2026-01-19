@@ -69,15 +69,15 @@
       (pc-set-crosshair-enabled #f)
       (clear-mouse *mouse-data*)
       (send-event *target* 'draw #t)
-      ;;(logclear! (-> *target* draw status) (draw-status hidden))
       )
     (begin
       (when (or (in-hl-state?) (= (-> *target* state name) 'target-hl-death))
         (send-event *camera* 'set-fov 16384.845)
         (send-event *camera* 'change-state cam-fps 0)
         (when (and (not (= (-> *target* state name) 'target-hl-death)) (not (target-sleeping?))) (pc-set-viewmodel-enabled #t))
-        (send-event *target* 'draw #f))
-      (pc-set-crosshair-enabled #f)
+        (send-event *target* 'draw #f)
+        )
+        (pc-set-crosshair-enabled #f)
       (when (and (not (paused?)) (not (target-sleeping?)))
         (hud-hl-display-on)
         (pc-get-mouse-data *mouse-data*)
@@ -86,18 +86,23 @@
         (update-suit-upgrade-message))
       ))
   ;; hide stuff too on other states
-  (when (not (in-hl-state?))
+  (when (or (not (in-hl-state?)) (= (-> *target* state name) 'target-hl-grab))
       (hud-hl-display-off)
       (pc-set-viewmodel-enabled #f)
       (pc-set-crosshair-enabled #f))
+
+  (when (= (-> *target* state name) 'target-hl-grab)
+    (send-event *target* 'draw #t)
+    ;;(send-event *camera* 'change-state cam-string 0)
+    (clear-mouse *mouse-data*))
+
   ;; show target when fishing
   (when (= (-> *target* state name) 'target-hl-fishing)
-    (logclear! (-> *target* draw status) (draw-status hidden)))
+    (send-event *target* 'draw #t))
 
   (when (in-zoomer?)
     (send-event *target* 'draw #t)
     (send-event *camera* 'change-state cam-string 0)
-    ;;(logclear! (-> *target* draw status) (draw-status hidden))
   )
 
   ;;(send-event *camera* 'set-slave-option (cam-slave-options ALLOW_Z_ROT))
@@ -167,7 +172,6 @@
   ;; Code here runs every time jak spawns (loading a file new game or death)
   ;;uncomment this to use custom music for custom levels - the function is in mod-common-functions.gc
   ;;(process-spawn-function process music-manager-proc)
-  (send-event *target* 'draw #f)
     (when (not (process-by-name 'hl-weapon-proc *active-pool*))
       (start-hl-weapons))
   (none))

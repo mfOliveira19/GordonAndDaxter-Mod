@@ -464,7 +464,6 @@
       ((-> target-hl-grab event) proc argc message block))
   :enter
     (behavior ((arg0 handle))
-      (send-event *target* 'draw #t)
       (set! (-> self control pole) arg0)
       (set! (-> self control last-transv2 quad) (-> self control trans quad))
       (set! (-> self control temp-flop-end-checks) (the-as uint #t))
@@ -475,7 +474,6 @@
       (send-event (ppointer->process (-> self sidekick)) 'shadow #t))
   :exit
     (behavior ()
-      (send-event *target* 'draw #f)
       (send-event (ppointer->process (-> self sidekick)) 'matrix 'normal)
       (send-event (ppointer->process (-> self sidekick)) 'shadow #t)
       (let ((gp-0 (joint-node eichar-lod0-jg main))
@@ -511,7 +509,7 @@
   :code
     (behavior ((arg0 handle))
       (clone-anim arg0 (the-as int (-> self draw origin-joint-index)) #t "")
-      (go target-stance))
+      (go target-hl-movement-ground))
   :post target-no-ja-move-post)
 
 (defstate target-hl-grab (target)
@@ -521,7 +519,7 @@
         ((and (= message 'query) (= (-> block param 0) 'mode)) (-> self state name))
         (else
          (case message
-           (('end-mode) (go target-stance))
+           (('end-mode) (go target-hl-movement-ground))
            (('play-anim)
             (let ((v0-0 (the-as object (-> block param 0)))) (set! (-> self control temp-flop-end-checks) (the-as uint v0-0)) v0-0))
            (('clone-anim) (go target-hl-clone-anim (process->handle (the-as process (-> block param 0)))))
@@ -531,17 +529,15 @@
                (go target-final-door
                    (the-as basic (process->handle (the-as process (-> block param 1))))
                    (process->handle (the-as process (-> block param 2)))))))
-           (else (target-generic-event-handler proc argc message block))))))
+           (else (target-hl-generic-event-handler proc argc message block))))))
   :enter
     (behavior ()
-      ;;(send-event *target* 'draw #t)
       (set! (-> self control cur-surf) *grab-mods*)
       (set! (-> self neck flex-blend) 0.0)
       (logior! (-> self state-flags) (state-flags invulnerable grabbed))
       (set! (-> self control temp-flop-end-checks) (the-as uint 'stance)))
   :exit
     (behavior ()
-      (send-event *target* 'draw #f)
       (logclear! (-> self state-flags) (state-flags invulnerable))
       (target-exit)
       )

@@ -1447,7 +1447,7 @@
                      (not (s2-0 (if v1-3 (-> v1-3 extra process)) s3-0))))
             (suspend))))
       (when (not arg0)
-        (ambient-hint-spawn "gamcam21" (the-as vector #f) *entity-pool* 'camera)
+        ;;(ambient-hint-spawn "gamcam21" (the-as vector #f) *entity-pool* 'camera)
         (let ((v1-11 (manipy-spawn (-> self root trans) (-> self entity) *reflector-mirror-break-sg* #f :to self)))
           (send-event (ppointer->process v1-11) 'anim-mode 'play1))
         (suspend-for (seconds 0.5))
