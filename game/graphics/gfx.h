@@ -109,6 +109,7 @@ struct GfxGlobalSettings {
   float viewmodel_offset_z = 0.0;
   float viewmodel_rotation_x = 0.0;
   bool viewmodel_show = true;
+  bool viewmodel_pause = false;
   // Crosshair
   int current_crosshair = 0;
   bool crosshair_show = true;

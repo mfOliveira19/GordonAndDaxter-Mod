@@ -1177,6 +1177,10 @@ void pc_renderer_viewmodel_set_enabled(u32 val) {
   Gfx::g_global_settings.viewmodel_show = symbol_to_bool(val);
 }
 
+void pc_renderer_viewmodel_set_paused(u32 val) {
+  Gfx::g_global_settings.viewmodel_pause = symbol_to_bool(val);
+}
+
 void pc_renderer_crosshair_set_enabled(u32 val) {
   Gfx::g_global_settings.crosshair_show = symbol_to_bool(val);
 }
@@ -1393,6 +1397,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-set-viewmodel-offset-z", (void*)pc_renderer_viewmodel_set_offset_z);
   make_func_symbol_func("pc-set-viewmodel-rotation-x", (void*)pc_renderer_viewmodel_set_rotation_x);
   make_func_symbol_func("pc-set-viewmodel-enabled", (void*)pc_renderer_viewmodel_set_enabled);
+  make_func_symbol_func("pc-set-viewmodel-paused", (void*)pc_renderer_viewmodel_set_paused);
   make_func_symbol_func("pc-set-crosshair-current-crosshair", (void*)pc_renderer_crosshair_set_current_crosshair);
   make_func_symbol_func("pc-set-crosshair-enabled", (void*)pc_renderer_crosshair_set_enabled);
 

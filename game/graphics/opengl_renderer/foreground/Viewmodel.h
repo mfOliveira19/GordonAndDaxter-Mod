@@ -265,6 +265,7 @@ class Viewmodel {
   int viewmodelActiveModel() { return Gfx::g_global_settings.viewmodel_active_model; };
   float viewmodelAnimationSpeed() { return Gfx::g_global_settings.viewmodel_animation_speed; };
   bool viewmodelShow() { return Gfx::g_global_settings.viewmodel_show; };
+  bool viewmodelPause() { return Gfx::g_global_settings.viewmodel_pause; };
   ViewmodelAnimations viewmodelActiveAnimation() {
     int val = Gfx::g_global_settings.viewmodel_active_animation;
     if (val < 0 || val > smg_grenade) {

@@ -556,6 +556,8 @@
 
 (define-extern pc-set-viewmodel-enabled (function symbol none))
 
+(define-extern pc-set-viewmodel-paused (function symbol none))
+
 (define-extern pc-set-crosshair-enabled (function symbol none))
 
 (define-extern pc-set-crosshair-current-crosshair (function int none))

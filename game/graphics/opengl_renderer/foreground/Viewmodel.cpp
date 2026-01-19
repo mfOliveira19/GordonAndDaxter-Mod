@@ -159,8 +159,9 @@ void Viewmodel::render(DmaFollower& dma,
   shader.activate();
 
   // --- ANIMATION UPDATE ---
-  update_animation();
-
+  if (!viewmodelPause()) {
+    update_animation();
+  }
 
   auto set_matrix = [&](const char* name, const math::Matrix4f& mat) {
     GLint loc = glGetUniformLocation(prog, name);

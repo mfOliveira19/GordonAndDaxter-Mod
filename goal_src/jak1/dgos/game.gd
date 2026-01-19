@@ -358,8 +358,8 @@
   "hl-weapons-crowbar.o"
   "hl-weapons-pistol.o"
   "hl-weapons-smg.o"
-  "target-hl-death.o"
   "target-hl-handler.o"
+  "target-hl-death.o"
   "target-hl.o"
   ;;
   "hud-classes-pc.o" ;; added

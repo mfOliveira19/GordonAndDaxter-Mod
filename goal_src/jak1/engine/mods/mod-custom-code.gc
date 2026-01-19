@@ -105,6 +105,11 @@
     (send-event *camera* 'change-state cam-string 0)
   )
 
+  (if (paused?)
+    (pc-set-viewmodel-paused #t)
+    (pc-set-viewmodel-paused #f)
+  )
+  
   ;;(send-event *camera* 'set-slave-option (cam-slave-options ALLOW_Z_ROT))
 ))
 
