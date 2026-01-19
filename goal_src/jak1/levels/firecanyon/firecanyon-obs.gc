@@ -200,7 +200,8 @@
   :trans
     (behavior ()
       (when (and *target*
-                 (= (send-event *target* 'query 'mode) 'racer)
+                 ;; changed for HL mod
+                 ;;(= (send-event *target* 'query 'mode) 'racer)
                  (< (vector-vector-distance (-> self root trans) (target-pos 0)) 225280.0))
         (sound-play "magma-rock")
         (let ((v1-8 (entity-actor-count (-> self entity) 'alt-actor)))
@@ -487,7 +488,7 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack 'touch) (send-event proc 'attack (-> block param 0) (static-attack-info ((mode 'darkeco)))) (go-virtual die))))
+        (('attack 'attack-hl 'touch) (send-event proc 'attack (-> block param 0) (static-attack-info ((mode 'darkeco)))) (go-virtual die))))
   :code
     (behavior ()
       (transform-post)
