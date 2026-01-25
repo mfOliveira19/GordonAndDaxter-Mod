@@ -560,7 +560,7 @@
       (cond
         ((and (= message 'query) (= (-> block param 0) 'mode)) (-> self state name))
         ((let ((v1-4 message)) (= v1-4 'end-mode)) (go target-hl-movement-ground))
-        (else (target-standard-event-handler proc argc message block))))
+        (else (target-hl-standard-event-handler proc argc message block))))
   :enter
     (behavior ()
       (set! (-> self neck flex-blend) 0.0)
@@ -623,3 +623,30 @@
       (set! (-> self control transv quad) (the-as uint128 0))
       (anim-loop))
   :post target-no-move-post)
+
+(defstate target-hl-movement-swim (target)
+  :event target-hl-standard-event-handler
+  :enter
+  (behavior ()
+    (set! *entered-swim?* #t)
+    (format 0 "entered swim ~%")
+    (when (time-elapsed? *last-step-time* (fsec 1.0))
+      (let ((rand-index (+ (rand-vu-int-range 0 3))))
+        (case rand-index
+          ((0) (sound-play "pl_wade1"))
+          ((1) (sound-play "pl_wade3"))
+          ((2) (sound-play "pl_wade2"))
+          ((3) (sound-play "pl_wade4")))))
+    (target-hl-collide-set! 'normal (the-as float 0.0)))
+
+  :trans
+  (behavior ()
+      (when (and (not (logtest? (-> self water flags) (water-flags wt11))) (time-elapsed? (-> self state-time) (seconds 0.1)))
+        (go target-hl-movement-ground))
+  )
+  :code
+    (behavior ()
+      (loop (suspend)))
+  :post 
+  (behavior ()
+    (target-hl-movement-swim-post)))

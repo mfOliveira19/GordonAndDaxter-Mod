@@ -46,7 +46,6 @@
    (weapon-next-idle-wait          time-frame)
    (current-aim-punch-last-update  time-frame)
    (crowbar-swing-index            uint16)
-   (current-aim-punch              float)
    (current-pistol-mag-ammo        uint16)
    (current-smg-mag-ammo           uint16))
   (:methods)
@@ -114,20 +113,17 @@
   (set! (-> (the-as camera-slave (-> *camera* slave 0)) tracking inv-mat vector 0 w) new-pitch))
 
 (defbehavior add-aim-punch hl-weapons ((amount float))
-  (set-camera-pitch (+ (get-camera-pitch) amount))
-  (set! (-> self current-aim-punch) (+ (-> self current-aim-punch) amount)))
+  (set! *current-aim-punch* (+ *current-aim-punch* amount))
+  (set! *current-aim-punch-offset* (+ *current-aim-punch-offset* amount)))
 
+;; decay punch over time
 (defbehavior update-aim-punch hl-weapons ((decay-rate float))
-  (let ((p (-> self current-aim-punch)))
-    (when (> (abs p) 0.0001) ;; only decay if there's actual punch left
-      (let ((decay (* p decay-rate)))
-        ;; decay shouldn't exceed the current punch
-        (when (> (abs decay) (abs p))
-          (set! decay p))
-        ;; apply decay to camera
-        (set-camera-pitch (- (get-camera-pitch) decay))
-        ;; update stored punch
-        (set! (-> self current-aim-punch) (- p decay))))))
+  (when (> (abs *current-aim-punch-offset*) 0.0001)
+    (let ((decay (* *current-aim-punch-offset* decay-rate)))
+      (when (> (abs decay) (abs *current-aim-punch-offset*))
+        (set! decay *current-aim-punch-offset*))
+      (set! *current-aim-punch* (- *current-aim-punch* decay))
+      (set! *current-aim-punch-offset* (- *current-aim-punch-offset* decay)))))
 
 (defun fire-hl-shot ((shooter process-drawable) (is-debug? symbol) (offset-x float) (offset-y float))
   (rlet ((vf0 :class vf)

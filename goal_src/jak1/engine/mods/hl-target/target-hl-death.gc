@@ -274,6 +274,5 @@
              )
       (set! (-> self control transv quad) (the-as uint128 0))
       (initialize! (-> self game) 'dead (the-as game-save #f) (the-as string #f))
-      (set-time! (-> self state-time))
-      (anim-loop))
+      (set-time! (-> self state-time)))
   :post target-hl-no-stick-post)

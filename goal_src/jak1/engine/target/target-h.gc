@@ -155,6 +155,8 @@
    target-hl-movement-air
    target-hl-movement-ground-duck
    target-hl-movement-air-duck
+   target-hl-movement-swim
+   target-hl-movement-swim-ducked
    (target-hl-jump float float surface)
    (target-hl-high-jump float float basic)
    (target-hl-play-anim string handle)

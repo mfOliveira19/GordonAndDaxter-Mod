@@ -988,6 +988,12 @@
 
 (defstate target-hl-racing-get-on (target)
   :event target-hl-generic-event-handler
+  :enter
+  (behavior ()
+    ;; When on zoomer, we collide with water
+    (set! (-> (-> *target* control body-spheres 0) collide-with)
+      (collide-kind background cak-1 cak-2 cak-3 water powerup crate enemy wall-object ground-object mother-spider))
+  )
   :exit
     (-> target-hl-racing-start
         exit)
@@ -1079,6 +1085,12 @@
 
 (defstate target-hl-racing-get-off (target)
   :event target-hl-generic-event-handler
+  :enter
+  (behavior ()
+      ;; Out of zoomer, we no longer collide with water
+    (set! (-> (-> *target* control body-spheres 0) collide-with)
+      (collide-kind background cak-1 cak-2 cak-3 powerup crate enemy wall-object ground-object mother-spider))
+  )
   :exit
     (-> target-hl-racing-start
         exit)

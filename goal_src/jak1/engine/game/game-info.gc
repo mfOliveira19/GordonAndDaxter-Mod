@@ -151,7 +151,8 @@
   (case cause
     (('dead)
      ;; reload game-info because we died.  Increase death counts
-     (+! (-> this total-deaths) 1)
+     ;; Changed for HL mod, we will use the total-deaths to store the cell hints (i think nobody will care about the deaths)
+     ;;(+! (-> this total-deaths) 1)
      (+! (-> this continue-deaths) 1)
      (+! (-> this fuel-cell-deaths) 1)
      (when *target*

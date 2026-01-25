@@ -49,9 +49,9 @@
        (set! (-> self skip-cut) #t))
       (else
        (logior! (-> self skel status) (janim-status inited))
-       ;;(process-grab? *target*)
-       ;;(set! (-> *camera-other-root* quad) (-> self root trans quad))
-       #|
+       (process-grab? *target*)
+       (set! (-> *camera-other-root* quad) (-> self root trans quad))
+
        (let ((s5-1 (-> self node-list data 88 bone transform))
              (gp-1 (-> self node-list data 88 bone scale)))
          (let ((s4-1 (new 'stack-no-clear 'vector)))
@@ -67,11 +67,11 @@
          (set! (-> *camera-other-matrix* vector 2 w) 0.0)
          (vector-reset! (-> *camera-other-matrix* vector 3))
          (othercam-calc (-> gp-1 x)))
-       ;;(hide-hud-quick)
-       ;;(set! *camera-look-through-other* 2)
+       (hide-hud-quick)
+       (set! *camera-look-through-other* 2)
        (when (< (-> self valid-frames) 2)
          (set-blackout-frames (seconds 0.035))
-         (+! (-> self valid-frames) 1))|#
+         (+! (-> self valid-frames) 1))
          )
          
          ))

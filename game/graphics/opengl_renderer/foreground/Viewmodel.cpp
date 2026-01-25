@@ -82,6 +82,12 @@ void Viewmodel::render(DmaFollower& dma,
     dma.read_and_advance();
 
   if (!viewmodelShow()) {
+    if (m_playing_animation) {
+      auto& model = m_models[m_active_model];
+      auto& anim = model.animations[m_active_animation];
+      m_current_time = anim.duration;  // jump to end
+      update_animation();
+    }
     return;
   }
 

@@ -22,7 +22,7 @@
 ;; Begin function defintions.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun in-zoomer? ()
+(defun on-zoomer? ()
   (or (= (-> *target* state name) 'target-hl-racing)
   (= (-> *target* state name) 'target-hl-racing-grab)
   (= (-> *target* state name) 'target-hl-racing-clone-anim)
@@ -51,74 +51,125 @@
                (= st 'target-title-wait)
                (= st 'target-hl-fishing)
                (= st 'target-hl-clone-anim)
-               (in-zoomer?))))))
+               (on-zoomer?))))))
 
 (defun target-sleeping? ()
   (nonzero? (logand (-> *target* mask)
                     (process-mask sleep))))
 
-((defun run-hl-mod-stuff ()
-  ;; hide stuff while in cutscenes
-  (when (target-sleeping?)
-   (pc-set-viewmodel-enabled #f)
-  )
-  (if (movie?)
+(defun show-viewmodel-and-hud ()
+  (logclear! (-> *hl-weapons* mask) (process-mask sleep))
+  (hud-hl-display-on)
+  (pc-set-viewmodel-enabled #t)
+  (pc-set-crosshair-enabled #t))
+
+(defun hide-viewmodel-and-hud ()
+  (logior! (-> *hl-weapons* mask) (process-mask sleep))
+  (hud-hl-display-off)
+  (pc-set-viewmodel-enabled #f)
+  (pc-set-crosshair-enabled #f))
+
+(defun green-screen ()
+  (with-dma-buffer-add-bucket ((dma-buf (-> (current-frame) global-buf)) (bucket-id debug-no-zbuf))
+    (draw-sprite2d-xy dma-buf 0 0 512 224 (new 'static 'rgba :r #x00 :g #xCC :b #x00 :a #x60))) (none))
+
+(defun start-green-flash ((times int))
+  (set! *green-flash-times* times)
+  (set! *green-flash-started* #f)
+  (set! *green-flash-active* #t)
+  (set! *green-flash-current* 0))
+
+(defun update-green-flash ()
+  (when *green-flash-active*
+    ;; if we're not in a flash, wait for the gap
+    (when (not *green-flash-started*)
+      (when (or (not *green-flash-last-time*) ;; first flash
+                (time-elapsed? *green-flash-last-time* *green-flash-gap-sec*))
+        ;; start current flash
+        (set! *show-green-screen?* #t)
+        (set-time! *green-flash-time*)
+        (set! *green-flash-started* #t))))
+
+    ;; draw green screen while time has not elapsed
+    (when *show-green-screen?*
+      (green-screen))
+
+    ;; check if current flash duration has finished
+    (when (and *green-flash-started*
+               (time-elapsed? *green-flash-time* *green-flash-duration-sec*))
+      ;; end current flash
+      (set! *show-green-screen?* #f)
+      (set! *green-flash-started* #f)
+      (set! *green-flash-current* (+ *green-flash-current* 1))
+      ;; store the end time to wait for the gap
+      (set-time! *green-flash-last-time*)
+
+      ;; stop flashing if reached total
+      (when (>= *green-flash-current* *green-flash-times*)
+        (set! *green-flash-active* #f))))
+
+
+(defun handle-draw-and-input-stuff ()
+  ;; Set the camera to first-person when we are a normal state (ground, air, etc.) and not in a cutscene
+  (when (or (and (in-hl-state?) (not (movie?)) (not (on-zoomer?))) (= (-> *target* state name) 'target-hl-death))
+    (send-event *camera* 'set-fov 16384.845)
+    (send-event *camera* 'change-state cam-fps 0))
+  
+  ;; In the zoomer we set the camera back to string
+  (when (on-zoomer?)
+    (send-event *camera* 'change-state cam-string 0))
+
+  ;; Handle input and new hints when not paused
+  (when (and (not (paused?)) (not (target-sleeping?)))
+    (hud-hl-display-on)
+    (unless (= (-> *target* state name) 'target-warp-in) (pc-get-mouse-data *mouse-data*))
+    (pc-set-crosshair-enabled #t)
+    (update-cell-suit-upgrade-status)
+    (update-suit-upgrade-message))
+
+  ;; When we should hide the viewmodel and hud
+  ;;  
+  ;; Hide when we are not in first person or not in play, we also hide target
+  (if (or (!= *camera-look-through-other* 0) (!= (-> *target* game mode) 'play) (not (in-hl-state?)) (movie?))
     (begin
-      (hud-hl-display-off)
-      (pc-set-viewmodel-enabled #f)
-      (pc-set-crosshair-enabled #f)
-      (clear-mouse *mouse-data*)
-      (send-event *target* 'draw #t)
-      )
+      (hide-viewmodel-and-hud)
+      ;; We also hide the target when we die
+      (unless (= (-> *target* state name) 'target-hl-death)
+        (send-event *target* 'draw #t))
+    )
     (begin
-      (when (or (in-hl-state?) (= (-> *target* state name) 'target-hl-death))
-        (send-event *camera* 'set-fov 16384.845)
-        (send-event *camera* 'change-state cam-fps 0)
-        (when (and (not (= (-> *target* state name) 'target-hl-death)) (not (target-sleeping?))) (pc-set-viewmodel-enabled #t))
-        (send-event *target* 'draw #f))
-        (pc-set-crosshair-enabled #f)
-      (when (and (not (paused?)) (not (target-sleeping?)))
-        (hud-hl-display-on)
-        (pc-get-mouse-data *mouse-data*)
-        (pc-set-crosshair-enabled #t)
-        (update-cell-suit-upgrade-status)
-        (update-suit-upgrade-message))
-      ))
-  ;; hide stuff too on other states
-  (when (or (not (in-hl-state?)) (= (-> *target* state name) 'target-hl-grab))
-      (hud-hl-display-off)
-      (pc-set-viewmodel-enabled #f)
-      (pc-set-crosshair-enabled #f))
-
-  (when (= (-> *target* state name) 'target-hl-grab)
-    (send-event *target* 'draw #t)
-    ;;(send-event *camera* 'change-state cam-string 0)
-    (clear-mouse *mouse-data*))
-
-  ;; show target when fishing
-  (when (= (-> *target* state name) 'target-hl-fishing)
-    (send-event *target* 'draw #t))
-
-  (when (in-zoomer?)
-    (send-event *target* 'draw #t)
-    (send-event *camera* 'change-state cam-string 0)
+      (show-viewmodel-and-hud)
+      (send-event *target* 'draw #f)
+    )
   )
 
+  ;; Handle pausing the viewmodel
   (if (paused?)
     (pc-set-viewmodel-paused #t)
-    (pc-set-viewmodel-paused #f)
+    (pc-set-viewmodel-paused #f))
+
+  (when (or (= (-> *target* state name) 'target-hl-clone-anim))
+    (set! *should-blackout?* #f)
   )
-  
-  ;;(send-event *camera* 'set-slave-option (cam-slave-options ALLOW_Z_ROT))
-))
+
+  ;; Force blackout during target warp transitions
+  (when *should-blackout?* (blackout))
+
+  ;; Handle the green screen teleport effect
+  (update-green-flash)
+  0
+)
+
 
 (defun runs-every-frame ()
   (if *show-input-display* (input-display-on) (input-display-off))
   ;;(set! *display-collision-marks* #t)
   (update-keyboard-input-stuff)
   (should-update-jump-buffer?)
-  (run-hl-mod-stuff)
+  (handle-draw-and-input-stuff)
+  ;;(format 0 "PITCH: ~f ~%" (-> (the-as camera-slave (-> *camera* slave 0)) tracking inv-mat vector 0 w))
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
+  (update-mood-fog *default-mood* 100.0)
   (when *debug-segment*
     (orb-placer-maintenance))
   (none))
@@ -184,10 +235,6 @@
   (case death-event
     (('dying)
      ;; Code here runs immediately every time jak dies, before any death animation or death cutscene
-      ;; hide stuff too when we die
-      (hud-hl-display-off)
-      (pc-set-viewmodel-enabled #f)
-      (pc-set-crosshair-enabled #f)  
      )
     (('blackout)
      ;; Code here runs after jak dies (and any death cutscene finishes), during the blackout before he spawns

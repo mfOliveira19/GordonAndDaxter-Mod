@@ -26,15 +26,34 @@
         ((= val 20) (print-game-text "YOUR SUIT CAN NOW WALK ON FIRE CANYON" a1-3 #f 128 22))
         ((= val 72) (print-game-text "YOUR SUIT CAN NOW WALK ON LAVA TUBE" a1-3 #f 128 22)))))
 
+;; We are using the total-deaths value from the saves to store the hints display status
 (defun check-cell-suit-upgrade ((val int))
-  (let ((fuel (the int (-> *game-info* fuel))))
-    (when (and (< *last-cell-val* val)
-               (>= fuel val))
-      (cond
-        ((= val 20)  (sound-play "cell-reach-20"))
-        ((= val 72)  (sound-play "cell-reach-72"))
-        ((= val 100) (sound-play "cell-reach-100")))
-      (start-suit-upgrade-message val))))
+  (let* ((fuel (the int (-> *game-info* fuel)))
+         (last-hint (the int (-> *game-info* total-deaths))))
+    (cond
+      ((and (= val 20)
+            (< *last-cell-val* val)
+            (>= fuel val)
+            (< last-hint 1))
+       (sound-play "cell-reach-20")
+       (start-suit-upgrade-message val)
+       (set! (-> *game-info* total-deaths) 1))
+
+      ((and (= val 72)
+            (< *last-cell-val* val)
+            (>= fuel val)
+            (< last-hint 2))
+       (sound-play "cell-reach-72")
+       (start-suit-upgrade-message val)
+       (set! (-> *game-info* total-deaths) 2))
+
+      ((and (= val 100)
+            (< *last-cell-val* val)
+            (>= fuel val)
+            (< last-hint 3))
+       (sound-play "cell-reach-100")
+       (start-suit-upgrade-message val)
+       (set! (-> *game-info* total-deaths) 3)))))
 
 (defun update-suit-upgrade-message ()
   (when *suit-upgrade-active*
@@ -56,7 +75,7 @@
   (set! *last-cell-val* (the int (-> *game-info* fuel))))
 
 (defbehavior target-should-take-lava-damage? target ((arg1 attack-info))
-  ;; We only check if the attack type is burnup o burn
+  ;; We only check if the attack type is burnup or burn
   (if (or (= (-> arg1 mode) 'burnup) (= (-> arg1 mode) 'burn))
     (cond
       ;; If we are in firecanyon and we have at least 20 cells
@@ -69,45 +88,6 @@
       #t)
     )
 #t))
-
-(defbehavior target-hl-no-stick-post target ()
-  (let ((gp-0 (the int (-> *display* time-ratio))))
-    (set-time-ratios *display* 1.0)
-    (countdown (s5-0 gp-0)
-      (set! (-> self control unknown-int40) s5-0)
-      (flag-setup)
-      (build-conversions (-> self control transv))
-      (do-rotations1)
-      (let ((s4-0 (new-stack-vector0))) (read-pad s4-0) (turn-to-vector s4-0 0.0))
-      (add-thrust)
-      (add-gravity)
-      (do-rotations2)
-      (reverse-conversions (-> self control transv))
-      (if *debug-segment*
-        (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
-                   'draw
-                   (new 'static 'rgba :r #x40 :b #x40 :a #x80)))
-      (fill-cache-integrate-and-collide! (-> self control) (-> self control transv) (-> self control root-prim collide-with))
-      (if (logtest? (-> self control root-prim prim-core action) (collide-action edgegrab-possible))
-        (find-edge-grabs! *target* *collide-cache*))
-      (if *debug-segment*
-        (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
-                   'draw
-                   (new 'static 'rgba :r #x80 :g #x60 :b #x40 :a #x80)))
-      (bend-gravity)
-      (hl-post-flag-setup))
-    (set-time-ratios *display* (the float gp-0)))
-  (if *debug-segment*
-    (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
-               'draw
-               (new 'static 'rgba :r #x40 :b #x40 :a #x80)))
-  (ja-post)
-  (if *debug-segment*
-    (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0) 'draw (new 'static 'rgba :r #x80 :a #x80)))
-  (joint-points)
-  (do-target-shadow)
-  (target-powerup-process)
-  (none))
 
 (defbehavior target-hl-explosion-handler target ((arg0 symbol) (arg1 attack-info) (arg2 process) (arg3 touching-shapes-entry) (arg4 (state symbol attack-info target)) (arg5 event-message-block))
   ;; Only process if invincibility timer allows
@@ -162,7 +142,7 @@
           (set! (-> dir x) (* (-> dir x) horizontal-strength))
           (set! (-> dir z) (* (-> dir z) horizontal-strength))
 
-          (if (> dy -2500.0)
+          (if (> dy -2800.0)
               (begin
               (format 0 "ALLOW LIFT ~f ~%" dy)
               ;; explosion below player -> allow lift
@@ -708,6 +688,12 @@
     (('play-anim) (go target-hl-play-anim (the-as string (-> arg3 param 0)) (the-as handle arg1)))
     (('clone-anim) (go target-hl-clone-anim (process->handle (the-as process (-> arg3 param 0)))))
     ;;(('edge-grab) (go target-edge-grab))
+    (('swim)
+     (if (not (or (= (-> self control cur-surf mode) 'swim)
+                  (= (-> self control cur-surf mode) 'dive)
+                  (= (-> self next-state name) 'target-hit)
+                  (= (-> *target* state name) 'target-hl-movement-swim)))
+       (go target-hl-movement-swim)))
     (('pole-grab)
      (if (not (logtest? (-> self control root-prim prim-core action) (collide-action swingpole-active)))
        (go target-pole-cycle (process->handle (the-as process (-> arg3 param 0))))))

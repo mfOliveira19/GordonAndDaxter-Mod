@@ -1,0 +1,190 @@
+(defbehavior hl-add-thrust-swim target ()
+  (let* ((wishvel (-> self control trans-targ))
+         (curvel  (-> self control ltransv))
+         (frametime (seconds-per-frame))
+         (maxspeed (if (target-has-eco-type? (pickup-type eco-blue))
+                       hl-max-speed-swim-blue-eco
+                       hl-max-speed-swim))
+         (accel 200.0)
+         (friction 6.0)
+         ;; vertical damping factor (counter falling into water)
+         (vert-damp 0.2)
+         ;; gravity/sink speed if no input
+         (sink-speed -9000.0)
+         ;; horizontal and vertical wish components
+         (wish-horz (new-stack-vector0))
+         (wish-vert (new-stack-vector0)))
+
+    ;; --------------------------------------------------
+    ;; 1. Apply base velocity damping on first frame of water
+    ;; --------------------------------------------------
+    (when *entered-swim?*
+      ;; reduce vertical momentum to 20% and horizontal to 30%
+      (vector-xz-normalize! curvel (* (vector-xz-length curvel) 0.3))
+      (set! (-> curvel y) (* (-> curvel y) vert-damp))
+      ;; clear the flag so it runs only once
+      *entered-swim?* #f)
+
+    ;; --------------------------------------------------
+    ;; 2. Apply horizontal friction
+    ;; --------------------------------------------------
+    (let ((speed (vector-xz-length curvel)))
+      (when (> speed 0.0)
+        (let ((drop (* speed friction frametime))
+              (new-speed (max 0.0 (- speed (* speed friction frametime)))))
+          (vector-xz-normalize! curvel new-speed))))
+
+    ;; --------------------------------------------------
+    ;; 3. Apply horizontal acceleration from input
+    ;; --------------------------------------------------
+    (let ((wishspeed (vector-xz-length wishvel)))
+      (when (> wishspeed 0.0)
+        (vector-normalize! wishvel 1.0)
+        (when (> wishspeed maxspeed)
+          (set! wishspeed maxspeed))
+        (let* ((curr-speed (vector-dot curvel wishvel))
+               (addspeed (- wishspeed curr-speed)))
+          (when (> addspeed 0.0)
+            (let ((accelspeed (* accel frametime wishspeed)))
+              (when (> accelspeed addspeed) (set! accelspeed addspeed))
+              (vector+! curvel curvel (vector-float*! (new-stack-vector0) wishvel accelspeed)))))))
+
+    ;; --------------------------------------------------
+    ;; 4. Apply vertical movement
+    ;; --------------------------------------------------
+    (let ((vert-input (-> wishvel y)))
+      (cond
+        ;; If player presses jump → go upward
+        ((should-jump?)
+        ;; you can tweak swim-up speed
+        (+! (-> curvel y) jump-speed))  
+
+        ;; Otherwise, use player input up/down (optional)
+        ((not (= vert-input 0.0))
+        (+! (-> curvel y) (* vert-input accel frametime)))
+        ;; If no input → gentle sinking
+        ((if (fully-grounded? 2004.0)
+            (set! (-> curvel y) 0.0)
+            (+! (-> curvel y) sink-speed)))))
+
+    ;; --------------------------------------------------
+    ;; 5. Clamp horizontal speed
+    ;; --------------------------------------------------
+    (let ((speed (vector-xz-length curvel)))
+      (when (> speed maxspeed)
+        (vector-xz-normalize! curvel maxspeed)))))
+
+(if (fully-grounded? 2004.0)
+    (set! (-> curvel y) 0.0)
+    (+! (-> curvel y) sink-speed))
+
+    (-> (the-as camera-slave (-> *camera* slave 0)) tracking inv-mat vector 0 w)
+
+
+(define *CAM_FPS-bank*
+  (new 'static 'cam-fps-bank :rot-speed 5.0889 :max-degrees 16350.000 :max-fov 11650.845 :min-fov 11650.845))
+
+;; main first-person camera for hl mod
+;; og:preserve-this modified for high fps
+(defstate cam-fps (camera-slave)
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (case message
+        (('teleport) #f)
+        (else (cam-standard-event-handler proc argc message block))))
+  :enter
+    (behavior ()
+      (when (not (-> self enter-has-run))
+        (let ((v1-3 (vector-float*! (new-stack-vector0) (-> *camera* local-down) (+ 1024.0 (-> *camera* target-height)))))
+          (vector-! (-> self trans) (-> *camera* tpos-curr) v1-3))
+        (set! (-> self blend-from-type) (the-as uint 0))
+        (set! (-> self blend-to-type) (the-as uint 0))
+        0)
+      (set! (-> self fov) 11650.845))
+  :exit
+    (behavior ()
+      (if (and *target*
+               (logtest? (-> *camera* master-options) 2)
+               (logtest? (-> *target* state-flags) (state-flags first-person-mode)))
+        (send-event *target* 'end-mode)))
+  :trans
+    (behavior ()
+      (if (not (logtest? (-> *camera* master-options) 2)) (go cam-free-floating)))
+  :code
+  (behavior ()
+    (let ((gp-0 (current-time)))
+      (loop
+        (when (not (paused?))
+          (let ((s4-0 (vector-reset! (new-stack-vector0)))
+                (s5-0 (new-stack-matrix0)))
+            
+            ;; Handle mouse input
+            (when *mouse-data*
+              (let ((delta-x (-> *mouse-data* mouse-relx))
+                    (delta-y (-> *mouse-data* mouse-rely)))
+                
+                (let* ((fwd (-> self tracking inv-mat vector 2))
+                       (down (-> *camera* local-down))
+                       (current-pitch (asin (vector-dot down fwd)))
+                       (max-pitch (-> *CAM_FPS-bank* max-degrees)))
+                  
+                  ;; Clamp delta-y to not exceed max pitch
+                  (when (> current-pitch max-pitch)
+                    (set! delta-y 0.0))
+                  (when (< current-pitch (- max-pitch))
+                    (set! delta-y 0.0))
+                  (when (> (+ current-pitch (* delta-y (-> *pc-settings* mouse-xsens))) max-pitch)
+                    (set! delta-y (/ (- max-pitch current-pitch) (-> *pc-settings* mouse-xsens))))
+                  (when (< (+ current-pitch (* delta-y (-> *pc-settings* mouse-xsens))) (- max-pitch))
+                    (set! delta-y (/ (- (- max-pitch) current-pitch) (-> *pc-settings* mouse-xsens))))
+                
+                ;; Apply pitch and yaw deltas
+                (set! (-> s4-0 x) (+ (-> s4-0 x) (* delta-y (-> *pc-settings* mouse-xsens))))
+                (set! (-> s4-0 y) (- (-> s4-0 y) (* delta-x (-> *pc-settings* mouse-xsens))))
+                
+                ;; Not exactly an 180, but it will do
+                (when *do-180?*
+                  (set! (-> s4-0 y) (+ (-> s4-0 y) 32775.0))
+                  (set! *do-180?* #f)))))
+            
+            (matrix-axis-angle! s5-0 (-> *camera* local-down) (-> s4-0 y))
+            (matrix*! (the-as matrix (-> self tracking)) (the-as matrix (-> self tracking)) s5-0)
+            
+            (when (not (logtest? (-> self options) 8))
+              (if (< (vector-dot (-> self tracking inv-mat vector 1) (-> *camera* local-down)) 0.0)
+                  (forward-down->inv-matrix (the-as matrix (-> self tracking))
+                                            (-> self tracking inv-mat vector 2)
+                                            (-> *camera* local-down))
+                  (forward-down->inv-matrix (the-as matrix (-> self tracking))
+                                            (-> self tracking inv-mat vector 2)
+                                            (vector-negate! (new-stack-vector0) (-> *camera* local-down)))))
+            
+            (matrix-axis-angle! s5-0 (the-as vector (-> self tracking)) (- (-> s4-0 x)))
+            (matrix*! (the-as matrix (-> self tracking)) (the-as matrix (-> self tracking)) s5-0)
+            
+            (when (not (logtest? (-> self options) 8))
+              (let ((f30-1 (vector-dot (-> *camera* local-down) (-> self tracking inv-mat vector 2))))
+                (set! (-> (new 'stack-no-clear 'vector) quad) (the-as uint128 0))
+                (when (< (sin (-> *CAM_FPS-bank* max-degrees)) (fabs f30-1))
+                  (vector--float*! (-> self tracking inv-mat vector 2) (-> self tracking inv-mat vector 2) (-> *camera* local-down) f30-1)
+                  (vector-normalize! (-> self tracking inv-mat vector 2) (cos (-> *CAM_FPS-bank* max-degrees)))
+                  (if (< f30-1 0.0)
+                    (vector--float*! (-> self tracking inv-mat vector 2)
+                                     (-> self tracking inv-mat vector 2)
+                                     (-> *camera* local-down)
+                                     (sin (-> *CAM_FPS-bank* max-degrees)))
+                    (vector+float*! (-> self tracking inv-mat vector 2)
+                                    (-> self tracking inv-mat vector 2)
+                                    (-> *camera* local-down)
+                                    (sin (-> *CAM_FPS-bank* max-degrees))))
+                  (vector-cross! (-> self tracking inv-mat vector 1)
+                                 (-> self tracking inv-mat vector 2)
+                                 (the-as vector (-> self tracking)))
+                  (set! (-> self tracking inv-mat vector 1 w) 0.0)))))
+
+            (let ((v1-76 (vector-float*! (new-stack-vector0) (-> *camera* local-down) (+ 1024.0 (-> *camera* target-height)))))
+              (vector-! (-> self trans) (-> *camera* tpos-curr) v1-76))
+            
+            (suspend)))))
+          
+          )

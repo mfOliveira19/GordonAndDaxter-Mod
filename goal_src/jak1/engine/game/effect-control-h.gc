@@ -38,3 +38,22 @@
   (set! (-> this channel-offset) arg0)
   0
   (none))
+
+;; Added for hl mod
+;; Stuff for the teleport effect
+(define *green-flash-times* 0)
+(define *show-green-screen?* #f)
+(define *green-flash-started* #f)
+(define *green-flash-active* #f)
+(define *green-flash-current* 0)
+(define *green-flash-time* 0)
+(define *green-flash-last-time* 0)
+(define *green-flash-gap-sec* (seconds 0.1))
+(define *green-flash-duration-sec* (seconds 0.1))
+(define *should-blackout?* #f)
+
+(defun start-green-flash ((times int))
+  (set! *green-flash-times* times)
+  (set! *green-flash-started* #f)
+  (set! *green-flash-active* #t)
+  (set! *green-flash-current* 0))
