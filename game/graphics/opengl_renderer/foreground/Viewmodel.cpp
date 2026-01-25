@@ -90,6 +90,8 @@ void Viewmodel::render(DmaFollower& dma,
     }
     return;
   }
+  // Handle Fog
+  render_state->fog_intensity = fogIntensity();
 
   // Handle model switch
   if (viewmodelActiveModel() != m_active_model) {

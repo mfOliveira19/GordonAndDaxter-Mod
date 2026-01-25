@@ -629,7 +629,6 @@
   :enter
   (behavior ()
     (set! *entered-swim?* #t)
-    (format 0 "entered swim ~%")
     (when (time-elapsed? *last-step-time* (fsec 1.0))
       (let ((rand-index (+ (rand-vu-int-range 0 3))))
         (case rand-index
@@ -638,7 +637,10 @@
           ((2) (sound-play "pl_wade2"))
           ((3) (sound-play "pl_wade4")))))
     (target-hl-collide-set! 'normal (the-as float 0.0)))
-
+  :exit
+  (behavior ()
+    (pc-set-fog-intensity 1.0)
+  )
   :trans
   (behavior ()
       (when (and (not (logtest? (-> self water flags) (water-flags wt11))) (time-elapsed? (-> self state-time) (seconds 0.1)))

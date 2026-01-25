@@ -24,7 +24,7 @@
 (define *falling* #f)
 (define *should-take-fall-damage* #f)
 (define *entered-swim?* #f)
-
+(define *should-show-swim-screen?* #f)
 ;; Duck stuff
 (define *ducked?* #f)
 (define *ground-duck-started* #f)
@@ -1067,6 +1067,22 @@
 
 ;; Swim stuff
 
+(defbehavior in-swim-limits? target ()
+  (let ((water-proc (handle->process (-> self water volume)))
+        (limit 0.0))
+
+  (cond 
+    ((string= (the-as string (-> water-proc name)) "cave-water-2") (set! limit 138000.0))
+    ((string= (the-as string (-> water-proc name)) "cave-water-3") (set! limit 173000.0))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-4") (set! limit -690004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-3") (set! limit -599760.0625))
+    (else (set! limit -20348.3759)))
+
+
+    (if (<= (-> self control trans y) limit)
+      #t
+      #f)))
+
 (defbehavior hl-add-thrust-swim target ()
   (let* ((wishvel (-> self control trans-targ))
          (curvel  (-> self control ltransv))
@@ -1076,41 +1092,29 @@
                        hl-max-speed-swim))
          (accel 200.0)
          (friction 6.0)
-         ;; vertical damping factor (counter falling into water)
-         (vert-damp 0.2)
-         ;; gravity/sink speed if no input
+         (vert-damp 0.5)
          (sink-speed -9000.0)
-         ;; horizontal and vertical wish components
          (wish-horz (new-stack-vector0))
          (wish-vert (new-stack-vector0))
          (pitch (-> (the-as camera-slave (-> *camera* slave 0)) tracking inv-mat vector 0 w)))
 
-    ;; --------------------------------------------------
-    ;; 1. Apply base velocity damping on first frame of water
-    ;; --------------------------------------------------
+
     (when *entered-swim?*
-      ;; reduce vertical momentum to 20% and horizontal to 30%
-      (vector-xz-normalize! curvel (* (vector-xz-length curvel) 0.3))
+      (vector-xz-normalize! curvel (* (vector-xz-length curvel) 0.6))
       (set! (-> curvel y) (* (-> curvel y) vert-damp))
       ;; clear the flag so it runs only once
       *entered-swim?* #f)
 
-    ;; --------------------------------------------------
-    ;; 2. Apply horizontal friction
-    ;; --------------------------------------------------
+
     (let ((speed (vector-xz-length curvel)))
       (when (> speed 0.0)
         (let ((drop (* speed friction frametime))
               (new-speed (max 0.0 (- speed (* speed friction frametime)))))
           (vector-xz-normalize! curvel new-speed))))
 
-      ;; --------------------------------------------------
-      ;; 3. Apply horizontal acceleration from input
-      ;; --------------------------------------------------
       (let* ((using-forward?
               (or (should-move-forward?) (should-move-back?)))
 
-            ;; pitch reduces horizontal speed ONLY for W/S
             (h-scale (if using-forward?
                           (- 1.0 (abs pitch))
                           1.0))
@@ -1118,15 +1122,11 @@
             (wishspeed (vector-xz-length wishvel)))
 
         (when (> wishspeed 0.0)
-
-          ;; build PURE horizontal wish direction
           (vector-zero! wish-horz)
           (set! (-> wish-horz x) (-> wishvel x))
           (set! (-> wish-horz z) (-> wishvel z))
 
           (vector-normalize! wish-horz 1.0)
-
-          ;; scale desired speed
           (set! wishspeed (* wishspeed h-scale))
 
           (when (> wishspeed maxspeed)
@@ -1144,32 +1144,26 @@
 
       (when (or (should-move-forward?) (should-move-back?))
         (let* ((dir (if (should-move-forward?) 1.0 -1.0))
-              ;; 0 = flat, 1 = straight up/down
               (vert-speed (* dir pitch (* 20000 accel) frametime)))
           (+! (-> curvel y) vert-speed)))
 
-  
-    ;; --------------------------------------------------
-    ;; 4. Apply vertical movement
-    ;; --------------------------------------------------
     (let ((vert-input (-> wishvel y)))
       (cond
-        ;; If player presses jump → go upward
         ((should-jump?)
-        ;; you can tweak swim-up speed
         (+! (-> curvel y) jump-speed))  
 
-        ;; Otherwise, use player input up/down (optional)
         ((not (= vert-input 0.0))
         (+! (-> curvel y) (* vert-input accel frametime)))
-        ;; If no input → gentle sinking
         ((if (fully-grounded? 2004.0)
             (set! (-> curvel y) 0.0)
-            (+! (-> curvel y) sink-speed)))))
+            (if (not (or (should-move-left?) (should-move-right?))) 
+              (+! (-> curvel y) sink-speed)
+              (set! (-> curvel y) 0.0))))))
 
-    ;; --------------------------------------------------
-    ;; 5. Clamp horizontal speed
-    ;; --------------------------------------------------
+    (when (in-swim-limits?)
+      (when (< (-> curvel y) 0.0)
+        (set! (-> curvel y) 0.0)))
+
     (let ((speed (vector-xz-length curvel)))
       (when (> speed maxspeed)
         (vector-xz-normalize! curvel maxspeed)))))
@@ -1191,6 +1185,32 @@
           (set-time! *last-step-time*)))))
   (none))
 
+(defbehavior should-add-swim-effects? target ()
+  (let ((water-proc (handle->process (-> self water volume)))
+        (limit 0.0))
+
+  (cond 
+    ((string= (the-as string (-> water-proc name)) "cave-water-2") (set! limit 138000.0))
+    ((string= (the-as string (-> water-proc name)) "cave-water-3") (set! limit 173000.0))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-4") (set! limit -675004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-3") (set! limit -590582.2500))
+    (else (set! limit -9348.3759)))
+
+
+    (if (< (-> self control trans y) limit)
+      (begin
+        (pc-set-fog-intensity 10.0)
+        (set! *should-show-swim-screen?* #t)
+      )
+      (begin
+        (pc-set-fog-intensity 1.0)
+        (set! *should-show-swim-screen?* #f)
+      )
+    )
+  )
+
+)
+
 (defbehavior target-hl-movement-swim-post target ()
   (let* ((gp-0 (the int (-> *display* time-ratio))))
     (set-time-ratios *display* 1.0)
@@ -1203,14 +1223,14 @@
       (do-rotations1)
 
       (hl-update-swim-sound)
-      
+      (should-add-swim-effects?)
       (let ((s4-0 (new-stack-vector0)))
         (read-input s4-0)
         (let ((f30-0 (-> self control pad-stick-speed)))
           (turn-to-vector s4-0 f30-0)))
 
       (hl-add-thrust-swim)
-      ;;(do-rotations2-hl)
+      (do-rotations2-hl)
       (reverse-conversions (-> self control transv))
 
       (if *debug-segment*

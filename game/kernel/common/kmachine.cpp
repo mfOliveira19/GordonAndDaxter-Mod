@@ -1189,6 +1189,12 @@ void pc_renderer_crosshair_set_current_crosshair(int crosshair) {
   Gfx::g_global_settings.current_crosshair = crosshair;
 }
 
+void pc_renderer_viewmodel_set_fog(u32 fog_intensity) {
+  float fog_int;
+  memcpy(&fog_int, &fog_intensity, 4);
+  Gfx::g_global_settings.fog_intensity = fog_int;
+}
+
 void pc_renderer_tree_set_lod(Gfx::RendererTreeType tree, int lod) {
   switch (tree) {
     case Gfx::RendererTreeType::TFRAG3:
@@ -1400,6 +1406,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-set-viewmodel-paused", (void*)pc_renderer_viewmodel_set_paused);
   make_func_symbol_func("pc-set-crosshair-current-crosshair", (void*)pc_renderer_crosshair_set_current_crosshair);
   make_func_symbol_func("pc-set-crosshair-enabled", (void*)pc_renderer_crosshair_set_enabled);
+  make_func_symbol_func("pc-set-fog-intensity", (void*)pc_renderer_viewmodel_set_fog);
 
   // -- OTHER --
   // Return the current OS as a symbol. Actually returns what it was compiled for!

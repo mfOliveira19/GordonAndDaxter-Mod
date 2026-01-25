@@ -562,6 +562,8 @@
 
 (define-extern pc-set-crosshair-current-crosshair (function int none))
 
+(define-extern pc-set-fog-intensity (function float none))
+
 (define-extern pc-set-letterbox (function int int none))
 
 (define-extern pc-set-collision (function symbol none))

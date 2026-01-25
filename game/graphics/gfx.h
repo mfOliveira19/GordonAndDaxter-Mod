@@ -113,6 +113,8 @@ struct GfxGlobalSettings {
   // Crosshair
   int current_crosshair = 0;
   bool crosshair_show = true;
+  // Fog
+  float fog_intensity = 1.0;
 };
 
 namespace Gfx {

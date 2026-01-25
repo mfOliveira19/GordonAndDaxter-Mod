@@ -79,6 +79,10 @@
   (set! *green-flash-active* #t)
   (set! *green-flash-current* 0))
 
+(defun swim-screen ()
+  (with-dma-buffer-add-bucket ((dma-buf (-> (current-frame) global-buf)) (bucket-id debug-no-zbuf))
+    (draw-sprite2d-xy dma-buf 0 0 512 224 (new 'static 'rgba :r #x00 :g #x00 :b #xCC :a #x12))) (none))
+
 (defun update-green-flash ()
   (when *green-flash-active*
     ;; if we're not in a flash, wait for the gap
@@ -155,6 +159,10 @@
   ;; Force blackout during target warp transitions
   (when *should-blackout?* (blackout))
 
+  ;; Swim screen effect
+  (when *should-show-swim-screen?*
+    (swim-screen))
+
   ;; Handle the green screen teleport effect
   (update-green-flash)
   0
@@ -168,8 +176,8 @@
   (should-update-jump-buffer?)
   (handle-draw-and-input-stuff)
   ;;(format 0 "PITCH: ~f ~%" (-> (the-as camera-slave (-> *camera* slave 0)) tracking inv-mat vector 0 w))
+  (format 0 "~f ~%" (-> *target* control trans y))
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
-  (update-mood-fog *default-mood* 100.0)
   (when *debug-segment*
     (orb-placer-maintenance))
   (none))
@@ -227,6 +235,8 @@
   ;; Code here runs every time jak spawns (loading a file new game or death)
   ;;uncomment this to use custom music for custom levels - the function is in mod-common-functions.gc
   ;;(process-spawn-function process music-manager-proc)
+    (pc-set-fog-intensity 1.0)
+    (set! *should-show-swim-screen?* #f)
     (when (not (process-by-name 'hl-weapon-proc *active-pool*))
       (start-hl-weapons))
   (none))
