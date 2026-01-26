@@ -79,10 +79,10 @@
   (if (or (= (-> arg1 mode) 'burnup) (= (-> arg1 mode) 'burn))
     (cond
       ;; If we are in firecanyon and we have at least 20 cells
-      ((and (= (-> *target* current-level name) 'firecanyon) (>= (the int (-> *game-info* fuel)) 20))
+      ((and (= (-> self current-level name) 'firecanyon) (>= (the int (-> *game-info* fuel)) 20))
         #f)
       ;; If we are in lavatube and we have at least 72 cells
-      ((and (= (-> *target* current-level name) 'lavatube) (>= (the int (-> *game-info* fuel)) 72))
+      ((and (= (-> self current-level name) 'lavatube) (>= (the int (-> *game-info* fuel)) 72))
         #f)
       (else
       #t)

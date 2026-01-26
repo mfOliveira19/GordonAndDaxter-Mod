@@ -4,6 +4,8 @@
   :event target-hl-standard-event-handler
   :enter
     (behavior ()
+      (pc-set-fog-intensity 1.0)
+      (set! *should-show-swim-screen?* #f)
       (set! *ground-unduck-started* #f)
       (set! *ducked?* #t)
       (target-hl-collide-set! 'duck-ground (the-as float 1.0)))
@@ -56,6 +58,8 @@
   :event target-hl-jump-event-handler
   :enter
   (behavior ()
+    (pc-set-fog-intensity 1.0)
+    (set! *should-show-swim-screen?* #f)
     (target-hl-collide-set! 'normal (the-as float 0.0)))
   :trans 
   (behavior ()
@@ -205,7 +209,10 @@
           (ja :chan 2 :num! (chan 0)))))
   :post 
   (behavior ()
+  (set! (-> self water drip-wetness) 0.0)
+  (set! (-> self water drip-mult) 0.0)
     (when (should-duck?)
+      (when (should-jump?) (target-hl-apply-longjump))
       (start-ground-duck))
     (apply-ground-duck)
     (target-hl-movement-post)))
@@ -629,26 +636,46 @@
   :enter
   (behavior ()
     (set! *entered-swim?* #t)
-    (when (time-elapsed? *last-step-time* (fsec 1.0))
+    (when (time-elapsed? *last-swim-enter-time* (fsec 2.0))
       (let ((rand-index (+ (rand-vu-int-range 0 3))))
         (case rand-index
           ((0) (sound-play "pl_wade1"))
           ((1) (sound-play "pl_wade3"))
           ((2) (sound-play "pl_wade2"))
-          ((3) (sound-play "pl_wade4")))))
+          ((3) (sound-play "pl_wade4"))))
+          (set-time! *last-swim-enter-time*))
     (target-hl-collide-set! 'normal (the-as float 0.0)))
   :exit
   (behavior ()
+    (when (time-elapsed? *last-swim-enter-time* (fsec 2.0))
+      (let ((rand-index (+ (rand-vu-int-range 0 3))))
+        (case rand-index
+          ((0) (sound-play "pl_wade1"))
+          ((1) (sound-play "pl_wade3"))
+          ((2) (sound-play "pl_wade2"))
+          ((3) (sound-play "pl_wade4"))))
+          (set-time! *last-swim-enter-time*))
     (pc-set-fog-intensity 1.0)
   )
   :trans
   (behavior ()
       (when (and (not (logtest? (-> self water flags) (water-flags wt11))) (time-elapsed? (-> self state-time) (seconds 0.1)))
-        (go target-hl-movement-ground))
+        (if (on-ground?) (go target-hl-movement-ground) (go target-hl-movement-air)))
   )
   :code
     (behavior ()
       (loop (suspend)))
   :post 
   (behavior ()
+    (if (should-duck?)
+      (begin
+        (target-hl-collide-set! 'duck-ground (the-as float 1.0))
+        (set! *ground-unduck-started* #f)
+        (set! *ducked?* #t))
+      (begin
+        (target-hl-collide-set! 'normal (the-as float 1.0))
+        (set! *ducked?* #f)
+      )
+    )
+
     (target-hl-movement-swim-post)))

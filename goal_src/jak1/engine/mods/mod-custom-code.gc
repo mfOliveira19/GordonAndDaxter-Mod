@@ -81,7 +81,7 @@
 
 (defun swim-screen ()
   (with-dma-buffer-add-bucket ((dma-buf (-> (current-frame) global-buf)) (bucket-id debug-no-zbuf))
-    (draw-sprite2d-xy dma-buf 0 0 512 224 (new 'static 'rgba :r #x00 :g #x00 :b #xCC :a #x12))) (none))
+    (draw-sprite2d-xy dma-buf 0 0 512 224 (new 'static 'rgba :r #x00 :g #x00 :b #xCC :a #x20))) (none))
 
 (defun update-green-flash ()
   (when *green-flash-active*
@@ -176,7 +176,6 @@
   (should-update-jump-buffer?)
   (handle-draw-and-input-stuff)
   ;;(format 0 "PITCH: ~f ~%" (-> (the-as camera-slave (-> *camera* slave 0)) tracking inv-mat vector 0 w))
-  (format 0 "~f ~%" (-> *target* control trans y))
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
   (when *debug-segment*
     (orb-placer-maintenance))

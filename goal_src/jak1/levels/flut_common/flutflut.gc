@@ -83,12 +83,15 @@
         (let ((v1-0 (-> self condition)))
           (cond
             ((or (zero? v1-0) (= v1-0 1))
+            ;; Changed for hl mod, we dont need flut flut
+            #|
              (if (or (and (task-complete? *game-info* (game-task beach-flutflut))
                           (or (and (zero? (-> self condition)) (task-closed? (game-task village2-levitator) (task-status need-hint)))
                               (and (= (-> self condition) 1) (task-closed? (game-task village3-button) (task-status need-hint)))))
                      (and *cheat-mode* (cpad-hold? 0 l3))
                      (and *target* (logtest? (-> *target* control root-prim prim-core action) (collide-action flut))))
-               (goto cfg-75)))
+               (goto cfg-75))|#
+               )
             ((= v1-0 4)
              (if (and *target* (logtest? (-> *target* control root-prim prim-core action) (collide-action flut))) (goto cfg-75)))
             ((= v1-0 3)

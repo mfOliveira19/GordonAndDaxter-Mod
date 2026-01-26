@@ -20,6 +20,7 @@
 (define *foot-left* #f)
 (define *last-step-frame* 0)
 (define *last-step-time* 0)
+(define *last-swim-enter-time* 0)
 (define *fall-start-height* 0.0)
 (define *falling* #f)
 (define *should-take-fall-damage* #f)
@@ -341,6 +342,7 @@
         (string= (the-as string (-> water-proc name)) "villagea-water-1")
         (string= (the-as string (-> water-proc name)) "villagea-water-3")
         (string= (the-as string (-> water-proc name)) "villagea-water-4")
+        (= (-> *target* current-level name) 'swamp)
       )
       #t
       #f)))
@@ -354,17 +356,17 @@
     (set! (-> hvel y) 0.0)
 
     ;; don't play if too slow
-    (when (> (vector-length hvel) 220.0)
+    (when (or (> (vector-length hvel) 220.0) (= (-> *target* state name) 'target-hl-movement-swim))
       ;; check if in water
       (if (logtest? (-> self water flags) (water-flags wt09))
           ;; IN WATER: play water footsteps
           (let ((rand-index (+ (rand-vu-int-range 0 1) (if *foot-left* 2 0))))
             (case rand-index
-              ((0) (if (= (-> *target* state name) 'target-hl-movement-swim) 
+              ((0) (if (= (-> *target* state name) 'target-hl-movement-swim)
                 (begin 
                   (sound-play "pl_swim1"))
                 (begin 
-                  (if (should-do-normal-swim-step?)
+                  (if (or (should-do-normal-swim-step?))
                     (sound-play "pl_slosh1")
                     (sound-play "pl_wade1")))
               ))
@@ -442,12 +444,12 @@
       ;; With blue eco
       (if (should-do-normal-swim-step?)
         (fsec 0.25)
-        (fsec 0.75)
+        (fsec 1.0)
       )
       ;; Without blue eco
       (if (should-do-normal-swim-step?)
         (fsec 0.3)
-        (fsec 0.8)
+        (fsec 1.2)
       )
     )
     (if (target-has-eco-type? (pickup-type eco-blue))
@@ -563,6 +565,79 @@
 
       ;; all bottom spheres blocked - fully grounded
       #t)))
+
+(defbehavior near-wall? target ((probe-dist float))
+  (block wall-block
+    (let ((probe (new 'stack-no-clear 'collide-using-spheres-params))
+          (spheres (new 'stack-no-clear 'inline-array 'sphere 1))
+          (body-r (-> *TARGET-bank* body-radius)))
+
+      ((method-of-type sphere new)
+       (the-as symbol (-> spheres 0)) sphere)
+
+      (set! (-> probe spheres) spheres)
+      (set! (-> probe num-spheres) (the-as uint 1))
+      (set! (-> probe collide-with)
+            (-> self control root-prim collide-with))
+      (set! (-> probe proc) #f)
+      (set! (-> probe ignore-pat)
+            (new 'static 'pat-surface :noentity #x1))
+      (set! (-> probe solid-only) #t)
+
+      ;; --------------------------------------------------
+      ;; +X wall
+      ;; --------------------------------------------------
+      (let ((bs1 (-> self control body-spheres 1)))
+        (when bs1
+          (set! (-> spheres 0 quad) (-> self control trans quad))
+          (+! (-> spheres 0 x) (-> bs1 local-sphere x) probe-dist)
+          (+! (-> spheres 0 y) (-> bs1 local-sphere y))
+          (+! (-> spheres 0 z) (-> bs1 local-sphere z))
+          (set! (-> spheres 0 w) (* body-r 0.9))
+          (when (fill-and-probe-using-spheres *collide-cache* probe)
+            (return-from wall-block #t))))
+
+      ;; --------------------------------------------------
+      ;; -X wall
+      ;; --------------------------------------------------
+      (let ((bs1 (-> self control body-spheres 1)))
+        (when bs1
+          (set! (-> spheres 0 quad) (-> self control trans quad))
+          (+! (-> spheres 0 x) (-> bs1 local-sphere x) (- probe-dist))
+          (+! (-> spheres 0 y) (-> bs1 local-sphere y))
+          (+! (-> spheres 0 z) (-> bs1 local-sphere z))
+          (set! (-> spheres 0 w) (* body-r 0.9))
+          (when (fill-and-probe-using-spheres *collide-cache* probe)
+            (return-from wall-block #t))))
+
+      ;; --------------------------------------------------
+      ;; +Z wall
+      ;; --------------------------------------------------
+      (let ((bs1 (-> self control body-spheres 1)))
+        (when bs1
+          (set! (-> spheres 0 quad) (-> self control trans quad))
+          (+! (-> spheres 0 x) (-> bs1 local-sphere x))
+          (+! (-> spheres 0 y) (-> bs1 local-sphere y))
+          (+! (-> spheres 0 z) (-> bs1 local-sphere z) probe-dist)
+          (set! (-> spheres 0 w) (* body-r 0.9))
+          (when (fill-and-probe-using-spheres *collide-cache* probe)
+            (return-from wall-block #t))))
+
+      ;; --------------------------------------------------
+      ;; -Z wall
+      ;; --------------------------------------------------
+      (let ((bs1 (-> self control body-spheres 1)))
+        (when bs1
+          (set! (-> spheres 0 quad) (-> self control trans quad))
+          (+! (-> spheres 0 x) (-> bs1 local-sphere x))
+          (+! (-> spheres 0 y) (-> bs1 local-sphere y))
+          (+! (-> spheres 0 z) (-> bs1 local-sphere z) (- probe-dist))
+          (set! (-> spheres 0 w) (* body-r 0.9))
+          (when (fill-and-probe-using-spheres *collide-cache* probe)
+            (return-from wall-block #t))))
+
+      ;; no wall nearby
+      #f)))
 
 (defbehavior hl-add-thrust target ()
   (let* ((wishvel   (-> self control trans-targ))
@@ -843,13 +918,14 @@
 (defbehavior target-hl-apply-longjump target ()
   (let* ((curvel   (-> self control transv))
          (cam-fwd  (-> *math-camera* inv-camera-rot vector 2))
-         (speed    100000.0)
-         (jump-up  60070.0))  ;; upward boost for long jump
+         (speed    99000.0)
+         (jump-up  90070.0))  ;; upward boost for long jump
 
     ;; horizontal look direction
     (set! (-> cam-fwd y) 0.0)
     (vector-normalize! cam-fwd 1.0)
-
+    (when (time-elapsed? *last-step-time* (fsec 0.5))
+      (hl-play-step-sound))
     ;; apply horizontal speed along look
     (vector-float*! cam-fwd cam-fwd speed)
     (set! (-> curvel x) (-> cam-fwd x))
@@ -1070,18 +1146,95 @@
 (defbehavior in-swim-limits? target ()
   (let ((water-proc (handle->process (-> self water volume)))
         (limit 0.0))
-
   (cond 
-    ((string= (the-as string (-> water-proc name)) "cave-water-2") (set! limit 138000.0))
-    ((string= (the-as string (-> water-proc name)) "cave-water-3") (set! limit 173000.0))
+    ((string= (the-as string (-> water-proc name)) "cave-water-2") (set! limit 76300.0))
+    ((string= (the-as string (-> water-proc name)) "cave-water-3") (set! limit 99000.0))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-5") (set! limit -620004.9375))
     ((string= (the-as string (-> water-proc name)) "sunken-water-4") (set! limit -690004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-6") (set! limit -553004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-7") (set! limit -553004.9375))
     ((string= (the-as string (-> water-proc name)) "sunken-water-3") (set! limit -599760.0625))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-13") (set! limit -567982.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-11") (set! limit -602582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-9") (set! limit -602582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-8") (set! limit -652582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-10") (set! limit -602582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-12") (set! limit -612582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-15") (set! limit -1036808.8125))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-16") (set! limit -1036808.8125))
     (else (set! limit -20348.3759)))
 
 
     (if (<= (-> self control trans y) limit)
       #t
       #f)))
+
+(defbehavior should-add-swim-effects? target ()
+  (let ((water-proc (handle->process (-> self water volume)))
+        (limit 0.0))
+
+  (cond 
+    ((string= (the-as string (-> water-proc name)) "cave-water-2") (set! limit 137000.0))
+    ((string= (the-as string (-> water-proc name)) "cave-water-3") (set! limit 172300.0))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-5") (set! limit -610004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-4") (set! limit -675004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-6") (set! limit -552004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-7") (set! limit -552004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-3") (set! limit -590582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-13") (set! limit -547982.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-11") (set! limit -582582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-9") (set! limit -582682.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-8") (set! limit -612582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-10") (set! limit -582682.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-12") (set! limit -592582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-15") (set! limit -1034808.8125))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-16") (set! limit -1034808.8125))
+    (else (set! limit -9348.3759)))
+
+
+    (if (< (-> self control trans y) limit)
+      (begin
+        (pc-set-fog-intensity 10.0)
+        (set! *should-show-swim-screen?* #t)
+      )
+      (begin
+        (pc-set-fog-intensity 1.0)
+        (set! *should-show-swim-screen?* #f)
+      )
+    )
+  )
+)
+
+(defbehavior swim-exit-help-speed target ()
+  (let ((water-proc (handle->process (-> self water volume)))
+        (limit 0.0)
+        (speed 50000.0))
+
+  (cond 
+    ((string= (the-as string (-> water-proc name)) "cave-water-2") (set! limit 137000.0) (set! speed 70000.0))
+    ((string= (the-as string (-> water-proc name)) "cave-water-3") (set! limit 172300.0) (set! speed 30000.0))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-5") (set! limit -610004.9375) (set! speed 40000.0))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-4") (set! limit -675004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-6") (set! limit -552004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-7") (set! limit -552004.9375))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-3") (set! limit -590582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-13") (set! limit -547982.2500) (set! speed 40000.0))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-11") (set! limit -582582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-9") (set! limit -582682.2500) (set! speed 70000.0))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-8") (set! limit -612582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-10") (set! limit -582682.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-12") (set! limit -592582.2500))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-15") (set! limit -1034808.8125))
+    ((string= (the-as string (-> water-proc name)) "sunken-water-16") (set! limit -1034808.8125))
+    (else (set! limit -9348.3759)))
+
+
+    (if (> (-> self control trans y) limit)
+      speed
+      50000.0
+    )
+  )
+)
 
 (defbehavior hl-add-thrust-swim target ()
   (let* ((wishvel (-> self control trans-targ))
@@ -1093,11 +1246,10 @@
          (accel 200.0)
          (friction 6.0)
          (vert-damp 0.5)
-         (sink-speed -9000.0)
+         (sink-speed -8000.0)
          (wish-horz (new-stack-vector0))
          (wish-vert (new-stack-vector0))
          (pitch (-> (the-as camera-slave (-> *camera* slave 0)) tracking inv-mat vector 0 w)))
-
 
     (when *entered-swim?*
       (vector-xz-normalize! curvel (* (vector-xz-length curvel) 0.6))
@@ -1146,11 +1298,18 @@
         (let* ((dir (if (should-move-forward?) 1.0 -1.0))
               (vert-speed (* dir pitch (* 20000 accel) frametime)))
           (+! (-> curvel y) vert-speed)))
+    
+    (when (> (-> curvel y) hl-max-speed-swim) 
+      (set! (-> curvel y) hl-max-speed-swim)
+    )
+
+    (when (< (-> curvel y) (- hl-max-speed-swim)) 
+      (set! (-> curvel y) (- hl-max-speed-swim)))
 
     (let ((vert-input (-> wishvel y)))
       (cond
         ((should-jump?)
-        (+! (-> curvel y) jump-speed))  
+          (+! (-> curvel y) (if (near-wall? 500.0) (swim-exit-help-speed) jump-speed)))  
 
         ((not (= vert-input 0.0))
         (+! (-> curvel y) (* vert-input accel frametime)))
@@ -1169,47 +1328,10 @@
         (vector-xz-normalize! curvel maxspeed)))))
 
 (defbehavior hl-update-swim-sound target ()
-  (let ((speed (vector-length (-> self control ltransv))))
-    
-    (when (!= speed 0.0)
-      ;; HL constants
-      (let ((velrun 30010.0))
-        
-        ;; check if enough time has passed since last footstep
-        (when (time-elapsed? *last-step-time* (if (target-has-eco-type? (pickup-type eco-blue)) (fsec 0.7) (fsec 0.8)))
-          (when (> speed velrun)
-            ;; play step sound
-            (hl-play-step-sound))
-          
-          ;; record the time we played this step
-          (set-time! *last-step-time*)))))
+  (when (time-elapsed? *last-step-time* (if (target-has-eco-type? (pickup-type eco-blue)) (fsec 0.8) (fsec 1.5)))
+    (hl-play-step-sound)
+    (set-time! *last-step-time*))
   (none))
-
-(defbehavior should-add-swim-effects? target ()
-  (let ((water-proc (handle->process (-> self water volume)))
-        (limit 0.0))
-
-  (cond 
-    ((string= (the-as string (-> water-proc name)) "cave-water-2") (set! limit 138000.0))
-    ((string= (the-as string (-> water-proc name)) "cave-water-3") (set! limit 173000.0))
-    ((string= (the-as string (-> water-proc name)) "sunken-water-4") (set! limit -675004.9375))
-    ((string= (the-as string (-> water-proc name)) "sunken-water-3") (set! limit -590582.2500))
-    (else (set! limit -9348.3759)))
-
-
-    (if (< (-> self control trans y) limit)
-      (begin
-        (pc-set-fog-intensity 10.0)
-        (set! *should-show-swim-screen?* #t)
-      )
-      (begin
-        (pc-set-fog-intensity 1.0)
-        (set! *should-show-swim-screen?* #f)
-      )
-    )
-  )
-
-)
 
 (defbehavior target-hl-movement-swim-post target ()
   (let* ((gp-0 (the int (-> *display* time-ratio))))
