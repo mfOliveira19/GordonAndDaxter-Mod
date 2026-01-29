@@ -38,6 +38,7 @@
   ((current-weapon                 weapons-enum)
    (last-weapon                    weapons-enum)
    (last-hit-pat-mode              pat-mode)
+   (last-hit-pat-material          pat-material)
    (weapon-last-attack-time        time-frame)
    (weapon-last-second-attack-time time-frame)
    (weapon-last-switch-time        time-frame)
@@ -227,10 +228,12 @@
                     probe-pat)
                   0.0)
 
-          (let ((hit-pos (the-as vector (-> probe-res intersect))) (hit-pat (-> probe-res pat)))
+          (let ((hit-pos (the-as vector (-> probe-res intersect))) (hit-pat (-> probe-res pat)) (hit-mat (-> probe-res pat material)))
             (vector-! spawn-pos hit-pos
                       (vector-float*! (new 'stack-no-clear 'vector) cam-forward backoff-epsilon))
             (set! (-> *hl-weapons* last-hit-pat-mode) (-> hit-pat mode))
+            (set! (-> *hl-weapons* last-hit-pat-material) hit-mat)
+
             (when (not is-debug?)
               (let ((s4-0 (get-process *default-dead-pool* hl-weapon-shot #x4000)))
                 (when s4-0

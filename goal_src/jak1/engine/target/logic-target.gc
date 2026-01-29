@@ -600,9 +600,10 @@
       (+! (-> *game-info* in-level-time (-> *level-task-data-remap* (+ (-> self current-level info index) -1)))
           (- (current-time) (-> *display* old-base-frame-counter))))
     (if (and (or (not gp-0) (!= (-> gp-0 name) (-> self current-level name))) (-> self current-level))
+      (begin
       (send-event self 'level-enter (-> self current-level name))
-      ;; Added for hl mod so we have water collision on swamp
-      (if (= (-> self current-level name) 'swamp)
+      ;; Added for hl mod so we have water collision on swamp and basin
+      (if (or (= (-> self current-level name) 'swamp) (= (-> *target* current-level name) 'rolling))
         (set! (-> (-> self control body-spheres 0) collide-with)
           (collide-kind background cak-1 cak-2 cak-3
                         water
@@ -610,6 +611,7 @@
         (set! (-> (-> self control body-spheres 0) collide-with)
           (collide-kind background cak-1 cak-2 cak-3
                         powerup crate enemy wall-object ground-object mother-spider)))
+      )
       ))
   0
   (none))

@@ -27,6 +27,10 @@
   (set! (-> *keyboard-edge* tab-pressed) 0)
   (set! (-> *keyboard-edge* ctrl-pressed) 0))
 
+(defun clear-mouse-edge-pressed! ()
+  (set! (-> *mouse-edge* mouse1-pressed) 0)
+  (set! (-> *mouse-edge* mouse2-pressed) 0))
+
 (defmacro update-key-edge (key held pressed)
   `(if (!= (-> *keyboard-data* ,key) 0)
        (when (= (-> *keyboard-edge* ,held) 0)
@@ -35,14 +39,18 @@
        (begin
          (set! (-> *keyboard-edge* ,held) 0))))
 
+(defmacro update-mouse-edge (button held pressed)
+  `(if (!= (-> *mouse-data* ,button) 0)
+       (when (= (-> *mouse-edge* ,held) 0)
+         (set! (-> *mouse-edge* ,held) 1)
+         (set! (-> *mouse-edge* ,pressed) 1))
+       (begin
+         (set! (-> *mouse-edge* ,held) 0))))
+
 (defmacro key-status? (key)
   `(!= (-> *keyboard-edge* ,key) 0))
 
-(defun should-update-jump-buffer? ()
- (when (or (< (-> *mouse-data* mouse-scrolly) 0.0) (key-status? space-pressed))
-  (set-time! *hl-target-jump-buffer*)))
-
-((defun update-keyboard-input-stuff ()
+(defun update-keyboard-input-stuff ()
   (clear-keyboard-edge-pressed!)
   (pc-get-keyboard-data *keyboard-data*)
   ;; ENTER
@@ -78,11 +86,29 @@
   ;; TAB
   (update-key-edge key_tab tab-held tab-pressed)
   ;; CTRL
-  (update-key-edge key_ctrl ctrl-held ctrl-pressed)
-))
+  (update-key-edge key_ctrl ctrl-held ctrl-pressed))
+
+(defun update-mouse-input-stuff ()
+  (clear-mouse-edge-pressed!)
+  (pc-get-mouse-data *mouse-data*)
+
+  ;; Mouse 1
+  (update-mouse-edge mouse1 mouse1-held mouse1-pressed)
+  ;; Mouse 2
+  (update-mouse-edge mouse2 mouse2-held mouse2-pressed))
+
+
+(defun mouse-wheel-jump? ()
+  (unless (= (-> *pc-settings* mouse-wheel-behavior) 0)
+    (if (= (-> *pc-settings* mouse-wheel-behavior) 1)
+      (< (-> *mouse-data* mouse-scrolly) 0.0)
+      (> (-> *mouse-data* mouse-scrolly) 0.0))))
+
+(defun should-update-jump-buffer? ()
+ (when (or (mouse-wheel-jump?) (key-status? space-pressed))
+  (set-time! *hl-target-jump-buffer*)))
 
 (defun should-jump? ()
-  ;;(or (< (-> *mouse-data* mouse-scrolly) 0.0) (if (-> *pc-settings* auto-jump?) (!= (-> *keyboard-data* key_space) 0) (key-status? space-pressed)))
   (if (-> *pc-settings* auto-jump?)
     (begin 
       (when (or (not (time-elapsed? *hl-target-jump-buffer* hl-target-jump-buffer-time)) (!= (-> *keyboard-data* key_space) 0)) #t)
@@ -118,10 +144,16 @@
   (or (> (-> *mouse-data* mouse-scrolly) 0.0)
       (!= (-> *keyboard-data* key_ctrl) 0)))
 
+(defun mouse-wheel-duck? ()
+  (unless (= (-> *pc-settings* mouse-wheel-behavior) 0)
+    (if (= (-> *pc-settings* mouse-wheel-behavior) 1)
+      (> (-> *mouse-data* mouse-scrolly) 0.0)
+      (< (-> *mouse-data* mouse-scrolly) 0.0))))
+
 (defun should-duck? ()
   (cond
     ((key-status? ctrl-held) #t)
-    ((and (> (-> *mouse-data* mouse-scrolly) 0.0)
+    ((and (mouse-wheel-duck?)
           (time-elapsed? *last-duck-time* duck-cooldown))
      (set-time! *last-duck-time*)
      #t)

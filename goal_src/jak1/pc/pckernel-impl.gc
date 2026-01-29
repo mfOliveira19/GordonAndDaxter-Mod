@@ -229,8 +229,13 @@
    (tab-pressed          uint8)
    ;; CTRL
    (ctrl-held             uint8)
-   (ctrl-pressed          uint8)
-  ))
+   (ctrl-pressed          uint8)))
+
+(deftype mouse-edge (structure)
+  ((mouse1-held         uint8)
+   (mouse1-pressed      uint8)
+   (mouse2-held         uint8)
+   (mouse2-pressed      uint8)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; debug settings
@@ -317,3 +322,4 @@
 (define *mouse-data* (new 'global 'mouse-info))
 (define *keyboard-data* (new 'global 'keyboard-info))
 (define *keyboard-edge* (new 'global 'keyboard-edge))
+(define *mouse-edge* (new 'global 'mouse-edge))

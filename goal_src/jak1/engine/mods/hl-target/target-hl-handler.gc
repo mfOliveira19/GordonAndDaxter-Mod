@@ -149,7 +149,7 @@
               (set! (-> dir y)
                     (* vertical-strength 0.5))
               )
-              ;; explosion above or level  no upward push
+              ;; explosion above or level no upward push
               (begin
               (format 0 "NO LIFT ~f ~%" dy) 
               (set! (-> dir y) 0.0)
@@ -515,7 +515,10 @@
       (set! (-> self control cur-surf) *grab-mods*)
       (set! (-> self neck flex-blend) 0.0)
       (logior! (-> self state-flags) (state-flags invulnerable grabbed))
-      (set! (-> self control temp-flop-end-checks) (the-as uint 'stance)))
+      (set! (-> self control temp-flop-end-checks) (the-as uint 'stance))
+      (pc-set-fog-intensity 1.0)
+      (set! *should-show-swim-screen?* #f)      
+      )
   :exit
     (behavior ()
       (logclear! (-> self state-flags) (state-flags invulnerable))
@@ -529,7 +532,6 @@
           ;;(target-falling-anim-trans)
           (+! gp-0 (- (current-time) (-> *display* old-base-frame-counter)))
           (suspend))
-        #|
         (if (or (> gp-0 0)
                 (let ((v1-11 (ja-group)))
                   (or (= v1-11 eichar-jump-ja)
@@ -537,7 +539,7 @@
                       (= v1-11 eichar-launch-jump-ja)
                       (= v1-11 eichar-launch-jump-loop-ja)
                       (= v1-11 eichar-duck-high-jump-ja))))
-          (target-hit-ground-anim #f))|#
+          (target-hit-ground-anim #f))
           )
       (-> self control temp-spool)
       (loop

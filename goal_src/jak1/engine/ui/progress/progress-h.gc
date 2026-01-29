@@ -165,7 +165,9 @@
      (monitor)
      (controller)
      (binding-assignment)
-     (confirmation))) ;; end of PC_PORT = #t branch for enum initialization
+     (confirmation)
+     ;; Added for hl mod
+     (mouse-wheel))) ;; end of PC_PORT = #t branch for enum initialization
   ) ;; end of PC_PORT cond
 
 (defenum game-option-menu

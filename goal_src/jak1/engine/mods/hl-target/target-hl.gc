@@ -14,10 +14,10 @@
       (set! *ducked?* #f))
   :trans 
   (behavior ()
-    (when (and (not (should-duck?)) (can-exit-duck?))
+    (when (and (not (should-duck?)) (can-exit-duck-hl?))
       (go target-hl-movement-air))
     (when (on-ground?)
-      (if (and (not (should-duck?)) (can-exit-duck?)) (go target-hl-movement-ground) (go target-hl-movement-ground-duck))))
+      (if (and (not (should-duck?)) (can-exit-duck-hl?)) (go target-hl-movement-ground) (go target-hl-movement-ground-duck))))
   :code
     (behavior ()
       (loop (suspend)))
@@ -33,20 +33,14 @@
     (set! *ducked?* #t))
   :trans
   (behavior ()
-    (when (and (not (should-duck?)) (can-exit-duck?))
+    (when (and (not (should-duck?)) (can-exit-duck-hl?))
       (go target-hl-movement-ground))
     (when (should-jump?)
       ;; So we can use launchers
       (when (not (target-should-use-launcher?))
-        (let* ((vel         (-> self control ltransv))
-              (horiz-speed (vector-xz-length vel))
-              (can-lj      (and (not (time-elapsed? *target-duck-enter-time*
-                                                    (seconds 2.0)))
-                                (> horiz-speed 20000.0))))
-          (if (and can-lj *target-enable-long-jump*)
-            (target-hl-apply-longjump) (target-hl-apply-jump)))))
+        (target-hl-apply-jump)))
       (when (not (on-ground?))
-        (if (and (not (should-duck?)) (can-exit-duck?)) (go target-hl-movement-air) (go target-hl-movement-air-duck))))
+        (if (and (not (should-duck?)) (can-exit-duck-hl?)) (go target-hl-movement-air) (go target-hl-movement-air-duck))))
   :code
   (behavior ()
     (loop (suspend)))
@@ -93,6 +87,8 @@
   )
   :code
     (behavior ()
+    (loop (suspend))
+      #|
       (let ((s5-0 22)
             (gp-0 (new 'stack 'ground-tween-info)))
         (let ((v1-3 (ja-group)))
@@ -206,14 +202,17 @@
           (suspend)
           ;;(ja :num! (loop!))
           (ja :chan 1 :num! (chan 0))
-          (ja :chan 2 :num! (chan 0)))))
+          (ja :chan 2 :num! (chan 0)))
+          )|#
+  )
   :post 
   (behavior ()
   (set! (-> self water drip-wetness) 0.0)
   (set! (-> self water drip-mult) 0.0)
     (when (should-duck?)
-      (when (should-jump?) (target-hl-apply-longjump))
       (start-ground-duck))
+    (when (on-ground?)
+      (target-hl-apply-longjump))
     (apply-ground-duck)
     (target-hl-movement-post)))
 
@@ -655,13 +654,15 @@
           ((2) (sound-play "pl_wade2"))
           ((3) (sound-play "pl_wade4"))))
           (set-time! *last-swim-enter-time*))
-    (pc-set-fog-intensity 1.0)
+    ;;(pc-set-fog-intensity 1.0)
+    ;;(set! *should-show-swim-screen?* #f)
   )
   :trans
   (behavior ()
-      (when (and (not (logtest? (-> self water flags) (water-flags wt11))) (time-elapsed? (-> self state-time) (seconds 0.1)))
-        (if (on-ground?) (go target-hl-movement-ground) (go target-hl-movement-air)))
-  )
+    (when (and (time-elapsed? *started-drown-time* (seconds 30.0)) *should-show-swim-screen?*)
+      (send-event *target* 'attack-invinc #f (static-attack-info ((mode 'drown-death)))))
+    (when (and (not (logtest? (-> self water flags) (water-flags wt11))) (time-elapsed? (-> self state-time) (seconds 0.1)))
+      (if (on-ground?) (go target-hl-movement-ground) (go target-hl-movement-air))))
   :code
     (behavior ()
       (loop (suspend)))

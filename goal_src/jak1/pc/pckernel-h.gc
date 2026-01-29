@@ -154,6 +154,8 @@
    (mouse-movement?                  symbol)
    (auto-hide-cursor?                symbol)
    (auto-jump?                       symbol) ;; Added for hl mod
+   (longjump-enabled?                symbol) ;; Added for hl mod
+   (mouse-wheel-behavior             int16)   ;; Added for hl mod
    ;; audio settings
    (audio-latency-ms                 int16) ;; audio latency in milliseconds
    (audio-pan-override               float) ;; audio pan modifier
@@ -371,11 +373,13 @@
     (set! (-> obj mouse-enabled?) #f)
     (set! (-> obj auto-hide-cursor?) #t))
     (set! (-> obj auto-jump?) #t)
+    (set! (-> obj longjump-enabled?) #t)
   (when (or (= device 'all) (= device 'mouse))
     (set! (-> obj mouse-camera?) #f)
     (set! (-> obj mouse-xsens) 2.0)
     (set! (-> obj mouse-ysens) 10.0)
-    (set! (-> obj mouse-movement?) #f))
+    (set! (-> obj mouse-movement?) #f)
+    (set! (-> obj mouse-wheel-behavior) 1))
   0)
 
 (defmethod reset-ps2 ((obj pc-settings) (call-handlers symbol))

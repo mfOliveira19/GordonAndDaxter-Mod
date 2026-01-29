@@ -405,13 +405,13 @@
                       (current-pitch (asin (vector-dot down fwd)))
                       (max-pitch (-> *CAM_FPS-bank* max-degrees))
                       (min-pitch (- max-pitch))
-                      (total-delta (+ (* delta-y (-> *pc-settings* mouse-xsens))
+                      (total-delta (+ (* delta-y (-> *pc-settings* mouse-xsens) 3.2)
                                       (- (* *current-aim-punch* 10000))))
                       (clamped-delta (max (min total-delta (- max-pitch current-pitch))
                                           (- min-pitch current-pitch))))
 
                   (set! (-> s4-0 x) (+ (-> s4-0 x) clamped-delta))
-                  (set! (-> s4-0 y) (- (-> s4-0 y) (* delta-x (-> *pc-settings* mouse-xsens))))
+                  (set! (-> s4-0 y) (- (-> s4-0 y) (* delta-x (-> *pc-settings* mouse-xsens) 3.2)))
                   (set! *current-aim-punch* 0.0)
                   ;; Not an exact 180, but is enough
                   (when *do-180?*

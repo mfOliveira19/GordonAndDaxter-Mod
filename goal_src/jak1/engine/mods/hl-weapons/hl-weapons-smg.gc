@@ -72,7 +72,8 @@
   (behavior ()
     (smg-switch-handle)
     (when (and (should-attack?)
-               (time-elapsed? (-> self weapon-last-attack-time) smg-attack-cooldown))
+               (time-elapsed? (-> self weapon-last-attack-time) smg-attack-cooldown)
+               (not *should-show-swim-screen?*))
       (go smg-attack))
     (when (and (should-second-attack?)
                (time-elapsed? (-> self weapon-last-second-attack-time) smg-grenade-cooldown))
@@ -88,6 +89,7 @@
     (loop (suspend)))
   :post
   (behavior ()
+    (when (and (!= (-> *mouse-edge* mouse1-pressed) 0) *should-show-swim-screen?*) (sound-play "no_shot"))
     (update-aim-punch smg-aim-punch-decay)))
 
 (defstate smg-idle-anim (hl-weapons)
@@ -106,7 +108,7 @@
   (behavior ()
     (smg-switch-handle)
     (when (and (should-reload?) (!= (-> self current-smg-mag-ammo) smg-max-mag-ammo)) (go smg-reload-part1))
-    (when (should-attack?) (go smg-attack))
+    (when (and (should-attack?) (not *should-show-swim-screen?*)) (go smg-attack))
     (when (should-second-attack?) (go smg-secondary))
     (when (time-elapsed? (-> self weapon-last-idle-time) (-> self weapon-next-idle-wait))
       (go smg-idle)))
@@ -147,7 +149,7 @@
     (smg-switch-handle)
     (when (should-reload?) (go smg-reload-part1))
     (when (time-elapsed? (-> self weapon-last-attack-time) smg-attack-cooldown)
-      (if (should-attack?)
+      (if (and (should-attack?) (not *should-show-swim-screen?*))
           (go smg-attack)
           (go smg-idle))))
   :code
@@ -212,7 +214,7 @@
     (smg-switch-handle)
     (when (time-elapsed? (-> self weapon-last-reload-time) smg-reload-part2-duration)
       (go smg-idle))
-    (when (should-attack?)
+    (when (and (should-attack?) (not *should-show-swim-screen?*))
       (go smg-attack)))
   
   :code

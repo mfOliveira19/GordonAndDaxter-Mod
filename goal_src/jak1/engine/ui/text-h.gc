@@ -797,6 +797,10 @@
   (input-opts-analog-sensitivity #x1619)
   (mouse-sensitivity #x1620)
   (auto-jump #x1621)
+  (long-jump #x1622)
+  (mouse-wheel #x1623)
+  (wheel-down-jump #x1624)
+  (wheel-up-jump #x1625)
   ;; mod text mod-base-change
   (pad-triangle #x2000)
   (pad-circle #x2001)

@@ -103,6 +103,10 @@
 
 (define *carousell-frame-rate* *carousell-frame-rate-150fps*)
 
+;; Added for hl mod
+(def-progress-carousell *carousell-mouse-wheel* (off wheel-down-jump wheel-up-jump))
+
+
 ;; pad remap stuff
 (define *progress-pad-timeout* (the-as time-frame 0)) ;; timeout for remap buttons
 
@@ -607,13 +611,15 @@
             :scale #t
             :param1 0.0
             :param2 10.0
-            :slider-step-size 0.1
+            :slider-step-size 0.005
             :slider-show-decimal? #t
             :on-confirm
             (lambda ()
               (update-mouse-controls! *pc-settings*)
               (none)))
        (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id auto-jump) :scale #t)
+       (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id long-jump) :scale #t)
+       (new 'static 'game-option :option-type (game-option-type mouse-wheel) :name (text-id mouse-wheel) :scale #t)
        #|
        (new 'static
             'game-option
@@ -2190,6 +2196,8 @@
   (set! (-> *mouse-options* 3 value-to-modify) (&-> *pc-settings* mouse-movement?))
   (set! (-> *input-options* 0 value-to-modify) (&-> *pc-settings* mouse-xsens)) ;; xsens will be used for both x and y
   (set! (-> *input-options* 1 value-to-modify) (&-> *pc-settings* auto-jump?))
+  (set! (-> *input-options* 2 value-to-modify) (&-> *pc-settings* longjump-enabled?))
+  (set! (-> *input-options* 3 value-to-modify) (&-> *progress-carousell* int-backup))
   ;;(set! (-> *input-options* 1 value-to-modify) (&-> *pc-settings* keyboard-enabled?))
   ;;(set! (-> *input-options* 2 value-to-modify) (&-> *pc-settings* mouse-enabled?))
   ;;(set! (-> *input-options* 4 value-to-modify) (&-> *pc-settings* auto-hide-cursor?))
@@ -2311,7 +2319,8 @@
                     (game-option-type speaker)
                     (game-option-type frame-rate)
                     (game-option-type language-subtitles)
-                    (game-option-type language-text))
+                    (game-option-type language-text)
+                    (game-option-type mouse-wheel))
                    ;; a carousell like language
                    (if (> (-> (the-as (pointer int) (-> options (-> obj option-index) value-to-modify))) 0)
                      (+! (-> (the-as (pointer int) (-> options (-> obj option-index) value-to-modify))) -1)
@@ -2397,7 +2406,8 @@
                     (game-option-type speaker)
                     (game-option-type frame-rate)
                     (game-option-type language-subtitles)
-                    (game-option-type language-text))
+                    (game-option-type language-text)
+                    (game-option-type mouse-wheel))
                    ;; same thing as before. if at last, go to first. otherwise, keep going forward.
                    (if (< (-> (the-as (pointer int) (-> options (-> obj option-index) value-to-modify)))
                           (1- (length (-> *progress-carousell* current-carousell))))
@@ -2703,6 +2713,12 @@
                         (logtest? (-> *pc-settings* cheats) (ash 1 (the int (-> options (-> obj option-index) param1)))))
                   (set! (-> (the-as (pointer symbol) (-> options (-> obj option-index) value-to-modify)))
                         (-> *progress-state* on-off-backup)))
+                  ;; Added for hl mod
+                 (((game-option-type mouse-wheel))
+                  (case (-> *pc-settings* mouse-wheel-behavior)
+                    ((1) (set! (-> *progress-carousell* int-backup) 1))
+                    ((2) (set! (-> *progress-carousell* int-backup) 2))
+                    (else (set! (-> *progress-carousell* int-backup) 0))))
                  (((game-option-type display-mode))
                   ;; display-mode just reuses language stuff
                   (case (pc-get-display-mode)
@@ -2761,6 +2777,7 @@
                   (set! (-> *progress-carousell* x-offset) 0)
                   (case (-> options (-> obj option-index) option-type)
                     (((game-option-type display-mode)) (set! (-> *progress-carousell* current-carousell) *carousell-display-mode*))
+                    (((game-option-type mouse-wheel)) (set! (-> *progress-carousell* current-carousell) *carousell-mouse-wheel*)) ;; Added for hl mod
                     (((game-option-type msaa)) (set! (-> *progress-carousell* current-carousell) *carousell-msaa*))
                     (((game-option-type lod-bg)) (set! (-> *progress-carousell* current-carousell) *carousell-lod-bg*))
                     (((game-option-type lod-fg)) (set! (-> *progress-carousell* current-carousell) *carousell-lod-bg*))
@@ -2793,6 +2810,11 @@
                (if (-> *pc-settings* use-vis?)
                  (set! (-> *setting-control* current aspect-ratio) #f)
                  (set-aspect! *pc-settings* (-> *pc-settings* aspect-custom-x) (-> *pc-settings* aspect-custom-y))))
+              (((game-option-type mouse-wheel))
+               (case (-> *progress-carousell* int-backup)
+                 ((0) (set! (-> *pc-settings* mouse-wheel-behavior) 0))
+                 ((1) (set! (-> *pc-settings* mouse-wheel-behavior) 1))
+                 ((2) (set! (-> *pc-settings* mouse-wheel-behavior) 2))))
               (((game-option-type display-mode))
                ;; same thing.
                (case (-> *progress-carousell* int-backup)
@@ -3214,7 +3236,8 @@
                       (game-option-type speaker)
                       (game-option-type frame-rate)
                       (game-option-type language-subtitles)
-                      (game-option-type language-text))
+                      (game-option-type language-text)
+                      (game-option-type mouse-wheel))
                      ;; crunched down to one generic function.
                      (progress-draw-carousell-from-string-list (-> *progress-carousell* current-carousell)
                                                                font
@@ -3280,7 +3303,8 @@
                       (game-option-type speaker)
                       (game-option-type frame-rate)
                       (game-option-type normal-inverted)
-                      (game-option-type confirmation))
+                      (game-option-type confirmation)
+                      (game-option-type mouse-wheel))
                      ;; slider and aspect ratio options just show their text
                      (set! option-str (lookup-text! *common-text* (-> options index name) #f)))
                     (((game-option-type on-off) (game-option-type aspect-native))

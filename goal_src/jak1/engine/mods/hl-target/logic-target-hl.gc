@@ -4,6 +4,7 @@
 
 ;; movement constants
 (defconstant jump-speed 35000.0)
+(defconstant swim-jump-speed 15000.0)
 (defconstant gravity-factor 0.55)
 (defconstant hl-max-speed   50650.0)
 (defconstant hl-max-speed-blue-eco 70650.0)
@@ -21,6 +22,7 @@
 (define *last-step-frame* 0)
 (define *last-step-time* 0)
 (define *last-swim-enter-time* 0)
+(define *started-drown-time* 0)
 (define *fall-start-height* 0.0)
 (define *falling* #f)
 (define *should-take-fall-damage* #f)
@@ -55,9 +57,6 @@
 (defconstant view-bob-vert-amp-base 250.0)
 (defconstant view-bob-horiz-amp-base 200.0)
 (defconstant view-bob-return-rate 0.1)
-
-(define *target-duck-enter-time* 0)
-(define *target-enable-long-jump* #f)
 
 (defenum collide-set
   (normal 0)
@@ -819,10 +818,11 @@
     (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
                'draw
                (new 'static 'rgba :r #x40 :b #x40 :a #x80)))
-  ;;(ja-post)
   (if *debug-segment*
     (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0) 'draw (new 'static 'rgba :r #x80 :a #x80)))
-  ;;(joint-points)
+  (unless (= (-> self state name) 'target-hl-death)
+    (ja-post)
+    (joint-points))
   (do-target-shadow)
   (target-powerup-process)
   (none))
@@ -916,22 +916,22 @@
 )
 
 (defbehavior target-hl-apply-longjump target ()
-  (let* ((curvel   (-> self control transv))
-         (cam-fwd  (-> *math-camera* inv-camera-rot vector 2))
-         (speed    99000.0)
-         (jump-up  90070.0))  ;; upward boost for long jump
-
-    ;; horizontal look direction
-    (set! (-> cam-fwd y) 0.0)
-    (vector-normalize! cam-fwd 1.0)
-    (when (time-elapsed? *last-step-time* (fsec 0.5))
-      (hl-play-step-sound))
-    ;; apply horizontal speed along look
-    (vector-float*! cam-fwd cam-fwd speed)
-    (set! (-> curvel x) (-> cam-fwd x))
-    (set! (-> curvel z) (-> cam-fwd z))
-    ;; add upward velocity
-    (set! (-> curvel y) jump-up)))
+  (when (and (-> *pc-settings* longjump-enabled?) (should-duck?) (should-jump?))
+    (let* ((curvel (-> self control transv))
+          (vel (-> self control ltransv))
+          (cam-fwd  (-> *math-camera* inv-camera-rot vector 2))
+          (speed    99000.0)
+          (jump-up  90070.0)
+          (horiz-speed (vector-xz-length vel)))
+      (when (and (> horiz-speed 20000.0))
+        (set! (-> cam-fwd y) 0.0)
+        (vector-normalize! cam-fwd 1.0)
+        (when (time-elapsed? *last-step-time* (fsec 0.5))
+          (hl-play-step-sound))
+        (vector-float*! cam-fwd cam-fwd speed)
+        (set! (-> curvel x) (-> cam-fwd x))
+        (set! (-> curvel z) (-> cam-fwd z))
+        (set! (-> curvel y) jump-up)))))
 
 (defbehavior target-should-use-launcher? target ()
   (when (= (-> self control unknown-symbol40) 'launch)
@@ -947,6 +947,25 @@
           (a2-5 (-> self control last-transv2)))
       (set! (-> a2-5 quad) (-> (the-as vector (-> self control unknown-dword62)) quad))
       (go target-hl-launch (the-as float a0-9) (the-as symbol a1-5) a2-5 (-> self control unknown-dword63)))#t) #f)
+
+(defbehavior can-exit-duck-hl? target ()
+  (let ((gp-0 (new 'stack-no-clear 'collide-using-spheres-params)))
+    (let ((s5-0 (new 'stack-no-clear 'inline-array 'sphere 2)))
+      (dotimes (s4-0 2)
+        ((method-of-type sphere new) (the-as symbol (-> s5-0 s4-0)) sphere))
+      (set! (-> s5-0 0 quad) (-> self control trans quad))
+      (set! (-> s5-0 0 y) (+ 5734.4 (-> *TARGET-bank* body-radius) (-> s5-0 0 y)))
+      (set! (-> s5-0 0 w) (-> *TARGET-bank* body-radius))
+      (set! (-> s5-0 1 quad) (-> self control trans quad))
+      (set! (-> s5-0 1 y) (+ 2867.2 (-> *TARGET-bank* body-radius) (-> s5-0 1 y)))
+      (set! (-> s5-0 1 w) (-> *TARGET-bank* body-radius))
+      (set! (-> gp-0 spheres) s5-0))
+    (set! (-> gp-0 num-spheres) (the-as uint 2))
+    (set! (-> gp-0 collide-with) (-> self control root-prim collide-with))
+    (set! (-> gp-0 proc) #f)
+    (set! (-> gp-0 ignore-pat) (new 'static 'pat-surface :noentity #x1))
+    (set! (-> gp-0 solid-only) #t)
+    (if (fill-and-probe-using-spheres *collide-cache* gp-0) #f #t)))
 
 (defbehavior target-hl-collide-set! target ((arg0 symbol) (arg1 float))
   (let ((gp-0 (-> self control)))
@@ -980,7 +999,7 @@
                       (+ (-> *TARGET-bank* body-radius) (* 5734.4 f30-0))
                       0.0
                       (-> *TARGET-bank* body-radius))))
-      ;; not used, just and experiment
+      ;; not used, just an experiment
       (('duck-air)
        (set! *target-current-collide-set* (collide-set duck-air))
        (set! (-> self control unknown-float91) arg1)
@@ -1173,7 +1192,8 @@
   (let ((water-proc (handle->process (-> self water volume)))
         (limit 0.0))
 
-  (cond 
+  (cond
+    ((string= (the-as string (-> water-proc name)) "training-water-1") (set! limit 53000.0))
     ((string= (the-as string (-> water-proc name)) "cave-water-2") (set! limit 137000.0))
     ((string= (the-as string (-> water-proc name)) "cave-water-3") (set! limit 172300.0))
     ((string= (the-as string (-> water-proc name)) "sunken-water-5") (set! limit -610004.9375))
@@ -1194,6 +1214,8 @@
 
     (if (< (-> self control trans y) limit)
       (begin
+        (unless *should-show-swim-screen?*
+          (set-time! *started-drown-time*))
         (pc-set-fog-intensity 10.0)
         (set! *should-show-swim-screen?* #t)
       )
@@ -1210,7 +1232,8 @@
         (limit 0.0)
         (speed 50000.0))
 
-  (cond 
+  (cond
+    ((string= (the-as string (-> water-proc name)) "training-water-1") (set! limit 53000.0) (set! speed 70000.0)) 
     ((string= (the-as string (-> water-proc name)) "cave-water-2") (set! limit 137000.0) (set! speed 70000.0))
     ((string= (the-as string (-> water-proc name)) "cave-water-3") (set! limit 172300.0) (set! speed 30000.0))
     ((string= (the-as string (-> water-proc name)) "sunken-water-5") (set! limit -610004.9375) (set! speed 40000.0))
@@ -1226,6 +1249,7 @@
     ((string= (the-as string (-> water-proc name)) "sunken-water-12") (set! limit -592582.2500))
     ((string= (the-as string (-> water-proc name)) "sunken-water-15") (set! limit -1034808.8125))
     ((string= (the-as string (-> water-proc name)) "sunken-water-16") (set! limit -1034808.8125))
+    ((string= (the-as string (-> water-proc name)) "water-vol-103") (set! limit -9348.3759) (set! speed 70000.0))
     (else (set! limit -9348.3759)))
 
 
@@ -1309,7 +1333,7 @@
     (let ((vert-input (-> wishvel y)))
       (cond
         ((should-jump?)
-          (+! (-> curvel y) (if (near-wall? 500.0) (swim-exit-help-speed) jump-speed)))  
+          (+! (-> curvel y) (if (near-wall? 800.0) (swim-exit-help-speed) swim-jump-speed)))  
 
         ((not (= vert-input 0.0))
         (+! (-> curvel y) (* vert-input accel frametime)))

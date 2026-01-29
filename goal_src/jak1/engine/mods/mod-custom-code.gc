@@ -83,6 +83,10 @@
   (with-dma-buffer-add-bucket ((dma-buf (-> (current-frame) global-buf)) (bucket-id debug-no-zbuf))
     (draw-sprite2d-xy dma-buf 0 0 512 224 (new 'static 'rgba :r #x00 :g #x00 :b #xCC :a #x20))) (none))
 
+(defun swim-screen-misty ()
+  (with-dma-buffer-add-bucket ((dma-buf (-> (current-frame) global-buf)) (bucket-id debug-no-zbuf))
+    (draw-sprite2d-xy dma-buf 0 0 512 224 (new 'static 'rgba :r #x00 :g #x50 :b #x00 :a #x20))) (none))
+
 (defun update-green-flash ()
   (when *green-flash-active*
     ;; if we're not in a flash, wait for the gap
@@ -118,7 +122,7 @@
   (when (or (and (in-hl-state?) (not (movie?)) (not (on-zoomer?))) (= (-> *target* state name) 'target-hl-death))
     (send-event *camera* 'set-fov 16384.845)
     (send-event *camera* 'change-state cam-fps 0))
-  
+
   ;; In the zoomer we set the camera back to string
   (when (on-zoomer?)
     (send-event *camera* 'change-state cam-string 0))
@@ -126,7 +130,7 @@
   ;; Handle input and new hints when not paused
   (when (and (not (paused?)) (not (target-sleeping?)))
     (hud-hl-display-on)
-    (unless (= (-> *target* state name) 'target-warp-in) (pc-get-mouse-data *mouse-data*))
+    (unless (= (-> *target* state name) 'target-warp-in) (update-mouse-input-stuff))
     (pc-set-crosshair-enabled #t)
     (update-cell-suit-upgrade-status)
     (update-suit-upgrade-message))
@@ -156,12 +160,17 @@
     (set! *should-blackout?* #f)
   )
 
+  (when (and (= (-> *target* current-level name) 'misty) (= (-> *target* state name) 'target-hl-grab))
+    (send-event *camera* 'set-fov 16384.845))
+
   ;; Force blackout during target warp transitions
   (when *should-blackout?* (blackout))
 
   ;; Swim screen effect
   (when *should-show-swim-screen?*
-    (swim-screen))
+    (if (= (-> *target* current-level name) 'misty)
+    (swim-screen-misty)
+    (swim-screen)))
 
   ;; Handle the green screen teleport effect
   (update-green-flash)
@@ -175,7 +184,6 @@
   (update-keyboard-input-stuff)
   (should-update-jump-buffer?)
   (handle-draw-and-input-stuff)
-  ;;(format 0 "PITCH: ~f ~%" (-> (the-as camera-slave (-> *camera* slave 0)) tracking inv-mat vector 0 w))
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
   (when *debug-segment*
     (orb-placer-maintenance))

@@ -58,7 +58,8 @@
 (defstate silostep-camera (silostep)
   :code
     (behavior ()
-      (misty-camera-view)
+      ;; Changed for hl mod because the camera was not working correctly
+      ;;(misty-camera-view)
       (let* ((gp-0 (get-task-control (game-task misty-warehouse)))
              (v1-1 (get-reminder gp-0 0)))
         (save-reminder gp-0 (logior v1-1 2) 0))
