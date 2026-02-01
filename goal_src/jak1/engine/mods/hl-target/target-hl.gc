@@ -87,8 +87,6 @@
   )
   :code
     (behavior ()
-    (loop (suspend))
-      #|
       (let ((s5-0 22)
             (gp-0 (new 'stack 'ground-tween-info)))
         (let ((v1-3 (ja-group)))
@@ -200,15 +198,11 @@
         (loop
           (ground-tween-update gp-0 (-> self control tween-input) (-> self control tween-output))
           (suspend)
-          ;;(ja :num! (loop!))
+          (ja :num! (loop!))
           (ja :chan 1 :num! (chan 0))
-          (ja :chan 2 :num! (chan 0)))
-          )|#
-  )
+          (ja :chan 2 :num! (chan 0)))))
   :post 
   (behavior ()
-  (set! (-> self water drip-wetness) 0.0)
-  (set! (-> self water drip-mult) 0.0)
     (when (should-duck?)
       (start-ground-duck))
     (when (on-ground?)

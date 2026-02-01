@@ -172,6 +172,12 @@
     (swim-screen-misty)
     (swim-screen)))
 
+  ;; So we are not staring at the teleported after the first cutscene after beating geyser
+  (when *in-cutscene-after-geyser*
+    (when (not (movie?))
+      (set! *do-180?* #t)
+      (set! *in-cutscene-after-geyser* #f)))
+
   ;; Handle the green screen teleport effect
   (update-green-flash)
   0
@@ -184,6 +190,7 @@
   (update-keyboard-input-stuff)
   (should-update-jump-buffer?)
   (handle-draw-and-input-stuff)
+  ;;(format 0 "~%~A" (-> *art-control* active-stream))
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
   (when *debug-segment*
     (orb-placer-maintenance))

@@ -251,8 +251,9 @@
         (begin
           (vector-normalize! arg0 1.0)
           (set! (-> self control stick-vec quad) (-> arg0 quad))
-
-            (set! (-> self control pad-stick-speed) 1.5)
+          (let ((base-speed (if (should-walk?) 0.48 1.5))
+                (duck-mult (if (target-hl-is-in-duck?) 0.3 1.0)))
+            (set! (-> self control pad-stick-speed) (* base-speed duck-mult)))
           (vector-matrix*! arg0 arg0 (matrix-local->world #t #f))
 ))))
 

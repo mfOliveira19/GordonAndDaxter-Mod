@@ -181,7 +181,6 @@
   )
 
 (defun on-ground? ()
-  ;;(logtest? (-> *target* control status) (cshape-moving-flags onground))
   (not (and (not (logtest? (-> *target* control status) (cshape-moving-flags onsurf))) 
     (time-elapsed? (-> *target* control last-ground-time) (seconds 0.06))))
 )
@@ -612,6 +611,37 @@
       ;; no wall nearby
       #f)))
 
+(defbehavior turn-to-vector-hl target ((arg0 vector) (arg1 float))
+  (let ((gp-0 (new-stack-vector0)))
+    (warp-vector-into-surface! gp-0 arg0 (-> self control local-normal))
+    (set! (-> self control last-turn-vec-len) (-> self control turn-vec-len))
+    (set! (-> self control last-turn-vec-deg) (-> self control turn-vec-deg))
+    (set! (-> self control unknown-vector21 quad) (-> self control unknown-vector20 quad))
+    (set! (-> self control unknown-vector23 quad) (-> self control unknown-vector22 quad))
+    (vector-float*! (-> self control unknown-vector22) gp-0 arg1)
+    (if (< 0.0 arg1) (warp-vector-into-surface! (-> self control unknown-vector20) arg0 *up-vector*))
+    (dotimes (v1-15 7)
+      (set! (-> self control unknown-vector-array00 (+ v1-15 1) quad) (-> self control unknown-vector-array00 v1-15 quad)))
+    (set! (-> self control unknown-vector-array00 0 quad)
+          (-> (vector-matrix*! gp-0 gp-0 (-> self control unknown-matrix00)) quad))
+    (let ((f0-6 (atan (-> gp-0 x) (-> gp-0 z))))
+      (set! (-> self control turn-vec-len) arg1)
+      (set! (-> self control turn-vec-deg) f0-6))
+    ;; This used (-> self control new-surf target-speed)
+    ;; For some reason in debug mode its value is 40960 and in retail is 65536
+    (let ((f0-8 (* arg1 40960.0)))
+      (set! (-> self control trans-targ quad) (-> (vector-normalize! gp-0 f0-8) quad))))
+  (let ((gp-1 (new-stack-vector0)))
+    (vector-matrix*! gp-1 (-> self control trans-targ) (-> self control unknown-matrix01))
+    (vector-float*! gp-1 gp-1 0.5)
+    (vector+! gp-1 gp-1 (-> self control trans))
+    (add-debug-text-sphere *display-target-marks*
+                           (bucket-id debug-no-zbuf)
+                           gp-1
+                           819.2
+                           "target"
+                           (new 'static 'rgba :r #xff :g #xff :a #x80))))
+
 (defbehavior hl-add-thrust target ()
   (let* ((wishvel   (-> self control trans-targ))
          (curvel    (-> self control ltransv))
@@ -622,14 +652,10 @@
       (set! (-> wishvel y) 0.0)
       (set! (-> curvel  y) 0.0)
 
-    (let ((duck-mult (if (target-hl-is-in-duck?) 0.3 1.0))
-          (walk-mult (if (should-walk?) 0.48 1.0)))
-      (vector-float*! wishvel wishvel (* duck-mult walk-mult)))
-
       ;; ----------------------
       ;; APPLY FRICTION FIRST
       ;; ----------------------
-      
+
       (when (not (should-jump?))
         (let ((speed (vector-xz-length curvel)))
           (when (> speed 0.0)
@@ -666,6 +692,7 @@
                 (let ((accelspeed (* accel frametime wishspeed)))
                   (when (> accelspeed addspeed)
                     (set! accelspeed addspeed))
+                  ;;(when (should-walk?) (set! accelspeed (* 0.015 addspeed)))
                   (vector+! curvel curvel
                             (vector-float*! (new-stack-vector0) wishvel accelspeed)))))))
 
@@ -773,7 +800,7 @@
       (flag-setup)
       (build-conversions (-> self control transv))
       (do-rotations1)
-      (let ((s4-0 (new-stack-vector0))) (read-pad s4-0) (turn-to-vector s4-0 0.0))
+      (let ((s4-0 (new-stack-vector0))) (read-pad s4-0) (turn-to-vector-hl s4-0 0.0))
       (add-thrust)
       (add-gravity)
       (do-rotations2-hl)
@@ -832,14 +859,14 @@
                 (vector-lerp! s4-0 a1-2 a2-1 f0-12)))
             (set! f30-0 (vector-length s4-0))
             (vector-normalize! s4-0 1.0))
-          (turn-to-vector s4-0 f30-0)))|#
+          (turn-to-vector-hl s4-0 f30-0)))|#
       (when (on-ground?)
         (hl-update-step-sound))
       
       (let ((s4-0 (new-stack-vector0)))
         (read-input s4-0)
         (let ((f30-0 (-> self control pad-stick-speed)))
-          (turn-to-vector s4-0 f30-0)))
+          (turn-to-vector-hl s4-0 f30-0)))
 
       (if (on-ground?)
           (unless (should-jump?)
@@ -1080,7 +1107,6 @@
   (set! (-> self water drip-mult) 1.0)
   (set! (-> self neck flex-blend) 1.0)
   (set! (-> self control unknown-float91) 0.0)
-  ;;(logclear! (-> self draw status) (draw-status hidden))
   (logclear! (-> self skel status) (janim-status spool))
   (logclear! (-> self control status) (cshape-moving-flags csmf14))
   0
@@ -1351,7 +1377,7 @@
       (let ((s4-0 (new-stack-vector0)))
         (read-input s4-0)
         (let ((f30-0 (-> self control pad-stick-speed)))
-          (turn-to-vector s4-0 f30-0)))
+          (turn-to-vector-hl s4-0 f30-0)))
 
       (hl-add-thrust-swim)
       (do-rotations2-hl)

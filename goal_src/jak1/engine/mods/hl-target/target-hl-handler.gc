@@ -8,6 +8,7 @@
 (define *suit-upgrade-val* 0)
 (define *suit-upgrade-time* 0.0)
 (define *suit-upgrade-duration* 6.0) ;; seconds on screen
+(define *in-cutscene-after-geyser* #f)
 
 (defun start-suit-upgrade-message ((val int))
   (set! *suit-upgrade-active* #t)
@@ -223,9 +224,7 @@
          (cpad-set-buzz! (-> *cpad-list* cpads 0) 0 255 (seconds 0.5))
          (let ((v1-13 (-> arg0 angle))) (= v1-13 'up)))
        ;;(sound-play "hit-up")
-       )
-      (else
-        (when (>= (-> self fact health) 1.0) (sound-play "hev_beep")))))
+       )))
   (case (-> arg0 mode)
     (('burn 'burnup)
      ;; og:preserve-this
@@ -490,7 +489,10 @@
     (behavior ((arg0 handle))
       (clone-anim arg0 (the-as int (-> self draw origin-joint-index)) #t "")
       (go target-hl-movement-ground))
-  :post target-no-ja-move-post)
+  :post 
+  (behavior ()
+    (when (string= (-> *art-control* active-stream) "sage-intro-sequence-e") (set! *in-cutscene-after-geyser* #t))
+    target-no-ja-move-post))
 
 (defstate target-hl-grab (target)
   :event
@@ -603,7 +605,7 @@
       (target-hl-no-stick-post)))
 
 (defstate target-hl-play-anim (target)
-  :event target-generic-event-handler
+  :event target-hl-generic-event-handler
   :enter
     (behavior ((arg0 string) (arg1 handle))
       (set! (-> self control pole) arg1)
@@ -766,6 +768,7 @@
             ((= arg0 'attack)
              (logior! (-> self state-flags) (state-flags being-attacked))
              (set-time! (-> self game hit-time))
+             (when (and (>= (-> self fact health) 1.0) (!= (-> gp-0 mode) 'endlessfall)) (sound-play "hev_beep"))
              (case (-> gp-0 mode)
                (('endlessfall)
                 (cond
@@ -806,7 +809,6 @@
   :post 
   (behavior ()
     (target-post)
-    ;;(set! (-> self draw status) (draw-status hidden))
   ))
 
 (defbehavior target-hl-bonk-event-handler target ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
