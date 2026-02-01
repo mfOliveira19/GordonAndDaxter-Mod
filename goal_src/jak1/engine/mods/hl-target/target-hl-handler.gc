@@ -144,14 +144,14 @@
 
           (if (> dy -2800.0)
               (begin
-              (format 0 "ALLOW LIFT ~f ~%" dy)
+              ;;(format 0 "ALLOW LIFT ~f ~%" dy)
               ;; explosion below player -> allow lift
               (set! (-> dir y)
                     (* vertical-strength 0.5))
               )
               ;; explosion above or level no upward push
               (begin
-              (format 0 "NO LIFT ~f ~%" dy) 
+              ;;(format 0 "NO LIFT ~f ~%" dy)
               (set! (-> dir y) 0.0)
               ))
 

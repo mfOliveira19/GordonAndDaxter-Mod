@@ -308,32 +308,6 @@
   0
   (none))
 
-(defbehavior apply-fall-status target ()
-  (format 0 "FALL DAMAGE~%")
-  (sound-play "pl_jumpland2")
-  (sound-play "pl_pain2")
-  (set! *should-take-fall-damage* #f))
-
-(defbehavior update-fall-status target ()
-  (let ((cur-y (-> self control trans y)))
-    (if (on-ground?)
-        ;; Player has landed
-        (begin
-          (when *falling*
-            (let ((fall-dist (- *fall-start-height* cur-y)))
-              (set! *should-take-fall-damage* (> fall-dist fall-damage-threshold))))
-          (set! *falling* #f)
-          (set! *fall-start-height* cur-y)
-            (if *should-take-fall-damage*
-              (apply-fall-status))
-          )) ;; reset start height
-        ;; Player is in air
-        (begin
-          (unless *falling*
-            (set! *falling* #t)
-            (set! *fall-start-height* cur-y))
-          (set! *should-take-fall-damage* #f))))
-
 (defbehavior should-do-normal-swim-step? target ()
   (let ((water-proc (handle->process (-> self water volume))))
     (if
@@ -647,6 +621,10 @@
     (let ((saved-y (-> curvel y)))
       (set! (-> wishvel y) 0.0)
       (set! (-> curvel  y) 0.0)
+
+    (let ((duck-mult (if (target-hl-is-in-duck?) 0.3 1.0))
+          (walk-mult (if (should-walk?) 0.48 1.0)))
+      (vector-float*! wishvel wishvel (* duck-mult walk-mult)))
 
       ;; ----------------------
       ;; APPLY FRICTION FIRST

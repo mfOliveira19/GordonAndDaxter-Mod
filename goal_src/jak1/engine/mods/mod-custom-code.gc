@@ -244,8 +244,6 @@
   ;;(process-spawn-function process music-manager-proc)
     (pc-set-fog-intensity 1.0)
     (set! *should-show-swim-screen?* #f)
-    (when (not (process-by-name 'hl-weapon-proc *active-pool*))
-      (start-hl-weapons))
   (none))
 
 (defun runs-on-jak-death ((death-event symbol))
@@ -256,6 +254,12 @@
     (('blackout)
      ;; Code here runs after jak dies (and any death cutscene finishes), during the blackout before he spawns
      ))
+  (none))
+
+(defun runs-on-jak-init ()
+  ;; Code here runs on target init
+    (when (not (process-by-name 'hl-weapon-proc *active-pool*))
+      (start-hl-weapons))
   (none))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;

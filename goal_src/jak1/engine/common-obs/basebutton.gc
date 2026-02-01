@@ -63,9 +63,10 @@
         (('attack-hl)
          (case (-> block param 1)
            (('uppercut) ;; a crowbar attack
-            (basebutton-method-29 self (-> self event-going-down) (-> self notify-actor))
-            (sound-play "silo-button")
-            (go-virtual basebutton-going-down))))
+            (unless (and (< (-> *game-info* fuel) 4) (= (-> *target* current-level name) 'training))
+              (basebutton-method-29 self (-> self event-going-down) (-> self notify-actor))
+              (sound-play "silo-button")
+              (go-virtual basebutton-going-down)))))
         (('attack)
          (case (-> block param 1)
            (('flop)

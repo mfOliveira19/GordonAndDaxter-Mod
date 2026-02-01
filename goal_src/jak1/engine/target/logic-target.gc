@@ -9,6 +9,8 @@
 (require "engine/common-obs/water-h.gc")
 (require "engine/target/target-util.gc")
 
+(define-extern runs-on-jak-init (function none))
+
 ;; note: changed for high fps
 
 ;; target-start is modified due to changing the size of the stack in gkernel.gc
@@ -1313,6 +1315,8 @@
   (set! (-> self event-hook) target-generic-event-handler)
   (set! (-> self current-level) #f)
   (level-setup)
+  ;; Added for hl mod, we start the weapons process here
+  (runs-on-jak-init)
   (go target-continue arg0)
   (none))
 
