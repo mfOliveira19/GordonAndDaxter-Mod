@@ -190,7 +190,6 @@
   (update-keyboard-input-stuff)
   (should-update-jump-buffer?)
   (handle-draw-and-input-stuff)
-  ;;(format 0 "~%~A" (-> *art-control* active-stream))
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
   (when *debug-segment*
     (orb-placer-maintenance))
@@ -251,6 +250,8 @@
   ;;(process-spawn-function process music-manager-proc)
     (pc-set-fog-intensity 1.0)
     (set! *should-show-swim-screen?* #f)
+    (when (not (process-by-name 'hl-weapon-proc *active-pool*))
+      (start-hl-weapons))
   (none))
 
 (defun runs-on-jak-death ((death-event symbol))
@@ -264,9 +265,14 @@
   (none))
 
 (defun runs-on-jak-init ()
-  ;; Code here runs on target init
-    (when (not (process-by-name 'hl-weapon-proc *active-pool*))
-      (start-hl-weapons))
+    ;; Code here runs on target init
+    ;; Init the timers, for some reason, when we load the game sometimes the timers are fucked up
+    (set! *hl-target-jump-buffer* 0)
+    (set! *last-duck-time* 0)
+    (set-time! *last-step-time*)
+    (if (not (process-by-name 'hl-weapon-proc *active-pool*))
+      (start-hl-weapons)
+      (reset-hl-weapon-timers))
   (none))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;

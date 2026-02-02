@@ -83,8 +83,7 @@
       (when (not (target-should-use-launcher?))
             (target-hl-apply-jump)))
       (when (not (on-ground?))
-        (go target-hl-movement-air))
-  )
+        (go target-hl-movement-air)))
   :code
     (behavior ()
       (let ((s5-0 22)
@@ -637,8 +636,7 @@
           ((1) (sound-play "pl_wade3"))
           ((2) (sound-play "pl_wade2"))
           ((3) (sound-play "pl_wade4"))))
-          (set-time! *last-swim-enter-time*))
-    (target-hl-collide-set! 'normal (the-as float 0.0)))
+          (set-time! *last-swim-enter-time*)))
   :exit
   (behavior ()
     (when (time-elapsed? *last-swim-enter-time* (fsec 2.0))
@@ -649,8 +647,6 @@
           ((2) (sound-play "pl_wade2"))
           ((3) (sound-play "pl_wade4"))))
           (set-time! *last-swim-enter-time*))
-    ;;(pc-set-fog-intensity 1.0)
-    ;;(set! *should-show-swim-screen?* #f)
   )
   :trans
   (behavior ()

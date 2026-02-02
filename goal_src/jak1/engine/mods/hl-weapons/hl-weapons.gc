@@ -90,8 +90,16 @@
 
 (defun start-hl-weapons ()
   (let ((v1-3 (process-spawn hl-weapons :init init-hl-weapons :from *4k-dead-pool* :to *active-pool* :stack *kernel-dram-stack* :stack-size #x4000 :name 'hl-weapon-proc)))
+    (format 0 "STARTED WEAPONS PROCESS~%")
     (if v1-3 (set! *hl-weapons* (the-as hl-weapons (-> v1-3 0 self))) (set! *hl-weapons* #f)))
   (none))
+
+(defun reset-hl-weapon-timers ()
+  (set-time! (-> *hl-weapons* weapon-last-switch-time))
+  (set-time! (-> *hl-weapons* weapon-last-attack-time))
+  (set-time! (-> *hl-weapons* weapon-last-second-attack-time))
+  (set-time! (-> *hl-weapons* weapon-last-reload-time))
+  (set-time! (-> *hl-weapons* weapon-last-idle-time)))
 
 (defun viewmodel-play-animation ((animation viewmodel-animations-enum) (anim-speed float))
   (pc-set-viewmodel-animation-speed anim-speed)

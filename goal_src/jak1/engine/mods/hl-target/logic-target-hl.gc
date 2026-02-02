@@ -182,8 +182,7 @@
 
 (defun on-ground? ()
   (not (and (not (logtest? (-> *target* control status) (cshape-moving-flags onsurf))) 
-    (time-elapsed? (-> *target* control last-ground-time) (seconds 0.06))))
-)
+    (time-elapsed? (-> *target* control last-ground-time) (seconds 0.06)))))
 
 (defbehavior update-viewmodel-bob target ()
   (let ((hvel (new 'stack-no-clear 'vector)))
@@ -692,7 +691,6 @@
                 (let ((accelspeed (* accel frametime wishspeed)))
                   (when (> accelspeed addspeed)
                     (set! accelspeed addspeed))
-                  ;;(when (should-walk?) (set! accelspeed (* 0.015 addspeed)))
                   (vector+! curvel curvel
                             (vector-float*! (new-stack-vector0) wishvel accelspeed)))))))
 
@@ -842,7 +840,6 @@
         (set! (-> self control force-push-speed-mod) (- 1.0 (-> self control cpad stick0-speed))))
       (build-conversions (-> self control transv))
       (do-rotations1)
-      #|
       (let ((s4-0 (new-stack-vector0)))
         (read-pad s4-0)
         (let ((f30-0 (-> self control pad-stick-speed)))
@@ -859,7 +856,7 @@
                 (vector-lerp! s4-0 a1-2 a2-1 f0-12)))
             (set! f30-0 (vector-length s4-0))
             (vector-normalize! s4-0 1.0))
-          (turn-to-vector-hl s4-0 f30-0)))|#
+          (turn-to-vector-hl s4-0 f30-0)))
       (when (on-ground?)
         (hl-update-step-sound))
       
@@ -895,7 +892,7 @@
         (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)
                    'draw
                    (new 'static 'rgba :r #x80 :g #x60 :b #x40 :a #x80)))
-      ;;(bend-gravity)
+      (bend-gravity)
       (hl-post-flag-setup))
     (set-time-ratios *display* (the float gp-0)))
 
