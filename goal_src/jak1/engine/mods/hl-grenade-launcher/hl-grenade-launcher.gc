@@ -450,7 +450,7 @@
       (set! (-> s4-0 prim-core collide-as) (collide-kind projectile))
       (set! (-> s4-0 collide-with) 
         (collide-kind
-         background
+          background
           cak-1
           cak-2 
           cak-3 

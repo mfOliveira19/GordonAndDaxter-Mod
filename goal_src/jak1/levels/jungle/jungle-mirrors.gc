@@ -590,9 +590,9 @@
                 (let ((delta-x (-> *mouse-data* mouse-relx)) ; left/right
                       (delta-y (-> *mouse-data* mouse-rely))) ; up/down
                   ;; Y movement affects pitch (x axis)
-                  (set! (-> s5-0 x) (+ (-> s5-0 x) (* delta-y (-> *pc-settings* mouse-xsens))))
+                  (set! (-> s5-0 x) (+ (-> s5-0 x) (* delta-y (-> *pc-settings* mouse-xsens) 3.2)))
                   ;; X movement affects yaw (y axis)
-                  (set! (-> s5-0 y) (- (-> s5-0 y) (* delta-x (-> *pc-settings* mouse-xsens))))
+                  (set! (-> s5-0 y) (- (-> s5-0 y) (* delta-x (-> *pc-settings* mouse-xsens) 3.2)))
                   
                   ))
             (when *camera-read-analog*

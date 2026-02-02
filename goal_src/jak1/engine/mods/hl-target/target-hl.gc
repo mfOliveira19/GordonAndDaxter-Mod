@@ -198,9 +198,10 @@
         (loop
           (ground-tween-update gp-0 (-> self control tween-input) (-> self control tween-output))
           (suspend)
-          (ja :num! (loop!))
+          ;;(ja :num! (loop!))
           (ja :chan 1 :num! (chan 0))
-          (ja :chan 2 :num! (chan 0)))))
+          (ja :chan 2 :num! (chan 0))))
+          )
   :post 
   (behavior ()
     (when (should-duck?)

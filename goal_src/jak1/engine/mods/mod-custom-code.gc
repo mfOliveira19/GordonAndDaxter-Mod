@@ -138,7 +138,7 @@
   ;; When we should hide the viewmodel and hud
   ;;  
   ;; Hide when we are not in first person or not in play, we also hide target
-  (if (or (!= *camera-look-through-other* 0) (!= (-> *target* game mode) 'play) (not (in-hl-state?)) (movie?))
+  (if (or (!= *camera-look-through-other* 0) (!= (-> *target* game mode) 'play) (not (in-hl-state?)) (movie?) (and (= (-> *target* state name) 'target-hl-grab) (= (-> *target* current-level name) 'swamp)))
     (begin
       (hide-viewmodel-and-hud)
       ;; We also hide the target when we die

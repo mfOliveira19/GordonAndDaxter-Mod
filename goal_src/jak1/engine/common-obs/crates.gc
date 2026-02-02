@@ -478,7 +478,7 @@
              #f)))
          (('steel)
           (case (-> arg3 param 1)
-            (('explode 'darkeco 'eco-yellow 'bonk 'tube 'flut-bonk 'flut-attack 'racer)
+            (('explode 'darkeco 'eco-yellow 'bonk 'tube 'flut-bonk 'flut-attack 'racer 'uppercut)
              (send-event arg0 'get-attack-count 1)
              (when (logtest? (-> self draw status) (draw-status was-drawn))
                (increment-success-for-hint (text-id sidekick-hint-crate-steel))

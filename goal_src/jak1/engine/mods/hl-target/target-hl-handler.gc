@@ -768,7 +768,7 @@
             ((= arg0 'attack)
              (logior! (-> self state-flags) (state-flags being-attacked))
              (set-time! (-> self game hit-time))
-             (when (and (>= (-> self fact health) 1.0) (!= (-> gp-0 mode) 'endlessfall)) (sound-play "hev_beep"))
+             (when (and (>= (-> self fact health) 1.0) (!= (-> gp-0 mode) 'endlessfall) (!= (-> gp-0 mode) 'instant-death) (!= (-> gp-0 mode) 'drown-death) (!= (-> gp-0 mode) 'dark-eco-pool) (!= (-> gp-0 mode) 'lava) (!= (-> gp-0 mode) 'sharkey)) (sound-play "hev_beep"))
              (case (-> gp-0 mode)
                (('endlessfall)
                 (cond

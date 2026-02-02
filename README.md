@@ -2,8 +2,9 @@
 
 A Jak 1 OpenGOAL Mod that attempts recreating Half-Life 1 movement and some weapons within GOAL.
 
-## Main Changes
 
+Overall experience is smoother with the frame rate limit set to 150 fps.
+## Main Changes
 
 ### Target Movement
 
@@ -83,6 +84,10 @@ Controls were changed for supporting mouse and keyboard only and currently canno
   <ul>
     <li>Walks</li>
   </ul>
+  <li>E</li>
+  <ul>
+    <li>Same as pressing circle</li>
+  </ul>
   <li>Tab</li>
   <ul>
     <li>Shows the HUD</li>
@@ -107,6 +112,37 @@ Controls were changed for supporting mouse and keyboard only and currently canno
   <ul>
     <li>Secondary Attack</li>
   </ul>
+  <li>ESC</li>
+  <ul>
+    <li>Pause</li>
+  </ul>
+  <li>Arrow Keys</li>
+  <ul>
+    <li>Navigating in menus</li>
+  </ul>
+  <li>Backspace</li>
+  <ul>
+    <li>Return in menus, skip cutscenes, select "NO"</li>
+  </ul>
 </ul>
 
 It was also added settings for jumping and ducking using the mouse wheel.
+
+
+### Weapons
+
+The shooting mechanics consist of using ``fill-and-probe-using-line-sphere`` which casts a line from the center of our camera to a fixed range. When firing, a projectile is spawned at the collision point of the probe (basically, it creates small yellow eco fireballs at where we are aiming).
+
+Currently, only 3 weapons are implemented. They are drawn using a new renderer which is  ``viewmodel`` and all their animation stuff and logic are in a new process called ``hl-weapons`` which contains the behavior of all the weapons such as reload time, firerate, switching weapons, etc. Also, ammo is unlimited.
+
+#### Crowbar
+
+The crowbar works the same as shooting with the other weapons except it has far less range and creates a bigger projectile where it connects. It also deals double the damage as the other weapons except the grenades.
+
+#### Pistol
+
+Deals the same damage as the SMG but has higher accuracy. It also has a secondary attack with higher fire rate but less accuracy.
+
+#### SMG
+
+Same damage has the pistol, less accuracy but higher firerate. Its secondary attack is the grenade launcher which deals the most damage, but its most useful function is the grenade jump which is needed in order to perform most of the jumps to be able to progress in the game. The grenade its basically a bomb from the cannons of the vanilla game but with changes to its gravity and a new model.
