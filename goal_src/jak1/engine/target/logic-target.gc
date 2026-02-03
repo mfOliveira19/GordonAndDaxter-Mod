@@ -603,17 +603,7 @@
           (- (current-time) (-> *display* old-base-frame-counter))))
     (if (and (or (not gp-0) (!= (-> gp-0 name) (-> self current-level name))) (-> self current-level))
       (begin
-      (send-event self 'level-enter (-> self current-level name))
-      ;; Added for hl mod so we have water collision on basin
-      (if (= (-> *target* current-level name) 'rolling)
-        (set! (-> (-> self control body-spheres 0) collide-with)
-          (collide-kind background cak-1 cak-2 cak-3
-                        water
-                        powerup crate enemy wall-object ground-object mother-spider))
-        (set! (-> (-> self control body-spheres 0) collide-with)
-          (collide-kind background cak-1 cak-2 cak-3
-                        powerup crate enemy wall-object ground-object mother-spider)))
-      )
+      (send-event self 'level-enter (-> self current-level name)))
       ))
   0
   (none))
@@ -1215,7 +1205,7 @@
         (set! (-> s3-0 prim-core action) (collide-action solid rider-target))
         (set! (-> s3-0 prim-core collide-as) (collide-kind target))
         (set! (-> s3-0 collide-with)
-              (collide-kind background cak-1 cak-2 cak-3 powerup crate enemy wall-object ground-object mother-spider))
+              (collide-kind background cak-1 cak-2 cak-3 water powerup crate enemy wall-object ground-object mother-spider))
         (set! (-> s3-0 prim-core offense) (collide-offense touch))
         (append-prim s4-0 s3-0)
         (set! (-> s5-0 body-spheres 0) s3-0))

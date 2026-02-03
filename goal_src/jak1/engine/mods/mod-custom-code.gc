@@ -48,6 +48,7 @@
                (= st 'target-hl-death)
                (= st 'target-title)
                (= st 'target-title-play)
+               (= st 'target-final-door)
                (= st 'target-title-wait)
                (= st 'target-hl-fishing)
                (= st 'target-hl-clone-anim)
@@ -269,10 +270,10 @@
     ;; Init the timers, for some reason, when we load the game sometimes the timers are fucked up
     (set! *hl-target-jump-buffer* 0)
     (set! *last-duck-time* 0)
-    (set-time! *last-step-time*)
+    (set! *last-step-time* 0)
     (if (not (process-by-name 'hl-weapon-proc *active-pool*))
       (start-hl-weapons)
-      (reset-hl-weapon-timers))
+      (reset-hl-weapon-stuff))
   (none))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;

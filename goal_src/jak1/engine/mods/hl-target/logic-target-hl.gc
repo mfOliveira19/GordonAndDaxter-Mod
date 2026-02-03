@@ -1254,7 +1254,7 @@
     (else (set! limit -9348.3759)))
 
 
-    (if (> (-> self control trans y) limit)
+    (if (> (-> self control trans y) (- limit 2000))
       speed
       50000.0
     )
@@ -1334,7 +1334,7 @@
     (let ((vert-input (-> wishvel y)))
       (cond
         ((should-jump?)
-          (+! (-> curvel y) (if (near-wall? 800.0) (swim-exit-help-speed) swim-jump-speed)))  
+          (+! (-> curvel y) (if (near-wall? 1500.0) (swim-exit-help-speed) swim-jump-speed)))  
 
         ((not (= vert-input 0.0))
         (+! (-> curvel y) (* vert-input accel frametime)))
