@@ -914,7 +914,7 @@
   (none))
 
 (defbehavior target-hl-apply-jump target ()
-  (set! (-> (-> self control transv) y) jump-speed)
+  (max! (-> (-> self control transv) y) jump-speed)
 )
 
 (defbehavior target-hl-apply-longjump target ()
@@ -923,7 +923,7 @@
           (vel (-> self control ltransv))
           (cam-fwd  (-> *math-camera* inv-camera-rot vector 2))
           (speed    99000.0)
-          (jump-up  90070.0)
+          (jump-up  40070.0)
           (horiz-speed (vector-xz-length vel)))
       (when (and (> horiz-speed 20000.0))
         (set! (-> cam-fwd y) 0.0)
@@ -933,7 +933,7 @@
         (vector-float*! cam-fwd cam-fwd speed)
         (set! (-> curvel x) (-> cam-fwd x))
         (set! (-> curvel z) (-> cam-fwd z))
-        (set! (-> curvel y) jump-up)))))
+        (set! (-> curvel y) jump-up)))#t))
 
 (defbehavior target-should-use-launcher? target ()
   (when (= (-> self control unknown-symbol40) 'launch)

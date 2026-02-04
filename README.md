@@ -128,6 +128,7 @@ Controls were changed for supporting mouse and keyboard only and currently canno
 
 It was also added settings for jumping and ducking using the mouse wheel.
 
+In debug mode, to open the debug menu use ``. + ESC``, ``arrow keys`` to navigate and ``ENTER`` and ``BACKSPACE`` to select and return.
 
 ### Weapons
 

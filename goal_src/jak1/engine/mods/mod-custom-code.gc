@@ -271,6 +271,7 @@
     (set! *hl-target-jump-buffer* 0)
     (set! *last-duck-time* 0)
     (set! *last-step-time* 0)
+    (set! *hl-target-explosion-invinc-time* 0)
     (if (not (process-by-name 'hl-weapon-proc *active-pool*))
       (start-hl-weapons)
       (reset-hl-weapon-stuff))

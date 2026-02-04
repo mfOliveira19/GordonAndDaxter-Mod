@@ -143,16 +143,12 @@
           (set! (-> dir x) (* (-> dir x) horizontal-strength))
           (set! (-> dir z) (* (-> dir z) horizontal-strength))
 
-          (if (> dy -2800.0)
+          (if (> dy -3000.0)
               (begin
-              ;;(format 0 "ALLOW LIFT ~f ~%" dy)
-              ;; explosion below player -> allow lift
               (set! (-> dir y)
                     (* vertical-strength 0.5))
               )
-              ;; explosion above or level no upward push
               (begin
-              ;;(format 0 "NO LIFT ~f ~%" dy)
               (set! (-> dir y) 0.0)
               ))
 
@@ -161,7 +157,8 @@
             (if (should-duck?) (go target-hl-movement-air-duck) (go target-hl-movement-air)))
 
           (let* ((base-force 100000.0)
-                (len (vector-length dir))
+                (len (max 0.25 (vector-length dir)))
+
                 (scaled-force
                   (if (> len 0.001)
                       (/ (* base-force t) len)
@@ -293,7 +290,9 @@
     (('reset-collide)
      (cond
        ((-> self control unknown-symbol00)
-        (target-collide-set! (-> self control unknown-symbol00) (-> self control unknown-float90)))
+        (format 0 "RESETTING COLLIDE SET")
+        ;;(target-collide-set! (-> self control unknown-symbol00) (-> self control unknown-float90))
+        )
        ((-> self control unknown-symbol30) (target-danger-set! (-> self control unknown-symbol30) #f))))
     (('level-deactivate) #f)
     (('level-enter)
@@ -699,9 +698,9 @@
                   (= (-> self state name) 'target-hl-movement-swim)
                   (= (-> self current-level name) 'rolling)))
        (go target-hl-movement-swim)))
-    (('pole-grab)
+    #|(('pole-grab)
      (if (not (logtest? (-> self control root-prim prim-core action) (collide-action swingpole-active)))
-       (go target-pole-cycle (process->handle (the-as process (-> arg3 param 0))))))
+       (go target-pole-cycle (process->handle (the-as process (-> arg3 param 0))))))|#
     (('tongue) (target-apply-tongue (the-as vector (-> arg3 param 0))))
     (else (target-hl-generic-event-handler arg0 arg1 arg2 arg3))
     ))
@@ -769,7 +768,7 @@
             ((= arg0 'attack)
              (logior! (-> self state-flags) (state-flags being-attacked))
              (set-time! (-> self game hit-time))
-             (when (and (>= (-> self fact health) 1.0) (!= (-> gp-0 mode) 'endlessfall) (!= (-> gp-0 mode) 'instant-death) (!= (-> gp-0 mode) 'drown-death) (!= (-> gp-0 mode) 'dark-eco-pool) (!= (-> gp-0 mode) 'lava) (!= (-> gp-0 mode) 'sharkey)) 
+             (when (and (>= (-> self fact health) 1.0) (!= (-> gp-0 mode) 'endlessfall) (!= (-> gp-0 mode) 'instant-death) (!= (-> gp-0 mode) 'drown-death) (!= (-> gp-0 mode) 'dark-eco-pool) (!= (-> gp-0 mode) 'lava) (!= (-> gp-0 mode) 'death) (!= (-> gp-0 mode) 'sharkey)) 
               (sound-play "hev_beep"))
              (case (-> gp-0 mode)
                (('endlessfall)
@@ -848,7 +847,7 @@
              (go target-hl-jump (-> *TARGET-bank* jump-height-min) (-> *TARGET-bank* jump-height-max) (the-as surface #f)))))
        #f)
       ((= arg2 'jump)
-       (sound-play "jump-long")
+       ;;(sound-play "jump-long")
        (go target-hl-jump (the-as float (-> arg3 param 0)) (the-as float (-> arg3 param 1)) (the-as surface (-> arg3 param 2)))
        
        )

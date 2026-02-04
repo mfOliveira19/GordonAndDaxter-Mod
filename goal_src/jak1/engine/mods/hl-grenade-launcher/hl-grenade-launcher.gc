@@ -438,10 +438,6 @@
   )
 
 (defun smg-grenade-collision-reaction ((arg0 collide-shape-moving) (arg1 collide-shape-intersect) (arg2 vector) (arg3 vector))
-  (format 0 "~A ~%" (pat-mode->string(-> arg1 best-tri pat)))
-  (format 0 "~A ~%" (pat-event->string(-> arg1 best-tri pat)))
-  (format 0 "~A ~%" (pat-material->string(-> arg1 best-tri pat)))
-  ;;(unless (= (-> arg1 best-tri pat mode) (pat-mode obstacle)))
     (let ((owner (-> arg0 process)))
       (when (and owner (type-type? (-> owner type) smg-grenade))
         (send-event owner 'attack)))

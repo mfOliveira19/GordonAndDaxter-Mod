@@ -80,7 +80,7 @@
   :trans
   (behavior ()
     (when (should-jump?)
-      (when (not (target-should-use-launcher?))
+      (when (and (not (target-should-use-launcher?)) (not (target-hl-apply-longjump)))
             (target-hl-apply-jump)))
       (when (not (on-ground?))
         (go target-hl-movement-air)))
@@ -205,8 +205,6 @@
   (behavior ()
     (when (should-duck?)
       (start-ground-duck))
-    (when (on-ground?)
-      (target-hl-apply-longjump))
     (apply-ground-duck)
     (target-hl-movement-post)))
 
@@ -299,7 +297,7 @@
   :post target-hl-movement-post)
 
 (defstate target-hl-duck-high-jump (target)
-  :event target-standard-event-handler
+  :event target-hl-standard-event-handler
   :enter
     (behavior ((arg0 float) (arg1 float) (arg2 symbol))
       (set-time! (-> self state-time))
