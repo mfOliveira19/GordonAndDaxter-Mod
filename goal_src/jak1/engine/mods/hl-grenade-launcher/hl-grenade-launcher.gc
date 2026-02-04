@@ -185,7 +185,8 @@
    (water-height float)
    (sfx          uint32)
    (part2        sparticle-launch-control)
-   (ground-time  time-frame))
+   (ground-time  time-frame)
+   (num-hits     uint16))
   (:states
    smg-grenade-explode
    smg-grenade-idle
@@ -214,7 +215,13 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack) (go smg-grenade-explode))))
+        (('attack)
+          ;; For some stupid reason i dont know, after we talk to keira in rock village to lift the boulder,
+          ;; every grenade explodes in an area around rock village due some unknown collision that only happens once when we spawn the grenade
+          ;; so the solution i found was to ignore the first hit
+          (+! (-> self num-hits) 1)
+          (when (> (-> self num-hits) 1)
+            (go smg-grenade-explode)))))
   :enter
     (behavior ()
       (set-time! (-> self state-time))
@@ -431,12 +438,16 @@
   )
 
 (defun smg-grenade-collision-reaction ((arg0 collide-shape-moving) (arg1 collide-shape-intersect) (arg2 vector) (arg3 vector))
-  (let ((owner (-> arg0 process)))
-    (when (and owner (type-type? (-> owner type) smg-grenade))
-      (send-event owner 'attack)))
-  (let ((flags (logior 7)))
-    (logior! (-> arg0 status) flags)
-    (the-as cshape-moving-flags flags)))
+  (format 0 "~A ~%" (pat-mode->string(-> arg1 best-tri pat)))
+  (format 0 "~A ~%" (pat-event->string(-> arg1 best-tri pat)))
+  (format 0 "~A ~%" (pat-material->string(-> arg1 best-tri pat)))
+  ;;(unless (= (-> arg1 best-tri pat mode) (pat-mode obstacle)))
+    (let ((owner (-> arg0 process)))
+      (when (and owner (type-type? (-> owner type) smg-grenade))
+        (send-event owner 'attack)))
+    (let ((flags (logior 7)))
+      (logior! (-> arg0 status) flags)
+      (the-as cshape-moving-flags flags)))
 
 (defbehavior smg-grenade-init-by-other smg-grenade ((arg0 smg-grenade-init-data) (arg1 entity-actor))
   (logior! (-> self mask) (process-mask projectile))
@@ -481,6 +492,7 @@
   (set! (-> self blast-radius) (-> arg0 blast-radius))
   (set! (-> self water-height) (res-lump-float (-> self entity) 'water-height :default -4096000.0))
   (set! (-> self part2) (create-launch-control (-> *part-group-id-table* 710) self))
+  (set! (-> self num-hits) 0)
   (go smg-grenade-idle)
   (none))
 

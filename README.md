@@ -145,4 +145,4 @@ Deals the same damage as the SMG but has higher accuracy. It also has a secondar
 
 #### SMG
 
-Same damage has the pistol, less accuracy but higher firerate. Its secondary attack is the grenade launcher which deals the most damage, but its most useful function is the grenade jump which is needed in order to perform most of the jumps to be able to progress in the game. The grenade its basically a bomb from the cannons of the vanilla game but with changes to its gravity and a new model.
+Same damage as the pistol, less accuracy but higher firerate. Its secondary attack is the grenade launcher which deals the most damage, but its most useful function is the grenade jump which is needed in order to perform most of the jumps to be able to progress in the game. The grenade its basically a bomb from the cannons of the vanilla game but with changes to its gravity and a new model.
