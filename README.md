@@ -1,7 +1,6 @@
 # Gordon And Daxter
 
-A Jak 1 OpenGOAL Mod that attempts recreating Half-Life 1 movement and some weapons within GOAL.
-
+A Jak 1 OpenGOAL Mod that "attempts" replicating Half-Life 1 movement and some weapons within GOAL.
 
 Overall experience is smoother with the frame rate limit set to 150 fps.
 ## Main Changes
