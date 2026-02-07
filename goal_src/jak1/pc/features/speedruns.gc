@@ -183,9 +183,9 @@
   (set! (-> *pc-settings* cheats) (the-as pc-cheats #x0))
   ;; ensure PS2 actor vis is enabled
   (set! (-> *pc-settings* ps2-actor-vis?) #t)
-  ;; ensure FPS set to `60`
-  (when (!= (-> *pc-settings* target-fps) 60)
-    (set-frame-rate! *pc-settings* 60 #t))
+  ;; ensure FPS set to `60` - disabled for this mod
+  ;; (when (!= (-> *pc-settings* target-fps) 60)
+  ;;   (set-frame-rate! *pc-settings* 60 #t))
   (none))
 
 (defun start-speedrun ((category speedrun-category))
@@ -469,11 +469,14 @@
   "Draw speedrun related settings in the bottom left corner"
   (when (and (-> *pc-settings* speedrunner-mode?) (not (paused?)) (-> *speedrun-info* should-display?))
     (with-dma-buffer-add-bucket ((buf (-> (current-frame) global-buf)) (bucket-id subtitle))
-      (draw-string-xy (string-format "Speedrunner Mode ~%Mod Version: ~S ~%Category: ~S ~S~%Run Started: ~S"
+      (draw-string-xy (string-format "Speedrunner Mode ~%Mod Version: ~S ~%Category: ~S ~S~%~DFPS / ~S / ~S"
                                      *mod-version-text*
                                      (enum->string speedrun-category (-> *speedrun-info* category))
                                      (if (-> *pc-settings* skip-movies?) "(CS Skips)" "(No CS Skips)")
-                                     (if (-> *speedrun-info* has-started?) "Yes" "No"))
+                                     (-> *pc-settings* target-fps)
+                                     (if (-> *pc-settings* auto-jump?) "Auto Jump" "No Auto Jump")
+                                     (if (-> *pc-settings* longjump-enabled?) "Long Jump" "No Long Jump")
+                                     )
                       buf
                       4
                       (- 222 (* 8 4))
