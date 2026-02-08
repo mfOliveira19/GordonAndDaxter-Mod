@@ -62,7 +62,7 @@
   (logclear! (-> *hl-weapons* mask) (process-mask sleep))
   (hud-hl-display-on)
   (pc-set-viewmodel-enabled #t)
-  (pc-set-crosshair-enabled #t))
+  (if (paused?) (pc-set-crosshair-enabled #f) (pc-set-crosshair-enabled #t)))
 
 (defun hide-viewmodel-and-hud ()
   (logior! (-> *hl-weapons* mask) (process-mask sleep))
@@ -132,7 +132,6 @@
   (when (and (not (paused?)) (not (target-sleeping?)))
     (hud-hl-display-on)
     (unless (= (-> *target* state name) 'target-warp-in) (update-mouse-input-stuff))
-    (pc-set-crosshair-enabled #t)
     (update-cell-suit-upgrade-status)
     (update-suit-upgrade-message))
 
@@ -161,9 +160,6 @@
     (set! *should-blackout?* #f)
   )
 
-  (when (and (= (-> *target* current-level name) 'misty) (= (-> *target* state name) 'target-hl-grab))
-    (send-event *camera* 'set-fov 16384.845))
-
   ;; Force blackout during target warp transitions
   (when *should-blackout?* (blackout))
 
@@ -191,6 +187,11 @@
   (update-keyboard-input-stuff)
   (should-update-jump-buffer?)
   (handle-draw-and-input-stuff)
+  
+  ;; So we can walk in firecanyon if we do FCS
+  (when (and (string= (-> *game-info* current-continue name) "firecanyon-end") (< (-> *game-info* total-deaths) 1))
+    (set! (-> *game-info* total-deaths) 1))
+
   ;; ensure orb-placer is spawned/killed as requested, debug menu is updated
   (when *debug-segment*
     (orb-placer-maintenance))
@@ -272,6 +273,9 @@
     (set! *last-duck-time* 0)
     (set! *last-step-time* 0)
     (set! *hl-target-explosion-invinc-time* 0)
+    (when (and (string= (-> *game-info* current-continue name) "lavatube-middle") (< (-> *game-info* total-deaths) 3))
+      (set! (-> *game-info* total-deaths) 2))
+
     (if (not (process-by-name 'hl-weapon-proc *active-pool*))
       (start-hl-weapons)
       (reset-hl-weapon-stuff))

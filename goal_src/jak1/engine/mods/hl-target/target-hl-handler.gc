@@ -80,10 +80,10 @@
   (if (or (= (-> arg1 mode) 'burnup) (= (-> arg1 mode) 'burn))
     (cond
       ;; If we are in firecanyon and we have at least 20 cells
-      ((and (= (-> self current-level name) 'firecanyon) (>= (the int (-> *game-info* fuel)) 20))
+      ((and (= (-> self current-level name) 'firecanyon) (or (>= (the int (-> *game-info* fuel)) 20) (>= (-> *game-info* total-deaths) 1)))
         #f)
-      ;; If we are in lavatube and we have at least 72 cells
-      ((and (= (-> self current-level name) 'lavatube) (>= (the int (-> *game-info* fuel)) 72))
+      ;; If we are in lavatube and we have at least 72 cells or we did LTS
+      ((and (= (-> self current-level name) 'lavatube) (or (>= (the int (-> *game-info* fuel)) 72) (>= (-> *game-info* total-deaths) 2)))
         #f)
       (else
       #t)
@@ -290,8 +290,8 @@
     (('reset-collide)
      (cond
        ((-> self control unknown-symbol00)
-        (format 0 "RESETTING COLLIDE SET")
         ;;(target-collide-set! (-> self control unknown-symbol00) (-> self control unknown-float90))
+        (if *ducked?* (target-hl-collide-set! 'duck-ground (-> self control unknown-float90)) (target-hl-collide-set! 'normal (-> self control unknown-float90)))
         )
        ((-> self control unknown-symbol30) (target-danger-set! (-> self control unknown-symbol30) #f))))
     (('level-deactivate) #f)

@@ -95,6 +95,8 @@
   :code
     (behavior ()
       (label cfg-0)
+      ;; Changed for hl mod - We dont allow zoomer
+      #|
       (case (-> self condition)
         ((2)
          (let ((gp-0 (get-task-control (-> self entity extra perm task))))
@@ -135,7 +137,7 @@
                                                            (-> self fact)))))))
         ((4)
          (if (and *target* (not (logtest? (-> *target* control root-prim prim-core action) (collide-action racer)))) (goto cfg-77)))
-        (else (goto cfg-77)))
+        (else (goto cfg-77)))|#
       (racer-effect)
       (suspend)
       (b! #t cfg-0 :delay (nop!))

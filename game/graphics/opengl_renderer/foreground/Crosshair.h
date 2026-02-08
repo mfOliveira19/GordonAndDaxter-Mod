@@ -9,6 +9,13 @@
 #include "game/graphics/opengl_renderer/Shader.h"
 #include "game/graphics/opengl_renderer/opengl_utils.h"
 
+
+struct CrosshairSprite {
+  GLuint tex = 0;
+  int width = 0;
+  int height = 0;
+};
+
 struct CrosshairDebugStats {
   int num_draws = 0;
   int num_predicted_draws = 0;
@@ -52,4 +59,12 @@ class Crosshair {
  private:
   void draw_crosshair(SharedRenderState* render_state);
   CrosshairType m_type = CrosshairType::Pistol;
+  CrosshairSprite pistol_1280;
+  CrosshairSprite smg_1280;
+  CrosshairSprite pistol_2560;
+  CrosshairSprite smg_2560;
+
+  void draw_sprite(GLuint tex, float cx, float cy, float w, float h);
+  GLuint load_texture(const std::string& filename, int& out_w, int& out_h);
+  CrosshairSprite* pick_sprite(CrosshairType type, int screen_width);
 };

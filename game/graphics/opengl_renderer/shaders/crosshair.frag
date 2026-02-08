@@ -1,8 +1,8 @@
 #version 410 core
-
-in vec4 v_color;
+in vec2 v_uv;
 out vec4 fragColor;
+uniform sampler2D u_tex;
 
 void main() {
-  fragColor = v_color;
+    fragColor = texture(u_tex, v_uv);
 }

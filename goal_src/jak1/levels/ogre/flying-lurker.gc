@@ -504,7 +504,8 @@
         (flying-lurker-rotate)
         (when (and (-> self alt-actor)
                    (or (< (vector-vector-distance-squared (-> self root trans) (-> self alt-actor extra trans)) 6710886400.0)
-                       (and *target* (< 4194304000000.0 (vector-vector-distance-squared (-> self root trans) (target-pos 0))))))
+                       ;; remove this check for hl mod (and *target* (< 4194304000000.0 (vector-vector-distance-squared (-> self root trans) (target-pos 0))))
+                       ))
           (set-or-clear-status! (-> self alt-actor) (entity-perm-status dead) #f)
           (entity-birth-no-kill (-> self alt-actor))
           (let ((a1-4 (new 'stack-no-clear 'event-message-block)))
@@ -513,7 +514,9 @@
             (set! (-> a1-4 message) 'plunge)
             (let ((t9-10 send-event-function)
                   (v1-13 (-> self alt-actor)))
-              (t9-10 (if v1-13 (-> v1-13 extra process)) a1-4))))))
+              (t9-10 (if v1-13 (-> v1-13 extra process)) a1-4)))
+              )
+              ))
   :code
     (behavior ()
       (loop
