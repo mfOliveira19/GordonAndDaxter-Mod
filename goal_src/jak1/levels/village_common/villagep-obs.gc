@@ -55,7 +55,12 @@
       ;; For some reason, the first time we enter geiser rock does not need to turn the camera
       (when (> (-> *game-info* fuel) 0)
         (set! *do-180?* #t))
-      (sound-play "warpgate-tele")
+      (play-sound-file
+        "sound_replacements/warpgate-tele.mp3"
+        (the int
+          (max
+            0
+            (the int (- (the int (-> *pc-settings* mod-sfx-volume)) 30)))))
       (set! *should-blackout?* #f)
       (ja-no-eval :group! eichar-duck-high-jump-ja :num! (seek! (ja-aframe 50.0 0)) :frame-num (ja-aframe 40.0 0))
       (until (ja-done? 0)
@@ -453,6 +458,8 @@
       (let ((t9-1 (-> (method-of-type basebutton basebutton-down-idle) exit))) (if t9-1 (t9-1))))
   :trans
     (behavior ()
+    ;; Changed for hl mod, this was causing a crash if we teleported from rock village to geyser and then back to rock village again
+    #|
       (when (time-elapsed? (-> self state-time) (seconds 60))
         (case (-> self entity extra perm task)
           (((game-task training-door))
@@ -460,7 +467,9 @@
              (level-hint-spawn (text-id training-warp-gate-reminder) "sagevb39" (the-as entity #f) *entity-pool* (game-task none))
              (clear-text-seen! *game-info* (text-id training-warp-gate-reminder)))))
         (set-time! (-> self state-time)))
-      (let ((t9-3 (-> (method-of-type basebutton basebutton-down-idle) trans))) (if t9-3 (t9-3)))))
+      (let ((t9-3 (-> (method-of-type basebutton basebutton-down-idle) trans))) (if t9-3 (t9-3)))|#
+      
+      ))
 
 (defstate basebutton-going-down (warp-gate-switch)
   :virtual #t

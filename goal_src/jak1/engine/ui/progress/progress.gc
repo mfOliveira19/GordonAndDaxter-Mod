@@ -643,7 +643,9 @@
                         (= v1-2 (progress-screen mouse-binds))
                         (= v1-2 (progress-screen controller-options))
                         (= v1-2 (progress-screen mouse-options))
-                        (= v1-2 (progress-screen reassign-binds-options)))))))))
+                        (= v1-2 (progress-screen reassign-binds-options))
+                        (= v1-2 (progress-screen mod-options)) ;; Added for hl mod
+                        )))))))
 
 (defmethod visible? ((this progress))
   (the-as symbol (and *progress-process* (zero? (-> *progress-process* 0 in-out-position)))))

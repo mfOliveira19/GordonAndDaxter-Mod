@@ -522,6 +522,9 @@
     (("auto-jump?") (set! (-> obj auto-jump?) (file-stream-read-symbol file))) ;; added for hl mod
     (("longjump-enabled?") (set! (-> obj longjump-enabled?) (file-stream-read-symbol file))) ;; added for hl mod
     (("mouse-wheel-behavior") (set! (-> obj mouse-wheel-behavior) (file-stream-read-int file))) ;; added for hl mod
+    (("fov") (set! (-> obj fov) (file-stream-read-float file))) ;; added for hl mod
+    (("mod-sfx-volume") (set! (-> obj mod-sfx-volume) (file-stream-read-float file))) ;; added for hl mod
+    (("hev-sounds?") (set! (-> obj hev-sounds?) (file-stream-read-symbol file))) ;; added for hl mod
     (("mouse-movement?") (set! (-> obj mouse-movement?) (file-stream-read-symbol file)))
     (("auto-hide-cursor?") (set! (-> obj auto-hide-cursor?) (file-stream-read-symbol file)))
     (("ps2-read-speed?") (set! (-> obj ps2-read-speed?) (file-stream-read-symbol file)))
@@ -602,6 +605,9 @@
   (format file "  (auto-jump? ~A)~%" (-> obj auto-jump?)) ;; added for hl mod
   (format file "  (longjump-enabled? ~A)~%" (-> obj longjump-enabled?)) ;; added for hl mod
   (format file "  (mouse-wheel-behavior ~D)~%" (-> obj mouse-wheel-behavior)) ;; added for hl mod
+  (format file "  (fov ~f)~%" (-> obj fov)) ;; added for hl mod
+  (format file "  (mod-sfx-volume ~f)~%" (-> obj mod-sfx-volume)) ;; added for hl mod
+  (format file "  (hev-sounds? ~A)~%" (-> obj hev-sounds?)) ;; added for hl mod
   (format file "  (mouse-ysens ~f)~%" (-> obj mouse-ysens))
   (format file "  (mouse-movement? ~A)~%" (-> obj mouse-movement?))
   (format file "  (auto-hide-cursor? ~A)~%" (-> obj auto-hide-cursor?))

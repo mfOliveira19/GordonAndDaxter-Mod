@@ -81,6 +81,13 @@
        'boxed-array
        :type
        game-option
+       ;; Added for hl mod
+       (new 'static
+            'game-option
+            :option-type (game-option-type menu)
+            :name (text-id mod-options)
+            :scale #t
+            :param3 (game-option-menu mod-options))
        (new 'static
             'game-option
             :option-type (game-option-type menu)

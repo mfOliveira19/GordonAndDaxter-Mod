@@ -141,7 +141,7 @@
         (fire-hl-shot *target* #f spread-x spread-y))
       (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot) 1.0)
       (add-aim-punch pistol-aim-punch-amount)
-      (sound-play "pl_gun3")
+      (play-mod-sound "pl_gun3")
       (hl-choose-idle-wait! 5.0 15.0))
     (set-time! (-> self weapon-last-attack-time)))
   :trans
@@ -171,7 +171,7 @@
         (fire-hl-shot *target* #f spread-x spread-y))
       (viewmodel-play-animation (viewmodel-animations-enum pistol-shoot) 1.0)
       (add-aim-punch pistol-aim-punch-amount)
-      (sound-play "pl_gun3")
+      (play-mod-sound "pl_gun3")
       (hl-choose-idle-wait! 5.0 15.0))
     (set-time! (-> self weapon-last-attack-time)))
   :trans
@@ -195,7 +195,7 @@
   :enter
   (behavior ()
     (viewmodel-play-animation (viewmodel-animations-enum pistol-reload) 1.0)
-    (sound-play "9mmclip2")
+    (play-mod-sound "9mmclip2")
     (set-time! (-> self weapon-last-reload-time)))
   
   :trans
@@ -216,7 +216,7 @@
   :enter
   (behavior ()
     (set! (-> self current-pistol-mag-ammo) pistol-max-mag-ammo)
-    (sound-play "9mmclip1")
+    (play-mod-sound "9mmclip1")
     (set-time! (-> self weapon-last-reload-time)))
   :trans
   (behavior ()

@@ -112,6 +112,22 @@
 
 (defbehavior keg-event-handler keg ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
+    ;; Added for hl mod so we can break
+    (('attack-hl)
+       (sound-play "icrate-break")
+       (process-spawn part-tracker
+                      :init
+                      part-tracker-init
+                      (-> *part-group-id-table* 71)
+                      20
+                      #f
+                      #f
+                      #f
+                      (-> self root trans)
+                      :to
+                      *entity-pool*)
+       (sound-stop (-> self sound-id))
+       (deactivate self))
     (('touch 'attack)
      (when (send-event arg0 'attack (-> arg3 param 0) (new 'static 'attack-info))
        (sound-play "icrate-break")
@@ -127,7 +143,8 @@
                       :to
                       *entity-pool*)
        (sound-stop (-> self sound-id))
-       (deactivate self)))))
+       (deactivate self)))
+       ))
 
 (defbehavior keg-post keg ()
   (cond
@@ -299,6 +316,7 @@
     (let ((s3-0 (new 'process 'collide-shape-prim-mesh s4-0 (the-as uint 0) (the-as uint 0))))
       (set! (-> s3-0 prim-core collide-as) (collide-kind enemy))
       (set! (-> s3-0 collide-with) (collide-kind target))
+      (set! (-> s3-0 prim-core action) (collide-action solid))
       (set! (-> s3-0 prim-core offense) (collide-offense indestructible))
       (set! (-> s3-0 transform-index) 3)
       (set-vector! (-> s3-0 local-sphere) 0.0 0.0 0.0 16384.0)

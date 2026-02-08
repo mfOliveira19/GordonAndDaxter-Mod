@@ -97,6 +97,7 @@
      (quit 34)
      ;; extra screens for pc port
      ;; input options
+     (mod-options) ;; Added for hl mod - a dedicated screen for the mod options
      (input-options)
      (select-controller)
      (controller-binds) ;; 0x25

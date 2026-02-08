@@ -801,6 +801,10 @@
   (mouse-wheel #x1623)
   (wheel-down-jump #x1624)
   (wheel-up-jump #x1625)
+  (mod-options #x1626)
+  (mod-sfx-volume #x1627)
+  (hev-sounds #x1628)
+  (fov #x1629)
   ;; mod text mod-base-change
   (pad-triangle #x2000)
   (pad-circle #x2001)

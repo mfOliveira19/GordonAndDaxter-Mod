@@ -698,9 +698,11 @@
   (if (logtest? (-> self control status) (cshape-moving-flags twall t-act)) (set-time! (-> self control moving-surf-touch-time)))
   (when (logtest? (-> self state-flags) (state-flags timed-invulnerable))
     ;; og:preserve-this changed for high fps. This fixes the flicker speed when damaged
+    ;; Changed for hl mod, this was causing weird behavior after going to hit state which prevented us from hitting the rings in basin
+    #|
     (if (< (logand (- (current-time) (-> self control unknown-dword80)) 3) (/ 1.0 (-> *display* time-adjust-ratio)))
       (logior! (-> self draw status) (draw-status hidden))
-      (logclear! (-> self draw status) (draw-status hidden)))
+      (logclear! (-> self draw status) (draw-status hidden)))|#
     (if (time-elapsed? (-> self control unknown-dword80) (-> self control unknown-dword81))
       (target-timed-invulnerable-off self)))
   (set! (-> self control unknown-symbol40) #f)

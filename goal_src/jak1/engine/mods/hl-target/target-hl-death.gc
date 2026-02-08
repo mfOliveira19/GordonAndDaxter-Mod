@@ -50,7 +50,7 @@
       (set! (-> self control transv quad) (the-as uint128 0))
       (logior! (-> self state-flags) (state-flags dying))
       (case arg0
-        (('none 'instant-death) (sound-play "hev_flatline"))
+        (('none 'instant-death) (play-mod-sound "hev_flatline"))
         (('ogreboss-super-boulder)
          ;; og:preserve-this PAL patch here
          (process-spawn part-tracker
@@ -70,7 +70,7 @@
          (ja-post)
          (suspend-for (seconds 1)))
         (('drown 'drown-death)
-         (sound-play "hev_flatline")
+         (play-mod-sound "hev_flatline")
          (logclear! (-> self water flags) (water-flags wt04))
          (clear-collide-with-as (-> self control))
          (set! (-> self control cur-surf) *dive-mods*)
@@ -99,7 +99,7 @@
              (set! (-> self alt-cam-pos y) (+ 4096.0 (-> self water height)))))
          (cond
            ((= arg0 'dark-eco-pool)
-            (sound-play "bodysplat")
+            (play-mod-sound "bodysplat")
             (process-spawn part-tracker
                            :init
                            part-tracker-init
@@ -112,7 +112,7 @@
                            :to
                            *entity-pool*))
            ((or (= arg0 'lava) (= arg0 'melt))
-            (sound-play "bodysplat") ;; was death-melt
+            (play-mod-sound "bodysplat") ;; was death-melt
             (process-spawn part-tracker
                            :init
                            part-tracker-init
@@ -131,7 +131,7 @@
          (suspend-for (seconds 2)))
         (('endlessfall)
          (initialize! (-> self game) 'dead (the-as game-save #f) (the-as string #f)) ;; this was added so we instantly die when we fall
-         (sound-play "bodysplat") ;; was death-fall
+         (play-mod-sound "bodysplat") ;; was death-fall
          (camera-change-to (the-as string cam-endlessfall) 30 #f)
          (set! (-> self control pat-ignore-mask unknown-bit) 1)
          (logclear! (-> self water flags) (water-flags wt04))
@@ -213,7 +213,7 @@
                (suspend)
                0))))
         (('burn 'burnup)
-          (sound-play "hev_flatline")
+          (play-mod-sound "hev_flatline")
          (process-spawn part-tracker
                         :init
                         part-tracker-init
@@ -228,9 +228,9 @@
          (target-death-anim (the-as spool-anim #f)))
         (else
          (case arg0
-           (('tar) (sound-play "hev_flatline");;(sound-play "death-drown")
+           (('tar) (play-mod-sound "hev_flatline");;(sound-play "death-drown")
            ))
-          (sound-play "hev_flatline")
+          (play-mod-sound "hev_flatline")
         
          (+! (-> *game-info* death-movie-tick) 1)
          (if (= (death-movie-remap (+ (-> *game-info* death-movie-tick) -1) (-> *death-spool-array* length))

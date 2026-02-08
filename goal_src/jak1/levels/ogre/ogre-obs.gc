@@ -315,7 +315,7 @@
       (case message
         (('die-big) (go-virtual die #t))
         (('die) (go-virtual die #f))
-        (('attack 'touch)
+        (('attack 'touch 'attack-hl)
          (send-event proc 'attack-invinc (-> block param 0) (static-attack-info ((mode 'death))))
          (go-virtual die #f))))
   :code
@@ -328,7 +328,7 @@
 (defmethod init-from-entity! ((this tntbarrel) (arg0 entity-actor))
   (let ((s4-0 (new 'process 'collide-shape this (collide-list-enum usually-hit-by-player))))
     (let ((s3-0 (new 'process 'collide-shape-prim-mesh s4-0 (the-as uint 0) (the-as uint 0))))
-      (set! (-> s3-0 prim-core collide-as) (collide-kind crate))
+      (set! (-> s3-0 prim-core collide-as) (collide-kind wall-object))
       (set! (-> s3-0 collide-with) (collide-kind target))
       (set! (-> s3-0 prim-core action) (collide-action solid))
       (set! (-> s3-0 prim-core offense) (collide-offense touch))

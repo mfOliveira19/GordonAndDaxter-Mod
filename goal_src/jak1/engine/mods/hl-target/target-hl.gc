@@ -626,6 +626,7 @@
   :event target-hl-standard-event-handler
   :enter
   (behavior ()
+    (format 0 "ENTERED SWIM ~%")
     (set! (-> (-> self control body-spheres 0) collide-with)
       (collide-kind background cak-1 cak-2 cak-3
                     powerup crate enemy wall-object ground-object mother-spider))
@@ -633,10 +634,10 @@
     (when (time-elapsed? *last-swim-enter-time* (fsec 2.0))
       (let ((rand-index (+ (rand-vu-int-range 0 3))))
         (case rand-index
-          ((0) (sound-play "pl_wade1"))
-          ((1) (sound-play "pl_wade3"))
-          ((2) (sound-play "pl_wade2"))
-          ((3) (sound-play "pl_wade4"))))
+          ((0) (play-mod-sound "pl_wade1"))
+          ((1) (play-mod-sound "pl_wade3"))
+          ((2) (play-mod-sound "pl_wade2"))
+          ((3) (play-mod-sound "pl_wade4"))))
           (set-time! *last-swim-enter-time*)))
   :exit
   (behavior ()
@@ -646,10 +647,10 @@
     (when (time-elapsed? *last-swim-enter-time* (fsec 2.0))
       (let ((rand-index (+ (rand-vu-int-range 0 3))))
         (case rand-index
-          ((0) (sound-play "pl_wade1"))
-          ((1) (sound-play "pl_wade3"))
-          ((2) (sound-play "pl_wade2"))
-          ((3) (sound-play "pl_wade4"))))
+          ((0) (play-mod-sound "pl_wade1"))
+          ((1) (play-mod-sound "pl_wade3"))
+          ((2) (play-mod-sound "pl_wade2"))
+          ((3) (play-mod-sound "pl_wade4"))))
           (set-time! *last-swim-enter-time*))
   )
   :trans

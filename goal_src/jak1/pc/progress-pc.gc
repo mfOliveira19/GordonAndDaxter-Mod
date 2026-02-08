@@ -129,6 +129,12 @@
        (new 'static
             'game-option
             :option-type (game-option-type menu)
+            :name (text-id mod-options)
+            :scale #t
+            :param3 (game-option-menu mod-options))
+       (new 'static
+            'game-option
+            :option-type (game-option-type menu)
             :name (text-id game-options)
             :scale #t
             :param3 (game-option-menu game-settings))
@@ -185,6 +191,12 @@
        (new 'static
             'game-option
             :option-type (game-option-type menu)
+            :name (text-id mod-options)
+            :scale #t
+            :param3 (game-option-menu mod-options))
+       (new 'static
+            'game-option
+            :option-type (game-option-type menu)
             :name (text-id game-options)
             :scale #t
             :param3 (game-option-menu game-settings))
@@ -237,12 +249,14 @@
        'boxed-array
        :type
        game-option
+       ;; Changed for hl mod - input stuff will also be in the MOD OPTIONS screen
+       #|
        (new 'static
             'game-option
             :option-type (game-option-type menu)
             :name (text-id input-options)
             :scale #t
-            :param3 (game-option-menu input-options))
+            :param3 (game-option-menu input-options))|#
        (new 'static
             'game-option
             :option-type (game-option-type on-off)
@@ -621,6 +635,123 @@
        (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id auto-jump) :scale #t)
        (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id long-jump) :scale #t)
        (new 'static 'game-option :option-type (game-option-type mouse-wheel) :name (text-id mouse-wheel) :scale #t)
+       #|
+       (new 'static
+            'game-option
+            :option-type (game-option-type menu)
+            :name (text-id camera-options)
+            :scale #t
+            :param3 (game-option-menu camera-options))
+       (new 'static
+            'game-option
+            :option-type (game-option-type menu)
+            :name (text-id input-opts-controller-opts)
+            :scale #t
+            :param3 (game-option-menu controller-options)
+            :option-disabled-func
+            (lambda ()
+              (<= (pc-get-controller-count) 0)))
+       (new 'static
+            'game-option
+            :option-type (game-option-type on-off)
+            :name (text-id input-opts-enable-kb)
+            :scale #t
+            :on-change
+            (lambda ((val object))
+              (let ((val-sym (the-as symbol val)))
+                (pc-set-keyboard-enabled! val-sym)
+                (set! (-> *pc-settings* keyboard-enabled?) val-sym)
+                (none))))
+       (new 'static
+            'game-option
+            :option-type (game-option-type on-off)
+            :name (text-id input-opts-enable-mouse)
+            :scale #t
+            :on-change
+            (lambda ((val object))
+              (let ((val-sym (the-as symbol val)))
+                (set! (-> *pc-settings* mouse-enabled?) val-sym)
+                (update-mouse-controls! *pc-settings*)
+                (none))))
+       (new 'static
+            'game-option
+            :option-type (game-option-type menu)
+            :name (text-id input-opts-mouse-opts)
+            :scale #t
+            :param3 (game-option-menu mouse-options)
+            :option-disabled-func
+            (lambda ()
+              (not (-> *pc-settings* mouse-enabled?))))
+       (new 'static
+            'game-option
+            :option-type (game-option-type on-off)
+            :name (text-id input-opts-auto-hide-cursor)
+            :scale #t
+            :on-change
+            (lambda ((val object))
+              (let ((val-sym (the-as symbol val)))
+                (set! (-> *pc-settings* auto-hide-cursor?) val-sym)
+                (update-mouse-controls! *pc-settings*)
+                (none))))
+       (new 'static
+            'game-option
+            :option-type (game-option-type menu)
+            :name (text-id input-opts-reassign-binds)
+            :scale #t
+            :param3 (game-option-menu reassign-binds-options))
+       (new 'static
+            'game-option
+            :option-type (game-option-type confirmation)
+            :name (text-id restore-defaults)
+            :scale #t
+            :on-confirm
+            (lambda ()
+              (reset-input *pc-settings* 'input #t)
+              (pc-set-keyboard-enabled! (-> *pc-settings* keyboard-enabled?))
+              (update-mouse-controls! *pc-settings*)
+              (none)))
+        |#
+       (new 'static 'game-option :option-type (game-option-type button) :name (text-id back) :scale #t)))
+
+(define *mod-options*
+  (new 'static
+       'boxed-array
+       :type
+       game-option
+       (new 'static
+            'game-option
+            :option-type (game-option-type slider)
+            :name (text-id mouse-sensitivity)
+            :scale #t
+            :param1 0.0
+            :param2 10.0
+            :slider-step-size 0.005
+            :slider-show-decimal? #t
+            :on-confirm
+            (lambda ()
+              (update-mouse-controls! *pc-settings*)
+              (none)))
+       (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id auto-jump) :scale #t)
+       (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id long-jump) :scale #t)
+       (new 'static 'game-option :option-type (game-option-type mouse-wheel) :name (text-id mouse-wheel) :scale #t)
+       (new 'static
+            'game-option
+            :option-type (game-option-type slider)
+            :name (text-id fov)
+            :scale #t
+            :param1 70.0
+            :param2 120.0
+            :slider-step-size 0.1
+            :slider-show-decimal? #f)
+       (new 'static
+            'game-option
+            :option-type (game-option-type slider)
+            :name (text-id mod-sfx-volume)
+            :scale #t
+            :param2 100.0
+            :slider-step-size 0.1
+            :slider-show-decimal? #f)
+       (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id hev-sounds) :scale #t)
        #|
        (new 'static
             'game-option
@@ -2086,6 +2217,7 @@
   ;; set up options for each screen
   (set! (-> *options-remap* (progress-screen settings))
         (if (or *cheat-mode* (nonzero? (-> *pc-settings* cheats-known))) *main-options-secrets* *main-options-pc*))
+  (set! (-> *options-remap* (progress-screen mod-options)) *mod-options*)
   (set! (-> *options-remap* (progress-screen game-settings)) *game-options-pc*)
   (set! (-> *options-remap* (progress-screen graphic-settings)) *graphic-options-pc*)
   (let ((max-refresh-rate (pc-get-active-display-refresh-rate)))
@@ -2121,7 +2253,7 @@
   (set! (-> *options-remap* (progress-screen quit)) *yes-no-options*)
   ;; our screens!
   (set! (-> *options-remap* (progress-screen aspect-msg)) *yes-no-options*)
-  (set! (-> *options-remap* (progress-screen input-options)) *input-options*)
+  ;;(set! (-> *options-remap* (progress-screen input-options)) *input-options*)
   (set! (-> *options-remap* (progress-screen camera-options)) *camera-options*)
   (set! (-> *options-remap* (progress-screen controller-options)) *controller-options*)
   (set! (-> *options-remap* (progress-screen mouse-options)) *mouse-options*)
@@ -2163,13 +2295,13 @@
   (set! (-> *sound-options* 2 value-to-modify) (&-> *setting-control* default dialog-volume))
   (set! (-> *yes-no-options* 0 value-to-modify) (&-> *progress-state* yes-no-choice))
   ;; our options!
-  (set! (-> *game-options-pc* 1 value-to-modify) (&-> *pc-settings* memcard-play-hints?))
-  (set! (-> *game-options-pc* 2 value-to-modify) (&-> *pc-settings* subtitles?))
-  (set! (-> *game-options-pc* 3 value-to-modify) (&-> *pc-settings* hinttitles?))
-  (set! (-> *game-options-pc* 4 value-to-modify) (&-> *setting-control* default language))
+  (set! (-> *game-options-pc* 0 value-to-modify) (&-> *pc-settings* memcard-play-hints?))
+  (set! (-> *game-options-pc* 1 value-to-modify) (&-> *pc-settings* subtitles?))
+  (set! (-> *game-options-pc* 2 value-to-modify) (&-> *pc-settings* hinttitles?))
+  (set! (-> *game-options-pc* 3 value-to-modify) (&-> *setting-control* default language))
+  (set! (-> *game-options-pc* 4 value-to-modify) (&-> *progress-carousell* int-backup))
   (set! (-> *game-options-pc* 5 value-to-modify) (&-> *progress-carousell* int-backup))
   (set! (-> *game-options-pc* 6 value-to-modify) (&-> *progress-carousell* int-backup))
-  (set! (-> *game-options-pc* 7 value-to-modify) (&-> *progress-carousell* int-backup))
   (set! (-> *graphic-options-pc* 1 value-to-modify) (&-> *progress-carousell* int-backup))
   (set! (-> *graphic-options-pc* 3 value-to-modify) (&-> *pc-settings* vsync?))
   (set! (-> *graphic-options-pc* 5 value-to-modify) (&-> *progress-carousell* int-backup))
@@ -2195,10 +2327,20 @@
   (set! (-> *mouse-options* 1 value-to-modify) (&-> *pc-settings* mouse-xsens))
   (set! (-> *mouse-options* 2 value-to-modify) (&-> *pc-settings* mouse-ysens))
   (set! (-> *mouse-options* 3 value-to-modify) (&-> *pc-settings* mouse-movement?))
+  #|
   (set! (-> *input-options* 0 value-to-modify) (&-> *pc-settings* mouse-xsens)) ;; xsens will be used for both x and y
   (set! (-> *input-options* 1 value-to-modify) (&-> *pc-settings* auto-jump?))
   (set! (-> *input-options* 2 value-to-modify) (&-> *pc-settings* longjump-enabled?))
-  (set! (-> *input-options* 3 value-to-modify) (&-> *progress-carousell* int-backup))
+  (set! (-> *input-options* 3 value-to-modify) (&-> *progress-carousell* int-backup))|#
+
+  (set! (-> *mod-options* 0 value-to-modify) (&-> *pc-settings* mouse-xsens)) ;; xsens will be used for both x and y
+  (set! (-> *mod-options* 1 value-to-modify) (&-> *pc-settings* auto-jump?))
+  (set! (-> *mod-options* 2 value-to-modify) (&-> *pc-settings* longjump-enabled?))
+  (set! (-> *mod-options* 3 value-to-modify) (&-> *progress-carousell* int-backup)) ;; This is the mouse wheel setting
+  (set! (-> *mod-options* 4 value-to-modify) (&-> *pc-settings* fov))
+  (set! (-> *mod-options* 5 value-to-modify) (&-> *pc-settings* mod-sfx-volume))
+  (set! (-> *mod-options* 6 value-to-modify) (&-> *pc-settings* hev-sounds?))
+
   ;;(set! (-> *input-options* 1 value-to-modify) (&-> *pc-settings* keyboard-enabled?))
   ;;(set! (-> *input-options* 2 value-to-modify) (&-> *pc-settings* mouse-enabled?))
   ;;(set! (-> *input-options* 4 value-to-modify) (&-> *pc-settings* auto-hide-cursor?))
@@ -3574,7 +3716,7 @@
              (hide-progress-icons)
              (draw-options self 115 25 0.65))
             (((progress-screen gfx-ps2-options)) (hide-progress-icons) (draw-options self 115 25 0.67))
-            (((progress-screen game-settings)) (hide-progress-icons) (draw-options self 115 25 0.70))
+            (((progress-screen game-settings) (progress-screen mod-options)) (hide-progress-icons) (draw-options self 115 25 0.70))
             (((progress-screen memcard-removed) (progress-screen memcard-auto-save-error))
              (draw-notice-screen self)
              (draw-options self 192 0 0.82))

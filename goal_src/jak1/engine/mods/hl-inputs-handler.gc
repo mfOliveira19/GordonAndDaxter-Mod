@@ -1,7 +1,7 @@
 (in-package goal)
 
 (define *hl-target-jump-buffer* 0)
-(defconstant hl-target-jump-buffer-time (seconds 0.2))
+(defconstant hl-target-jump-buffer-time (seconds 0.3))
 (define *last-duck-time* 0)
 (defconstant duck-cooldown (fsec 0.12))
 

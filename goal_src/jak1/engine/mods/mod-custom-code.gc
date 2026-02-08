@@ -121,7 +121,7 @@
 (defun handle-draw-and-input-stuff ()
   ;; Set the camera to first-person when we are a normal state (ground, air, etc.) and not in a cutscene
   (when (or (and (in-hl-state?) (not (movie?)) (not (on-zoomer?))) (= (-> *target* state name) 'target-hl-death))
-    (send-event *camera* 'set-fov 16384.845)
+    (send-event *camera* 'set-fov (degrees (-> *pc-settings* fov)))
     (send-event *camera* 'change-state cam-fps 0))
 
   ;; In the zoomer we set the camera back to string
@@ -173,7 +173,7 @@
     (swim-screen-misty)
     (swim-screen)))
 
-  ;; So we are not staring at the teleported after the first cutscene after beating geyser
+  ;; So we are not staring at the teleporter after the first cutscene after beating geyser
   (when *in-cutscene-after-geyser*
     (when (not (movie?))
       (set! *do-180?* #t)
