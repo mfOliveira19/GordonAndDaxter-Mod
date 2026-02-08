@@ -409,7 +409,8 @@
                    (-> *math-camera* hvdf-off w)))
     (set! (-> *part-id-table* 2827 init-specs 8 initial-valuef) (* 128.0 (-> self credit-fade)))
     (cond
-      ((< (-> self credit-fade) 1.0)
+      ;; these particles flash really bad at high FPS, this workaround just disables them if we're >60
+      ((or (< (-> self credit-fade) 1.0) (> (-> *pc-settings* target-fps) 60))
        (set! (-> *part-id-table* 2825 init-specs 1 initial-valuef) 0.0)
        (set! (-> *part-id-table* 2826 init-specs 1 initial-valuef) 0.0))
       (else
@@ -603,8 +604,8 @@
             (set! (-> self credit-fade) 1.0)
             (sage-finalboss-credit-particle)
             (set! s5-0 (draw-end-credits (the int f30-0)))
-            ;; og:preserve-this allow credits skip in speedrunner mode
-            (if (and (or *cheat-mode* (-> *pc-settings* speedrunner-mode?)) (cpad-pressed? 0 triangle)) (set! s5-0 #t))
+            ;; og:preserve-this allow credits skip in speedrunner mode (changed for mod to check Enter)
+            (if (and (or *cheat-mode* (-> *pc-settings* speedrunner-mode?)) (key-status? enter-held)) (set! s5-0 #t))
             (cond
               ((paused?))
               ((and (< 1300.0 f30-0) (or (cpad-hold? 0 circle x) (key-status? enter-held)))
