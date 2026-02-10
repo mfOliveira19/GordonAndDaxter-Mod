@@ -743,6 +743,7 @@
             :param2 120.0
             :slider-step-size 0.1
             :slider-show-decimal? #f)
+       (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id teleport-effect) :scale #t)
        (new 'static
             'game-option
             :option-type (game-option-type slider)
@@ -2338,8 +2339,9 @@
   (set! (-> *mod-options* 2 value-to-modify) (&-> *pc-settings* longjump-enabled?))
   (set! (-> *mod-options* 3 value-to-modify) (&-> *progress-carousell* int-backup)) ;; This is the mouse wheel setting
   (set! (-> *mod-options* 4 value-to-modify) (&-> *pc-settings* fov))
-  (set! (-> *mod-options* 5 value-to-modify) (&-> *pc-settings* mod-sfx-volume))
-  (set! (-> *mod-options* 6 value-to-modify) (&-> *pc-settings* hev-sounds?))
+  (set! (-> *mod-options* 5 value-to-modify) (&-> *pc-settings* teleport-effect?))
+  (set! (-> *mod-options* 6 value-to-modify) (&-> *pc-settings* mod-sfx-volume))
+  (set! (-> *mod-options* 7 value-to-modify) (&-> *pc-settings* hev-sounds?))
 
   ;;(set! (-> *input-options* 1 value-to-modify) (&-> *pc-settings* keyboard-enabled?))
   ;;(set! (-> *input-options* 2 value-to-modify) (&-> *pc-settings* mouse-enabled?))

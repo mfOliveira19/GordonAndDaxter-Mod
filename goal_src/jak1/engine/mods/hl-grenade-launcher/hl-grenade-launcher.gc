@@ -349,9 +349,9 @@
     (behavior ()
         (let ((idx (rand-vu-int-range 0 2)))
         (case idx
-            ((0) (sound-play "explosion1"))
-            ((1) (sound-play "explosion2"))
-            ((2) (sound-play "explosion3"))))
+            ((0) (play-mod-sound "explosion1"))
+            ((1) (play-mod-sound "explosion2"))
+            ((2) (play-mod-sound "explosion3"))))
       (ja-channel-set! 0)
       (let ((v1-11 (-> self root root-prim)))
         (set! (-> v1-11 local-sphere w) (-> self blast-radius))

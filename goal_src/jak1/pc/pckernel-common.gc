@@ -525,6 +525,7 @@
     (("fov") (set! (-> obj fov) (file-stream-read-float file))) ;; added for hl mod
     (("mod-sfx-volume") (set! (-> obj mod-sfx-volume) (file-stream-read-float file))) ;; added for hl mod
     (("hev-sounds?") (set! (-> obj hev-sounds?) (file-stream-read-symbol file))) ;; added for hl mod
+    (("teleport-effect?") (set! (-> obj teleport-effect?) (file-stream-read-symbol file))) ;; added for hl mod
     (("mouse-movement?") (set! (-> obj mouse-movement?) (file-stream-read-symbol file)))
     (("auto-hide-cursor?") (set! (-> obj auto-hide-cursor?) (file-stream-read-symbol file)))
     (("ps2-read-speed?") (set! (-> obj ps2-read-speed?) (file-stream-read-symbol file)))
@@ -608,6 +609,7 @@
   (format file "  (fov ~f)~%" (-> obj fov)) ;; added for hl mod
   (format file "  (mod-sfx-volume ~f)~%" (-> obj mod-sfx-volume)) ;; added for hl mod
   (format file "  (hev-sounds? ~A)~%" (-> obj hev-sounds?)) ;; added for hl mod
+  (format file "  (teleport-effect? ~A)~%" (-> obj teleport-effect?)) ;; added for hl mod
   (format file "  (mouse-ysens ~f)~%" (-> obj mouse-ysens))
   (format file "  (mouse-movement? ~A)~%" (-> obj mouse-movement?))
   (format file "  (auto-hide-cursor? ~A)~%" (-> obj auto-hide-cursor?))

@@ -100,7 +100,7 @@
         (set! *green-flash-started* #t))))
 
     ;; draw green screen while time has not elapsed
-    (when *show-green-screen?*
+    (when (and *show-green-screen?* (-> *pc-settings* teleport-effect?))
       (green-screen))
 
     ;; check if current flash duration has finished
@@ -164,7 +164,7 @@
   (when *should-blackout?* (blackout))
 
   ;; Swim screen effect
-  (when *should-show-swim-screen?*
+  (when (and *should-show-swim-screen?* (= (-> *target* state name) 'target-hl-movement-swim))
     (if (= (-> *target* current-level name) 'misty)
     (swim-screen-misty)
     (swim-screen)))
