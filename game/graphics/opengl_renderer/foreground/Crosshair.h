@@ -63,6 +63,8 @@ class Crosshair {
   CrosshairSprite smg_1280;
   CrosshairSprite pistol_2560;
   CrosshairSprite smg_2560;
+  CrosshairSprite pistol_low;
+  CrosshairSprite smg_low;
 
   void draw_sprite(GLuint tex, float cx, float cy, float w, float h);
   GLuint load_texture(const std::string& filename, int& out_w, int& out_h);

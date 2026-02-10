@@ -11,6 +11,8 @@ Crosshair::Crosshair() {
   smg_1280.tex = load_texture("crosshair_1280_smg.png", smg_1280.width, smg_1280.height);
   pistol_2560.tex = load_texture("crosshair_2560_pistol.png", pistol_2560.width, pistol_2560.height);
   smg_2560.tex = load_texture("crosshair_2560_smg.png", smg_2560.width, smg_2560.height);
+  pistol_low.tex = load_texture("crosshair_low_pistol.png", pistol_low.width, pistol_low.height);
+  smg_low.tex = load_texture("crosshair_low_smg.png", smg_low.width, smg_low.height);
 }
 
 Crosshair::~Crosshair() {
@@ -40,10 +42,8 @@ void Crosshair::draw_crosshair(SharedRenderState* render_state) {
 
   auto& shader = render_state->shaders[ShaderId::CROSSHAIR];
   GLuint prog = shader.id();
-  if (prog == 0) {
-    lg::error("[crosshair] shader not compiled/linked!");
+  if (!prog)
     return;
-  }
 
   shader.activate();
 
@@ -51,26 +51,80 @@ void Crosshair::draw_crosshair(SharedRenderState* render_state) {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  int width = Gfx::g_global_settings.game_res_w;
-  int height = Gfx::g_global_settings.game_res_h;
-
-  glUniform2f(glGetUniformLocation(prog, "u_resolution"), (float)width, (float)height);
-  glUniform4f(glGetUniformLocation(prog, "u_color"), 1.0f, 1.0f, 1.0f, 1.0f);
-
-  float cx = std::floor(width * 0.5f) + 0.5f;
-  float cy = std::floor(height * 0.5f) + 0.5f;
-
-
-  CrosshairSprite* sprite = pick_sprite(get_type(), width);
+  CrosshairSprite* sprite = pick_sprite(get_type(), render_state->render_fb_w);
   if (!sprite || sprite->tex == 0)
     return;
+
+  int screen_w = Gfx::g_global_settings.lbox_w;
+  int screen_h = Gfx::g_global_settings.lbox_h;
+
+  float base_frac = 0.0f;
+    switch (get_type()) {
+      case CrosshairType::Pistol:
+        base_frac = 0.013f;
+        break;
+      case CrosshairType::SMG:
+        base_frac = 0.022f;
+        break;
+      default:
+        base_frac = 0.022f;
+        break;
+    }
+
+  float reference_h = 1080.0f;
+  float exponent = 0.6f;
+  float scale_factor = std::pow(reference_h / (float)screen_h, exponent);
+
+  float target_h_px = screen_h * base_frac * scale_factor;
+  target_h_px = std::max(target_h_px, 12.0f);
+
+  float tex_aspect = (float)sprite->width / (float)sprite->height;
+  float target_w_px = target_h_px * tex_aspect;
+
+  float half_w_ndc = (target_w_px / screen_w) * 2.0f;
+  float half_h_ndc = (target_h_px / screen_h) * 2.0f;
+
+  struct Vertex {
+    float pos[2];
+    float uv[2];
+  };
+
+  Vertex verts[4] = {
+      {{-half_w_ndc, -half_h_ndc}, {0.0f, 0.0f}},
+      {{half_w_ndc, -half_h_ndc}, {1.0f, 0.0f}},
+      {{half_w_ndc, half_h_ndc}, {1.0f, 1.0f}},
+      {{-half_w_ndc, half_h_ndc}, {0.0f, 1.0f}},
+  };
+
+  GLuint indices[6] = {0, 1, 2, 2, 3, 0};
+
+  GLuint vao, vbo, ebo;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &ebo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(2 * sizeof(float)));
+  glEnableVertexAttribArray(1);
 
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, sprite->tex);
   glUniform1i(glGetUniformLocation(prog, "u_tex"), 0);
 
-  float scale = 0.9f;
-  draw_sprite(sprite->tex, cx, cy, (float)sprite->width * scale, (float)sprite->height * scale);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+  glBindVertexArray(0);
+  glDeleteBuffers(1, &vbo);
+  glDeleteBuffers(1, &ebo);
+  glDeleteVertexArrays(1, &vao);
 }
 
 GLuint Crosshair::load_texture(const std::string& filename, int& out_w, int& out_h) {
@@ -88,14 +142,12 @@ GLuint Crosshair::load_texture(const std::string& filename, int& out_w, int& out
   glGenTextures(1, &tex);
   glBindTexture(GL_TEXTURE_2D, tex);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, out_w, out_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-  glGenerateMipmap(GL_TEXTURE_2D);
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
   stbi_image_free(data);
   return tex;
@@ -137,11 +189,43 @@ void Crosshair::draw_sprite(GLuint tex, float cx, float cy, float w, float h) {
 }
 
 CrosshairSprite* Crosshair::pick_sprite(CrosshairType type, int screen_width) {
-  bool high_res = screen_width >= 2560;
-  if (type == CrosshairType::Pistol)
-    return high_res ? &pistol_2560 : &pistol_1280;
-  else if (type == CrosshairType::SMG)
-    return high_res ? &smg_2560 : &smg_1280;
+  enum class ResTier { Low, Mid, High };
+  ResTier tier;
+
+  if (screen_width >= 2560) {
+    tier = ResTier::High;
+  } else if (screen_width >= 1280) {
+    tier = ResTier::Mid;
+  } else {
+    tier = ResTier::Low;
+  }
+
+  switch (type) {
+    case CrosshairType::Pistol:
+      switch (tier) {
+        case ResTier::High:
+          return &pistol_2560;
+        case ResTier::Mid:
+          return &pistol_1280;
+        case ResTier::Low:
+          return &pistol_low;
+      }
+      break;
+
+    case CrosshairType::SMG:
+      switch (tier) {
+        case ResTier::High:
+          return &smg_2560;
+        case ResTier::Mid:
+          return &smg_1280;
+        case ResTier::Low:
+          return &smg_low;
+      }
+      break;
+
+    default:
+      break;
+  }
 
   return nullptr;
 }

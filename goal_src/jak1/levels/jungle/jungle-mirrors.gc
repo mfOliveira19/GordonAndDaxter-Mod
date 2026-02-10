@@ -1410,7 +1410,12 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (case message
-        (('attack 'attack-hl) (sound-play "mirror-smash") (go reflector-mirror-broken #f))))
+        (('attack) (sound-play "mirror-smash") (go reflector-mirror-broken #f))
+        ;; Changed for hl mod, only allow uppercut which is the event sent by the crowbar to avoid softlock by breaking the mirror from far distances
+        (('attack-hl)
+        (when (= (-> block param 1) 'uppercut)
+          (sound-play "mirror-smash")
+          (go reflector-mirror-broken #f)))))
   :exit
     (behavior ()
       (stop! (-> self sound)))
