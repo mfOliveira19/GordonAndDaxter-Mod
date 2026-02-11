@@ -433,8 +433,131 @@
   (true! (-> *speedrun-info* has-started?))
   (none))
 
+(defun continue-point-copy! ((dst continue-point) (src continue-point))
+  (set! (-> dst level) (-> src level))
+  (set! (-> dst load-commands) (-> src load-commands))
+  (set! (-> dst vis-nick) (-> src vis-nick))
+  (when (-> *level* level0)
+    (set! (-> dst lev0) (-> *level* level0 name))
+    (set! (-> dst lev0) (-> *level* level0 name))
+    (set! (-> dst disp0) (-> *level* level0 display?))
+    )
+  (when (-> *level* level1)
+    (set! (-> dst lev1) (-> *level* level1 name))
+    (set! (-> dst disp1) (-> *level* level1 display?))
+    )
+  (none)
+  )
+
+(defun camera-rot-copy! ((dst continue-point) (src matrix))
+  (set! (-> dst camera-rot 0) (-> src vector 0 x))
+  (set! (-> dst camera-rot 1) (-> src vector 0 y))
+  (set! (-> dst camera-rot 2) (-> src vector 0 z))
+  (set! (-> dst camera-rot 3) (-> src vector 1 x))
+  (set! (-> dst camera-rot 4) (-> src vector 1 y))
+  (set! (-> dst camera-rot 5) (-> src vector 1 z))
+  (set! (-> dst camera-rot 6) (-> src vector 2 x))
+  (set! (-> dst camera-rot 7) (-> src vector 2 y))
+  (set! (-> dst camera-rot 8) (-> src vector 2 z))
+  (none)
+  )
+
+(define *practice-spawn-post-init* (the-as (function none) #f))
+(define *last-real-continue-point* (the-as continue-point #f))
+(define *tmp-continue-point* (new 'static 'continue-point
+                             :name "tmp"
+                             :level #f
+                             :flags (continue-flags speedrun)
+                             :trans (new 'static 'vector :w 1.0)
+                             :quat (new 'static 'quaternion :w 1.0)
+                             :camera-trans (new 'static 'vector :w 1.0)
+                             :camera-rot (new 'static 'array float 9)
+                             :load-commands '()
+                             :vis-nick #f
+                             :lev0 #f
+                             :disp0 #f
+                             :lev1 #f
+                             :disp1 #f
+                             )
+    )
+
+(defun generic-post-init ()
+  (when *last-real-continue-point*
+    (set! (-> *game-info* current-continue) *last-real-continue-point*)
+    )
+  (none)
+  )
+
+(defun speedrun-practice-load-tmp-checkpoint ()
+  (when (-> *tmp-continue-point* level)
+    ;; store last real checkpoint to restore later
+    (when (not (string= (-> *game-info* current-continue name) "tmp"))
+      (set! *last-real-continue-point* (-> *game-info* current-continue))
+      )
+    (set! (-> *game-info* current-continue) *tmp-continue-point*)
+    (set! *practice-spawn-post-init* generic-post-init)
+    (initialize! *game-info* 'dead (the-as game-save #f) (the-as string #f))
+    )
+  (none)
+  )
+
+(defun speedrun-practice-store-temp-checkpoint ()
+  (case (-> *target* state)
+    ;; only store temp checkpoint if in one of these states
+    ((target-stance target-wade-stance target-swim-stance target-flut-stance target-racing
+      target-hl-movement-ground target-hl-movement-ground-duck target-hl-racing)
+      ;; copy levels from current continue
+      (continue-point-copy! *tmp-continue-point* (-> *game-info* current-continue))
+      ;; copy position of target + camera
+      (vector-copy! (-> *tmp-continue-point* trans) (-> *target* root trans))
+      (quaternion-copy! (-> *tmp-continue-point* quat) (-> *target* control quat-targ))
+      (vector-copy! (-> *tmp-continue-point* camera-trans) (-> *camera-combiner* trans))
+      (camera-rot-copy! *tmp-continue-point* (-> *camera-combiner* inv-camera-rot))
+      
+      (sound-play "select-menu")
+      )
+    (else
+      (sound-play "caught-eel" :pitch -0.7)
+      )
+    )
+  (none)
+  )
+
 (defun speedrun-mode-update ()
   "A per frame update for speedrunning related stuff"
+  ;; debug-only "savestate" logic
+  (when *debug-segment*
+    ;; if we're stuck continue-ing at a speedrun checkpoint, it might have bad vis so force it
+    (when (and *target* (= (-> *target* state name) 'target-continue)
+              (logtest? (-> *game-info* current-continue flags) (continue-flags speedrun)))
+      (load-state-want-vis (-> *load-state* want 0 name))
+      )
+    
+    ;; call post-init function
+    (when (and *practice-spawn-post-init*
+                *target*
+                (-> *setting-control* current allow-pause)
+                (>= (- (-> *display* base-frame-counter) (-> *game-info* blackout-time)) (seconds 0.1))
+                )
+      (*practice-spawn-post-init*)
+      (set! *practice-spawn-post-init* #f)
+      )
+
+    (when (key-status? tab-held)
+      ;; check for load savestate combo
+      (when (key-status? backspace-pressed)
+        (format #t "player triggered set savestate combo~%")
+        (speedrun-practice-load-tmp-checkpoint)
+        )
+
+      ;; check for set savestate combo
+      (when (key-status? enter-pressed)
+        (format #t "player triggered load savestate combo~%")
+        (speedrun-practice-store-temp-checkpoint)
+        )
+      )
+    )
+
   (when (-> *pc-settings* speedrunner-mode?)
     ;; Check if run/autosplitter should be started (out of blackout and player has control of jak)
     (when (and (not (-> *speedrun-info* has-started?))
