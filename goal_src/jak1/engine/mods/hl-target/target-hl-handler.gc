@@ -152,10 +152,6 @@
               (set! (-> dir y) 0.0)
               ))
 
-
-          (when (> (-> dir y) 0)
-            (if (should-duck?) (go target-hl-movement-air-duck) (go target-hl-movement-air)))
-
           (let* ((base-force 100000.0)
                 (len (max 0.25 (vector-length dir)))
 
@@ -234,6 +230,7 @@
 
 (defbehavior target-hl-attacked target ((arg0 symbol) (arg1 attack-info) (arg2 process) (arg3 touching-shapes-entry) (arg4 (state symbol attack-info target)))
   (when (and (not (logtest? (-> self state-flags) (state-flags being-attacked))) (target-should-take-lava-damage? arg1))
+    (format 0 "ENTERED HERE ~%")
     (cond
       ((or (logtest? (-> self state-flags) (state-flags invulnerable timed-invulnerable invuln-powerup))
            (and (logtest? (-> arg1 mask) (attack-mask mode))
@@ -636,6 +633,7 @@
 (defbehavior target-hl-standard-event-handler target ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
     (('attack 'attack-or-shove 'attack-invinc)
+     (format 0 "GETTING ATTACKED ~%")
      (target-hl-attacked arg2
                       (the-as attack-info (-> arg3 param 1))
                       arg0
