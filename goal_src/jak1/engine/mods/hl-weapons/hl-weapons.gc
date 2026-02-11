@@ -593,9 +593,28 @@
         (font-flags shadow kerning)
         1.2)
     ))
-
 )
 
+(defun draw-speed ((buf dma-buffer))
+  (when (and *target*
+             (-> *target* control)
+             (-> *target* control dynam))
+
+    (let* ((vel  (-> *target* control transv))
+           (grav (-> *target* control dynam gravity-normal))
+           (yv   (vector-dot grav vel))
+           (tmp  (new-stack-vector0)))
+
+      (vector-! tmp vel (vector-float*! tmp grav yv))
+
+      (draw-string-xy-scaled
+        (string-format "xzv: ~M" (vector-length tmp))
+        buf
+        225
+        212
+        (the font-color 4)
+        (font-flags shadow kerning)
+        1.2))))
 
 (defun hud-hl-display-on ()
   (when (and (not (process-by-name 'hl-hud-proc *active-pool*)) (process-by-name 'hl-weapon-proc *active-pool*))
@@ -610,6 +629,8 @@
         (loop
           ;Start a bucket thing block so we can use draw functions
           (with-dma-buffer-add-bucket ((testbuf (-> (current-frame) global-buf)) (bucket-id debug-no-zbuf))
+            (when (-> *pc-settings* show-speed?)
+              (draw-speed testbuf))
             ;Other draw stuff
             (draw-ammo testbuf))
           ;Processes should suspend themselves, the loop will resume next frame

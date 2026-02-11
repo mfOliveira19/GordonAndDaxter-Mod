@@ -806,6 +806,7 @@
   (hev-sounds #x1628)
   (fov #x1629)
   (teleport-effect #x1630)
+  (show-speed #x1631)
   ;; mod text mod-base-change
   (pad-triangle #x2000)
   (pad-circle #x2001)
