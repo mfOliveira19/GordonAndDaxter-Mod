@@ -753,6 +753,7 @@
             :slider-step-size 0.1
             :slider-show-decimal? #f)
        (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id hev-sounds) :scale #t)
+       (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id show-speed) :scale #t)
        #|
        (new 'static
             'game-option
@@ -2342,6 +2343,7 @@
   (set! (-> *mod-options* 5 value-to-modify) (&-> *pc-settings* teleport-effect?))
   (set! (-> *mod-options* 6 value-to-modify) (&-> *pc-settings* mod-sfx-volume))
   (set! (-> *mod-options* 7 value-to-modify) (&-> *pc-settings* hev-sounds?))
+  (set! (-> *mod-options* 8 value-to-modify) (&-> *pc-settings* show-speed?))
 
   ;;(set! (-> *input-options* 1 value-to-modify) (&-> *pc-settings* keyboard-enabled?))
   ;;(set! (-> *input-options* 2 value-to-modify) (&-> *pc-settings* mouse-enabled?))

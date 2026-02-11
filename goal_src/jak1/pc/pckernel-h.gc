@@ -160,6 +160,7 @@
    (mod-sfx-volume                   float)  ;; Added for hl mod
    (hev-sounds?                      symbol) ;; Added for hl mod
    (teleport-effect?                 symbol) ;; Added for hl mod
+   (show-speed?                      symbol) ;; Added for hl mod
    ;; audio settings
    (audio-latency-ms                 int16) ;; audio latency in milliseconds
    (audio-pan-override               float) ;; audio pan modifier
@@ -395,6 +396,7 @@
     (set! (-> obj mod-sfx-volume) 50.0)
     (set! (-> obj hev-sounds?) #t)
     (set! (-> obj teleport-effect?) #t)
+    (set! (-> obj show-speed?) #f)
   0)
 
 (defmethod reset-ps2 ((obj pc-settings) (call-handlers symbol))
