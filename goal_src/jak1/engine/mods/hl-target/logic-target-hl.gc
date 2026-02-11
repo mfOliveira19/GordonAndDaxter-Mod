@@ -1258,7 +1258,6 @@
     ((string= (the-as string (-> water-proc name)) "sunken-water-12") (set! limit -592582.2500))
     ((string= (the-as string (-> water-proc name)) "sunken-water-15") (set! limit -1034808.8125))
     ((string= (the-as string (-> water-proc name)) "sunken-water-16") (set! limit -1034808.8125))
-    ((string= (the-as string (-> water-proc name)) "water-vol-103") (set! limit -9348.3759) (set! speed 70000.0))
     ((string= (the-as string (-> water-proc name)) "water-vol-103") (set! limit -9348.3759) (set! speed 100000.0))
     (else (set! limit -9348.3759)))
 
