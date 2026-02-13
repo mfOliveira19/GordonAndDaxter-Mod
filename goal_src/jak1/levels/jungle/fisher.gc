@@ -1179,8 +1179,14 @@
       (process-spawn fisher-fish gp-0 (-> self spawner) (* 1.85 (-> self params fish-vel)) :to self)))
       (let ((stick (analog-input (the-as int (-> *cpad-list* cpads 0 leftx))
                                 128.0 32.0 110.0 28.0))
-            (mx (if *mouse-data* (-> *mouse-data* mouse-relx) 0.0)))
-        (let ((input (+ stick (* mx 5.0))))
+            (mx (if *mouse-data* (-> *mouse-data* mouse-relx) 0.0))
+            (kb (cond
+                  ((and (should-move-left?) (not (should-move-right?))) -1.0)
+                  ((and (should-move-right?) (not (should-move-left?)))  1.0)
+                  (else 0.0))))
+        (let ((input (+ stick
+                        (* mx 5.0)
+                        (* kb (if (should-walk?) 20.0 30.0)))))
           (+! (-> self paddle-vel) (* input (seconds-per-frame)))))
 
   (seek! (-> self paddle-vel) 0.0 (* 15.0 (seconds-per-frame)))
